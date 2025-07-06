@@ -1,0 +1,25 @@
+{
+  "name": "nongbuxx-frontend",
+  "version": "1.0.0",
+  "description": "NONGBUXX Frontend - 한국어 뉴스 콘텐츠 생성기",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 3000",
+    "build": "echo 'Static build complete'",
+    "start": "echo 'Static site ready'"
+  },
+  "keywords": [
+    "news",
+    "content",
+    "korean",
+    "ai",
+    "markdown"
+  ],
+  "author": "PSWPSE",
+  "license": "MIT",
+  "homepage": "https://nongbuxx.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PSWPSE/nongbuxx.git"
+  }
+} 

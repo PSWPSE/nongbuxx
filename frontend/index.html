@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NONGBUXX - 한국어 뉴스 콘텐츠 생성기</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-newspaper"></i>
+                <h1>NONGBUXX</h1>
+            </div>
+            <p class="subtitle">뉴스 링크를 한국어 마크다운으로 변환하세요</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- URL Input Section -->
+            <section class="input-section">
+                <div class="input-card">
+                    <h2><i class="fas fa-link"></i> URL 입력</h2>
+                    <form id="urlForm">
+                        <div class="form-group">
+                            <label for="urlInput">뉴스 기사 URL</label>
+                            <input 
+                                type="url" 
+                                id="urlInput" 
+                                placeholder="https://news.example.com/article"
+                                required
+                            >
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="apiProvider">API 제공자</label>
+                                <select id="apiProvider">
+                                    <option value="anthropic">Anthropic Claude</option>
+                                    <option value="openai">OpenAI GPT-4</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customFilename">사용자 정의 파일명 (선택)</label>
+                                <input 
+                                    type="text" 
+                                    id="customFilename" 
+                                    placeholder="my_article"
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-magic"></i>
+                                콘텐츠 생성
+                            </button>
+                            <button type="button" id="batchBtn" class="btn btn-secondary">
+                                <i class="fas fa-list"></i>
+                                배치 처리
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Batch Input Section (Hidden by default) -->
+            <section class="batch-section" id="batchSection" style="display: none;">
+                <div class="input-card">
+                    <h2><i class="fas fa-list"></i> 배치 처리</h2>
+                    <div class="form-group">
+                        <label for="batchUrls">여러 URL 입력 (한 줄에 하나씩)</label>
+                        <textarea 
+                            id="batchUrls" 
+                            rows="5" 
+                            placeholder="https://news1.example.com/article1&#10;https://news2.example.com/article2&#10;https://news3.example.com/article3"
+                        ></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="processBatchBtn" class="btn btn-primary">
+                            <i class="fas fa-play"></i>
+                            배치 처리 시작
+                        </button>
+                        <button type="button" id="cancelBatchBtn" class="btn btn-secondary">
+                            <i class="fas fa-times"></i>
+                            취소
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Progress Section -->
+            <section class="progress-section" id="progressSection" style="display: none;">
+                <div class="progress-card">
+                    <h3 id="progressTitle">처리 중...</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">0%</p>
+                    <div class="spinner"></div>
+                </div>
+            </section>
+
+            <!-- Result Section -->
+            <section class="result-section" id="resultSection" style="display: none;">
+                <div class="result-card">
+                    <div class="result-header">
+                        <h2><i class="fas fa-check-circle"></i> 생성 완료!</h2>
+                        <div class="result-actions">
+                            <button id="downloadBtn" class="btn btn-success">
+                                <i class="fas fa-download"></i>
+                                다운로드
+                            </button>
+                            <button id="copyBtn" class="btn btn-info">
+                                <i class="fas fa-copy"></i>
+                                복사
+                            </button>
+                            <button id="resetBtn" class="btn btn-secondary">
+                                <i class="fas fa-refresh"></i>
+                                새로 시작
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="result-meta">
+                        <p><strong>제목:</strong> <span id="resultTitle"></span></p>
+                        <p><strong>처리 시간:</strong> <span id="resultTime"></span></p>
+                        <p><strong>API 제공자:</strong> <span id="resultApi"></span></p>
+                    </div>
+                    
+                    <div class="result-content">
+                        <div class="content-tabs">
+                            <button class="tab-btn active" data-tab="preview">미리보기</button>
+                            <button class="tab-btn" data-tab="markdown">마크다운</button>
+                        </div>
+                        
+                        <div class="tab-content active" id="previewTab">
+                            <div class="markdown-preview" id="markdownPreview"></div>
+                        </div>
+                        
+                        <div class="tab-content" id="markdownTab">
+                            <pre><code id="markdownCode"></code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Batch Result Section -->
+            <section class="batch-result-section" id="batchResultSection" style="display: none;">
+                <div class="result-card">
+                    <div class="result-header">
+                        <h2><i class="fas fa-list-check"></i> 배치 처리 완료!</h2>
+                        <div class="result-actions">
+                            <button id="downloadAllBtn" class="btn btn-success">
+                                <i class="fas fa-download"></i>
+                                모두 다운로드
+                            </button>
+                            <button id="resetBatchBtn" class="btn btn-secondary">
+                                <i class="fas fa-refresh"></i>
+                                새로 시작
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="batch-summary" id="batchSummary">
+                        <!-- Batch summary will be populated here -->
+                    </div>
+                    
+                    <div class="batch-results" id="batchResults">
+                        <!-- Batch results will be populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Error Section -->
+            <section class="error-section" id="errorSection" style="display: none;">
+                <div class="error-card">
+                    <h2><i class="fas fa-exclamation-triangle"></i> 오류 발생</h2>
+                    <p id="errorMessage"></p>
+                    <button id="retryBtn" class="btn btn-primary">
+                        <i class="fas fa-redo"></i>
+                        다시 시도
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 NONGBUXX. AI 기반 뉴스 콘텐츠 생성기</p>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 
