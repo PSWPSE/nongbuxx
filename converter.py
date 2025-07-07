@@ -266,7 +266,7 @@ class NewsConverter:
         
         # First, handle specific symbol replacements that need special mapping
         specific_replacements = {
-            '$RELIANCE.NS': '$SRELI',  # Reliance Industries US symbol
+            '$RELIANCE.NS': '$RELI',  # Reliance Industries US symbol
             '$JIOFIN.NS': '$JIO',    # Use simplified symbol for Jio Financial
         }
         
