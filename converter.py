@@ -189,8 +189,12 @@ class NewsConverter:
 
         6. 특별 규칙:
            - 주식 종목명이 나오면 반드시 종목명 뒤에 $심볼 표기
-           예: 테슬라 $TSLA, 애플 $AAPL
+           - **주식 심볼은 반드시 미국 시장 기준의 표준 심볼만 사용**
+           - 거래소 접미사(.NS, .BO, .L 등) 사용 금지
            - 괄호 사용하지 않고 공백으로 구분
+           예: 테슬라 $TSLA, 애플 $AAPL, 릴라이언스 $RIL (단, $RELIANCE.NS 같은 형태는 금지)
+           - 인도 기업의 경우 ADR 심볼이 있다면 ADR 심볼 사용, 없다면 대표적인 미국 거래소 심볼 사용
+           - 심볼을 모르는 경우 $심볼 표기 생략
 
         7. 제외할 내용:
            - 기자 소개나 프로필 정보 (예: "에마 오커먼은 야후 파이낸스에서...")
@@ -257,8 +261,20 @@ class NewsConverter:
                     response = formatted_title + '\n'.join(lines[1:])
                     break
         
-        # Fix stock symbol format
+        # Fix stock symbol format (remove parentheses)
         response = re.sub(r'(\w+)\((\$[A-Z]+)\)', r'\1 \2', response)
+        
+        # First, handle specific symbol replacements that need special mapping
+        specific_replacements = {
+            '$RELIANCE.NS': '$SRELI',  # Reliance Industries US symbol
+            '$JIOFIN.NS': '$JIO',    # Use simplified symbol for Jio Financial
+        }
+        
+        for old_symbol, new_symbol in specific_replacements.items():
+            response = response.replace(old_symbol, new_symbol)
+        
+        # Then, remove all remaining exchange suffixes like .NS, .BO, .L, etc.
+        response = re.sub(r'\$([A-Z]+)\.[A-Z]+', r'$\1', response)
         
         return response
 
