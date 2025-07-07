@@ -11,7 +11,7 @@ const API_BASE_URL = window.ENV?.API_BASE_URL || 'http://localhost:8080';
 const urlForm = document.getElementById('urlForm');
 const urlInput = document.getElementById('urlInput');
 const apiProvider = document.getElementById('apiProvider');
-const customFilename = document.getElementById('customFilename');
+// const customFilename = document.getElementById('customFilename'); // Removed
 const batchBtn = document.getElementById('batchBtn');
 const batchSection = document.getElementById('batchSection');
 const batchUrls = document.getElementById('batchUrls');
@@ -22,11 +22,11 @@ const progressTitle = document.getElementById('progressTitle');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
 const resultSection = document.getElementById('resultSection');
-const resultTitle = document.getElementById('resultTitle');
-const resultTime = document.getElementById('resultTime');
-const resultApi = document.getElementById('resultApi');
+// const resultTitle = document.getElementById('resultTitle'); // Removed
+// const resultTime = document.getElementById('resultTime'); // Removed
+// const resultApi = document.getElementById('resultApi'); // Removed
 const markdownPreview = document.getElementById('markdownPreview');
-const markdownCode = document.getElementById('markdownCode');
+// const markdownCode = document.getElementById('markdownCode'); // Removed
 const downloadBtn = document.getElementById('downloadBtn');
 const copyBtn = document.getElementById('copyBtn');
 const resetBtn = document.getElementById('resetBtn');
@@ -68,13 +68,7 @@ function initEventListeners() {
     resetBatchBtn.addEventListener('click', resetForm);
     retryBtn.addEventListener('click', retryGeneration);
     
-    // Tab switching
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            switchTab(this.dataset.tab);
-        });
-    });
+    // Tab switching - removed (no longer needed)
 }
 
 // Form submission handler
@@ -83,7 +77,6 @@ async function handleFormSubmit(e) {
     
     const url = urlInput.value.trim();
     const api = apiProvider.value;
-    const filename = customFilename.value.trim();
     
     if (!url) {
         showToast('URL을 입력해주세요.', 'error');
@@ -104,10 +97,6 @@ async function handleFormSubmit(e) {
             api_provider: api,
             save_intermediate: false
         };
-        
-        if (filename) {
-            requestData.filename = filename;
-        }
         
         const response = await fetch(`${API_BASE_URL}/api/generate`, {
             method: 'POST',
@@ -239,23 +228,12 @@ function showResultSection() {
     hideAllSections();
     resultSection.style.display = 'block';
     
-    // Populate result data
-    resultTitle.textContent = currentData.title;
-    resultTime.textContent = new Date(currentData.timestamp).toLocaleString('ko-KR');
-    resultApi.textContent = currentData.api_provider === 'anthropic' ? 'Anthropic Claude' : 'OpenAI GPT-4';
-    
-    // Populate content
-    markdownCode.textContent = currentData.content;
-    
-    // Render markdown preview
+    // Render markdown preview directly
     if (typeof marked !== 'undefined') {
         markdownPreview.innerHTML = marked.parse(currentData.content);
     } else {
         markdownPreview.innerHTML = '<p>마크다운 미리보기를 로드할 수 없습니다.</p>';
     }
-    
-    // Show preview tab by default
-    switchTab('preview');
 }
 
 function showBatchResultSection() {
@@ -289,6 +267,9 @@ function showBatchResultSection() {
                     <button class="btn btn-info" onclick="previewBatchItem(${index})">
                         <i class="fas fa-eye"></i> 미리보기
                     </button>
+                    <button class="btn btn-copy" onclick="copyBatchItem(${index})">
+                        <i class="fas fa-copy"></i> 복사
+                    </button>
                 </div>
             `;
         } else {
@@ -309,26 +290,7 @@ function showErrorSection(message) {
     errorMessage.textContent = message;
 }
 
-// Tab switching
-function switchTab(tabName) {
-    // Update tab buttons
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    tabBtns.forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.tab === tabName) {
-            btn.classList.add('active');
-        }
-    });
-    
-    // Update tab content
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => {
-        content.classList.remove('active');
-        if (content.id === tabName + 'Tab') {
-            content.classList.add('active');
-        }
-    });
-}
+// Tab switching - removed (no longer needed)
 
 // File operations
 async function downloadFile() {
@@ -397,6 +359,26 @@ async function downloadBatchItem(index) {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
     showToast('파일이 다운로드되었습니다.', 'success');
+}
+
+async function copyBatchItem(index) {
+    const item = currentBatchData.results[index];
+    if (!item.success) return;
+    
+    try {
+        await navigator.clipboard.writeText(item.content);
+        showToast('클립보드에 복사되었습니다.', 'success');
+    } catch (error) {
+        console.error('Copy error:', error);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = item.content;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast('클립보드에 복사되었습니다.', 'success');
+    }
 }
 
 function previewBatchItem(index) {

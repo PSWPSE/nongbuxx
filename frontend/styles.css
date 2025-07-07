@@ -45,7 +45,7 @@ body {
 
 .logo h1 {
     font-size: 3rem;
-    font-weight: 700;
+    font-weight: 500;
     color: #fff;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
@@ -93,6 +93,21 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+}
+
+.form-row-header {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 20px;
+    align-items: end;
+}
+
+.url-group {
+    flex: 1;
+}
+
+.api-group {
+    min-width: 200px;
 }
 
 .form-group label {
@@ -404,11 +419,22 @@ body {
 
 .batch-item .batch-actions {
     margin-top: 10px;
+    display: flex;
+    gap: 8px;
 }
 
 .batch-item .batch-actions .btn {
     font-size: 14px;
     padding: 6px 12px;
+}
+
+.batch-item .batch-actions .btn-copy {
+    background: #17a2b8;
+    color: white;
+}
+
+.batch-item .batch-actions .btn-copy:hover {
+    background: #138496;
 }
 
 /* Error Styles */
@@ -493,6 +519,11 @@ body {
     
     .form-row {
         grid-template-columns: 1fr;
+    }
+    
+    .form-row-header {
+        grid-template-columns: 1fr;
+        gap: 15px;
     }
     
     .result-header {

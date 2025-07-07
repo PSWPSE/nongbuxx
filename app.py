@@ -25,10 +25,12 @@ CORS(app, origins=[
     "http://localhost:3000",  # Local development
     "http://localhost:5000",  # Local development 
     "http://localhost:8080",  # Local development
-    "https://*.vercel.app",   # All Vercel deployment domains
-    "https://nongbuxx.vercel.app",  # Production frontend domain
+    "https://nongbuxxfrontend.vercel.app",  # Main production frontend domain
+    "https://nongbuxxfrontend-dsvsdvsdvsds-projects.vercel.app",  # Project-specific domain
+    "https://nongbuxxfrontend-fgvw3eory-dsvsdvsdvsds-projects.vercel.app",  # New deployment URL
+    "https://nongbuxx.vercel.app",  # Alternative domain
     "https://nongbuxx-frontend.vercel.app",  # Alternative domain
-], allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST", "OPTIONS"], supports_credentials=True)
+], allow_headers=["Content-Type", "Authorization", "Accept"], methods=["GET", "POST", "OPTIONS"], supports_credentials=False)
 
 # Configuration
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -51,16 +53,23 @@ def serve_static(filename):
     """정적 파일 제공"""
     return send_from_directory('static', filename)
 
-@app.route('/api/health', methods=['GET'])
+@app.route('/api/health', methods=['GET', 'OPTIONS'])
 def health_check():
     """헬스 체크 엔드포인트"""
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
+    
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'version': '1.0.0'
     })
 
-@app.route('/api/generate', methods=['POST'])
+@app.route('/api/generate', methods=['POST', 'OPTIONS'])
 def generate_content():
     """
     콘텐츠 생성 API
@@ -73,6 +82,13 @@ def generate_content():
         "save_intermediate": true     // optional
     }
     """
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
+    
     try:
         # 요청 데이터 파싱
         data = request.get_json()

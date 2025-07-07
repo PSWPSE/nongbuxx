@@ -5,6 +5,9 @@ lxml>=4.9.3
 anthropic>=0.7.0
 openai>=1.0.0
 python-dotenv>=1.0.0
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+fake-useragent>=1.4.0
 
 # Web framework dependencies
 flask>=2.3.0

@@ -16,7 +16,7 @@
                 <i class="fas fa-newspaper"></i>
                 <h1>NONGBUXX</h1>
             </div>
-            <p class="subtitle">뉴스 링크를 한국어 마크다운으로 변환하세요</p>
+            <p class="subtitle">뉴스를 SNS 콘텐츠로 변환해 드려요.</p>
         </header>
 
         <!-- Main Content -->
@@ -26,32 +26,23 @@
                 <div class="input-card">
                     <h2><i class="fas fa-link"></i> URL 입력</h2>
                     <form id="urlForm">
-                        <div class="form-group">
-                            <label for="urlInput">뉴스 기사 URL</label>
-                            <input 
-                                type="url" 
-                                id="urlInput" 
-                                placeholder="https://news.example.com/article"
-                                required
-                            >
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
+                        <div class="form-row-header">
+                            <div class="form-group url-group">
+                                <label for="urlInput">뉴스 기사 URL</label>
+                                <input 
+                                    type="url" 
+                                    id="urlInput" 
+                                    placeholder="https://news.example.com/article"
+                                    required
+                                >
+                            </div>
+                            
+                            <div class="form-group api-group">
                                 <label for="apiProvider">API 제공자</label>
                                 <select id="apiProvider">
                                     <option value="anthropic">Anthropic Claude</option>
                                     <option value="openai">OpenAI GPT-4</option>
                                 </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="customFilename">사용자 정의 파일명 (선택)</label>
-                                <input 
-                                    type="text" 
-                                    id="customFilename" 
-                                    placeholder="my_article"
-                                >
                             </div>
                         </div>
                         
@@ -127,25 +118,8 @@
                         </div>
                     </div>
                     
-                    <div class="result-meta">
-                        <p><strong>제목:</strong> <span id="resultTitle"></span></p>
-                        <p><strong>처리 시간:</strong> <span id="resultTime"></span></p>
-                        <p><strong>API 제공자:</strong> <span id="resultApi"></span></p>
-                    </div>
-                    
                     <div class="result-content">
-                        <div class="content-tabs">
-                            <button class="tab-btn active" data-tab="preview">미리보기</button>
-                            <button class="tab-btn" data-tab="markdown">마크다운</button>
-                        </div>
-                        
-                        <div class="tab-content active" id="previewTab">
-                            <div class="markdown-preview" id="markdownPreview"></div>
-                        </div>
-                        
-                        <div class="tab-content" id="markdownTab">
-                            <pre><code id="markdownCode"></code></pre>
-                        </div>
+                        <div class="markdown-preview" id="markdownPreview"></div>
                     </div>
                 </div>
             </section>
