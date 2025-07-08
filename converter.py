@@ -7,20 +7,23 @@ from dotenv import load_dotenv
 import re
 
 class NewsConverter:
-    def __init__(self, api_provider='anthropic'):
+    def __init__(self, api_provider='anthropic', api_key=None):
         load_dotenv()
         self.api_provider = api_provider.lower()
         self.anthropic_client = None
         self.openai_client = None
         
+        # 사용자 제공 API 키를 우선 사용, 없으면 환경변수에서 가져오기
         if self.api_provider == 'anthropic':
-            self.anthropic_client = anthropic.Anthropic(
-                api_key=os.getenv('ANTHROPIC_API_KEY')
-            )
-        if self.api_provider == 'openai' or os.getenv('OPENAI_API_KEY'):
-            self.openai_client = OpenAI(
-                api_key=os.getenv('OPENAI_API_KEY')
-            )
+            key = api_key if api_key else os.getenv('ANTHROPIC_API_KEY')
+            if key:
+                self.anthropic_client = anthropic.Anthropic(api_key=key)
+                
+        if self.api_provider == 'openai':
+            key = api_key if api_key else os.getenv('OPENAI_API_KEY')
+            if key:
+                self.openai_client = OpenAI(api_key=key)
+                
         self.output_dir = Path('converted_articles')
         self.output_dir.mkdir(exist_ok=True)
 

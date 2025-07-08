@@ -84,7 +84,21 @@ class WebExtractor:
             return self._error_response(url, f"웹드라이버 오류: {str(e)}")
         except Exception as e:
             self.logger.error(f"데이터 추출 중 오류 발생: {str(e)}")
-            return self._error_response(url, str(e))
+            
+            # 403 Forbidden 에러에 대한 사용자 친화적 메시지 제공
+            error_str = str(e)
+            if '403' in error_str and 'Forbidden' in error_str:
+                return self._error_response(url, "이 사이트는 자동 콘텐츠 수집을 차단하고 있습니다. 다른 뉴스 사이트를 이용해 주세요.")
+            elif '404' in error_str:
+                return self._error_response(url, "페이지를 찾을 수 없습니다. URL을 확인해 주세요.")
+            elif '500' in error_str:
+                return self._error_response(url, "웹사이트 서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+            elif 'timeout' in error_str.lower():
+                return self._error_response(url, "페이지 로딩 시간이 초과되었습니다. 다시 시도해 주세요.")
+            elif 'connection' in error_str.lower():
+                return self._error_response(url, "네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해 주세요.")
+            else:
+                return self._error_response(url, error_str)
     
     def _extract_with_requests(self, url: str) -> Dict[str, Any]:
         """requests를 사용한 데이터 추출"""

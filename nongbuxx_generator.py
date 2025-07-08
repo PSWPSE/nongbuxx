@@ -11,15 +11,17 @@ from web_extractor import WebExtractor
 from converter import NewsConverter
 
 class NongbuxxGenerator:
-    def __init__(self, api_provider='anthropic', save_intermediate=True):
+    def __init__(self, api_provider='anthropic', api_key=None, save_intermediate=True):
         """
         NONGBUXX 콘텐츠 생성기
         
         Args:
             api_provider: 'anthropic' 또는 'openai'
+            api_key: 사용자 제공 API 키 (선택사항, 없으면 환경변수에서 읽기)
             save_intermediate: 중간 파일들을 저장할지 여부
         """
         self.api_provider = api_provider
+        self.api_key = api_key
         self.save_intermediate = save_intermediate
         
         # 출력 디렉토리 설정
@@ -33,9 +35,10 @@ class NongbuxxGenerator:
         
         # 모듈 초기화
         self.extractor = WebExtractor(use_selenium=False, save_to_file=save_intermediate)
-        self.converter = NewsConverter(api_provider=api_provider)
+        self.converter = NewsConverter(api_provider=api_provider, api_key=api_key)
         
-        print(f"NONGBUXX Generator 초기화 완료 (API: {api_provider})")
+        key_status = "사용자 제공" if api_key else "환경변수"
+        print(f"NONGBUXX Generator 초기화 완료 (API: {api_provider}, 키: {key_status})")
     
     def validate_url(self, url):
         """URL 유효성 검사"""
@@ -83,18 +86,27 @@ class NongbuxxGenerator:
             extracted_data = self.extractor.extract_data(url)
             
             if not extracted_data.get('success'):
-                return {
-                    'success': False,
-                    'error': f"Content extraction failed: {extracted_data.get('error', 'Unknown error')}",
-                    'url': url
-                }
+                error_msg = extracted_data.get('error', '알 수 없는 오류')
+                # 이미 사용자 친화적인 메시지인 경우 그대로 반환
+                if any(keyword in error_msg for keyword in ['차단', '찾을 수 없습니다', '시간 초과', '네트워크', '서버']):
+                    return {
+                        'success': False,
+                        'error': error_msg,
+                        'url': url
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': f"콘텐츠 추출 실패: {error_msg}",
+                        'url': url
+                    }
             
             print("✅ 웹 콘텐츠 추출 완료")
             
         except Exception as e:
             return {
                 'success': False,
-                'error': f"Extraction error: {str(e)}",
+                'error': f"추출 중 오류 발생: {str(e)}",
                 'url': url
             }
         

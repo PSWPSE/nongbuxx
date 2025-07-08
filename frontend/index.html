@@ -2,8 +2,14 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
     <title>NONGBUXX - 한국어 뉴스 콘텐츠 생성기</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
@@ -24,25 +30,36 @@
             <!-- URL Input Section -->
             <section class="input-section">
                 <div class="input-card">
-                    <h2><i class="fas fa-link"></i> URL 입력</h2>
-                    <form id="urlForm">
-                        <div class="form-row-header">
-                            <div class="form-group url-group">
-                            <label for="urlInput">뉴스 기사 URL</label>
-                            <input 
-                                type="url" 
-                                id="urlInput" 
-                                placeholder="https://news.example.com/article"
-                                required
-                            >
+                    <div class="card-header">
+                        <h2><i class="fas fa-link"></i> URL 입력</h2>
+                        <div class="header-controls">
+                            <button type="button" id="apiSettingsBtn" class="btn btn-header">
+                                <i class="fas fa-key"></i>
+                                API 키 설정
+                            </button>
+                            <div class="api-status-simple" id="apiStatus">
+                                <span class="status-dot"></span>
+                                <span class="status-text">AI비활성</span>
+                            </div>
                         </div>
-                        
-                            <div class="form-group api-group">
-                                <label for="apiProvider">API 제공자</label>
-                                <select id="apiProvider">
-                                    <option value="anthropic">Anthropic Claude</option>
-                                    <option value="openai">OpenAI GPT-4</option>
-                                </select>
+                    </div>
+                    <form id="urlForm">
+                        <div class="url-inputs-container" id="urlInputsContainer">
+                            <div class="url-input-row" data-index="0">
+                                <div class="form-group">
+                                    <div class="input-with-buttons">
+                                        <input 
+                                            type="url" 
+                                            id="urlInput-0" 
+                                            name="urlInput[]"
+                                            placeholder="https://news.example.com/article"
+                                            required
+                                        >
+                                        <button type="button" class="btn btn-icon add-url-btn" onclick="addUrlInput(0)">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -51,12 +68,55 @@
                                 <i class="fas fa-magic"></i>
                                 콘텐츠 생성
                             </button>
-                            <button type="button" id="batchBtn" class="btn btn-secondary">
-                                <i class="fas fa-list"></i>
-                                배치 처리
-                            </button>
                         </div>
                     </form>
+                </div>
+            </section>
+
+            <!-- API Key Settings Section (Hidden by default) -->
+            <section class="api-settings-section" id="apiSettingsSection" style="display: none;">
+                <div class="input-card">
+                    <h2><i class="fas fa-key"></i> API 키 설정</h2>
+                    <div class="form-group">
+                        <label for="apiProviderSelect">API 제공자</label>
+                        <select id="apiProviderSelect">
+                            <option value="anthropic">Anthropic Claude</option>
+                            <option value="openai">OpenAI GPT-4</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="apiKeyInput">API 키</label>
+                        <div class="input-with-button">
+                            <input 
+                                type="password" 
+                                id="apiKeyInput" 
+                                placeholder="sk-..."
+                                autocomplete="off"
+                            >
+                            <button type="button" id="toggleApiKeyBtn" class="btn btn-icon">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="validateApiKeyBtn" class="btn btn-info">
+                            <i class="fas fa-check"></i>
+                            유효성 확인
+                        </button>
+                        <button type="button" id="saveApiKeyBtn" class="btn btn-success" disabled>
+                            <i class="fas fa-save"></i>
+                            저장
+                        </button>
+                        <button type="button" id="deleteApiKeyBtn" class="btn btn-danger">
+                            <i class="fas fa-trash"></i>
+                            삭제
+                        </button>
+                        <button type="button" id="cancelApiSettingsBtn" class="btn btn-secondary">
+                            <i class="fas fa-times"></i>
+                            취소
+                        </button>
+                    </div>
+                    <div class="api-validation-result" id="apiValidationResult"></div>
                 </div>
             </section>
 

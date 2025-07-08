@@ -9,6 +9,10 @@ from datetime import datetime
 from pathlib import Path
 import json
 import uuid
+from dotenv import load_dotenv
+
+# Load environment variables from env.local file
+load_dotenv('env.local')
 
 # Import our existing modules
 from nongbuxx_generator import NongbuxxGenerator
@@ -69,6 +73,116 @@ def health_check():
         'version': '1.0.0'
     })
 
+@app.route('/api/validate-api-key', methods=['POST', 'OPTIONS'])
+def validate_api_key():
+    """API 키 유효성 검증 엔드포인트"""
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
+    
+    try:
+        data = request.get_json()
+        
+        if not data or 'api_provider' not in data or 'api_key' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'API provider and API key are required',
+                'code': 'MISSING_PARAMETERS'
+            }), 400
+        
+        api_provider = data['api_provider']
+        api_key = data['api_key']
+        
+        if api_provider not in ['anthropic', 'openai']:
+            return jsonify({
+                'success': False,
+                'error': 'API provider must be anthropic or openai',
+                'code': 'INVALID_API_PROVIDER'
+            }), 400
+        
+        if not api_key or len(api_key.strip()) < 10:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid API key format',
+                'code': 'INVALID_API_KEY'
+            }), 400
+        
+        # API 키 형식 기본 검증
+        if api_provider == 'anthropic':
+            if not api_key.startswith('sk-ant-'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid Anthropic API key format',
+                    'code': 'INVALID_ANTHROPIC_KEY'
+                }), 400
+        elif api_provider == 'openai':
+            if not api_key.startswith('sk-'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid OpenAI API key format',
+                    'code': 'INVALID_OPENAI_KEY'
+                }), 400
+        
+        # 실제 API 호출을 통한 유효성 검증
+        try:
+            if api_provider == 'anthropic':
+                import anthropic
+                client = anthropic.Anthropic(api_key=api_key)
+                # 간단한 테스트 메시지로 유효성 확인
+                response = client.messages.create(
+                    model="claude-3-haiku-20240307",
+                    max_tokens=10,
+                    messages=[{"role": "user", "content": "Hello"}]
+                )
+                
+            elif api_provider == 'openai':
+                import openai
+                client = openai.OpenAI(api_key=api_key)
+                # 간단한 테스트 호출로 유효성 확인
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    max_tokens=10,
+                    messages=[{"role": "user", "content": "Hello"}]
+                )
+            
+            return jsonify({
+                'success': True,
+                'message': 'API key is valid',
+                'provider': api_provider
+            })
+            
+        except Exception as e:
+            error_msg = str(e)
+            if 'Incorrect API key' in error_msg or 'Invalid API key' in error_msg:
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid API key',
+                    'code': 'INVALID_API_KEY'
+                }), 401
+            elif 'exceeded' in error_msg.lower():
+                return jsonify({
+                    'success': False,
+                    'error': 'API rate limit exceeded',
+                    'code': 'RATE_LIMIT_EXCEEDED'
+                }), 429
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'API validation failed: {error_msg}',
+                    'code': 'API_VALIDATION_FAILED'
+                }), 400
+                
+    except Exception as e:
+        logger.error(f"API key validation error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Internal server error',
+            'code': 'INTERNAL_ERROR'
+        }), 500
+
 @app.route('/api/generate', methods=['POST', 'OPTIONS'])
 def generate_content():
     """
@@ -77,7 +191,8 @@ def generate_content():
     Request Body:
     {
         "url": "https://example.com/news",
-        "api_provider": "anthropic",  // optional: anthropic or openai
+        "api_provider": "anthropic",  // required: anthropic or openai
+        "api_key": "sk-...",         // required: user's API key
         "filename": "custom_name",    // optional
         "save_intermediate": true     // optional
     }
@@ -100,8 +215,19 @@ def generate_content():
                 'code': 'MISSING_URL'
             }), 400
         
+        # 필수 파라미터 확인
+        required_fields = ['url', 'api_provider', 'api_key']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({
+                    'success': False,
+                    'error': f'{field} is required',
+                    'code': f'MISSING_{field.upper()}'
+                }), 400
+        
         url = data['url']
-        api_provider = data.get('api_provider', 'anthropic')
+        api_provider = data['api_provider']
+        api_key = data['api_key']
         custom_filename = data.get('filename')
         save_intermediate = data.get('save_intermediate', False)
         
@@ -121,19 +247,19 @@ def generate_content():
                 'code': 'INVALID_API_PROVIDER'
             }), 400
         
-        # API 키 확인
-        if api_provider == 'anthropic' and not os.getenv('ANTHROPIC_API_KEY'):
+        # API 키 기본 형식 검증
+        if api_provider == 'anthropic' and not api_key.startswith('sk-ant-'):
             return jsonify({
                 'success': False,
-                'error': 'ANTHROPIC_API_KEY environment variable is required',
-                'code': 'MISSING_API_KEY'
-            }), 500
-        elif api_provider == 'openai' and not os.getenv('OPENAI_API_KEY'):
+                'error': 'Invalid Anthropic API key format',
+                'code': 'INVALID_ANTHROPIC_KEY'
+            }), 400
+        elif api_provider == 'openai' and not api_key.startswith('sk-'):
             return jsonify({
                 'success': False,
-                'error': 'OPENAI_API_KEY environment variable is required',
-                'code': 'MISSING_API_KEY'
-            }), 500
+                'error': 'Invalid OpenAI API key format',
+                'code': 'INVALID_OPENAI_KEY'
+            }), 400
         
         # 작업 ID 생성
         job_id = str(uuid.uuid4())
@@ -146,9 +272,10 @@ def generate_content():
         
         logger.info(f"Starting content generation for URL: {url} (Job ID: {job_id})")
         
-        # NONGBUXX 생성기 초기화
+        # NONGBUXX 생성기 초기화 (사용자 제공 API 키 사용)
         generator = NongbuxxGenerator(
             api_provider=api_provider,
+            api_key=api_key,
             save_intermediate=save_intermediate
         )
         
@@ -200,12 +327,48 @@ def generate_content():
             
             logger.error(f"Content generation failed for job {job_id}: {result['error']}")
             
-            return jsonify({
-                'success': False,
-                'job_id': job_id,
-                'error': result['error'],
-                'code': 'GENERATION_FAILED'
-            }), 500
+            # 에러 메시지에 따라 적절한 HTTP 상태 코드 반환
+            error_msg = result['error']
+            if '차단' in error_msg or '403' in error_msg:
+                # 웹사이트에서 접근을 차단한 경우
+                return jsonify({
+                    'success': False,
+                    'job_id': job_id,
+                    'error': error_msg,
+                    'code': 'ACCESS_BLOCKED'
+                }), 403
+            elif '찾을 수 없습니다' in error_msg or '404' in error_msg:
+                # 페이지를 찾을 수 없는 경우
+                return jsonify({
+                    'success': False,
+                    'job_id': job_id,
+                    'error': error_msg,
+                    'code': 'PAGE_NOT_FOUND'
+                }), 404
+            elif '시간 초과' in error_msg or 'timeout' in error_msg.lower():
+                # 시간 초과 에러
+                return jsonify({
+                    'success': False,
+                    'job_id': job_id,
+                    'error': error_msg,
+                    'code': 'REQUEST_TIMEOUT'
+                }), 408
+            elif '네트워크' in error_msg or 'connection' in error_msg.lower():
+                # 네트워크 연결 오류
+                return jsonify({
+                    'success': False,
+                    'job_id': job_id,
+                    'error': error_msg,
+                    'code': 'NETWORK_ERROR'
+                }), 502
+            else:
+                # 기타 서버 오류
+                return jsonify({
+                    'success': False,
+                    'job_id': job_id,
+                    'error': error_msg,
+                    'code': 'GENERATION_FAILED'
+                }), 500
             
     except Exception as e:
         error_msg = str(e)
@@ -273,7 +436,7 @@ def download_file(job_id):
         mimetype='text/markdown'
     )
 
-@app.route('/api/batch', methods=['POST'])
+@app.route('/api/batch-generate', methods=['POST', 'OPTIONS'])
 def batch_generate():
     """
     배치 콘텐츠 생성 API
@@ -281,10 +444,18 @@ def batch_generate():
     Request Body:
     {
         "urls": ["https://example1.com", "https://example2.com"],
-        "api_provider": "anthropic",
+        "api_provider": "anthropic",  // required: anthropic or openai
+        "api_key": "sk-...",         // required: user's API key
         "save_intermediate": false
     }
     """
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
+    
     try:
         data = request.get_json()
         
@@ -295,8 +466,17 @@ def batch_generate():
                 'code': 'MISSING_URLS'
             }), 400
         
+        # API 키 검증
+        if 'api_provider' not in data or 'api_key' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'API provider and API key are required',
+                'code': 'MISSING_API_CREDENTIALS'
+            }), 400
+        
         urls = data['urls']
-        api_provider = data.get('api_provider', 'anthropic')
+        api_provider = data['api_provider']
+        api_key = data['api_key']
         save_intermediate = data.get('save_intermediate', False)
         
         if not isinstance(urls, list) or len(urls) == 0:
@@ -304,6 +484,13 @@ def batch_generate():
                 'success': False,
                 'error': 'URLs must be a non-empty list',
                 'code': 'INVALID_URLS'
+            }), 400
+        
+        if api_provider not in ['anthropic', 'openai']:
+            return jsonify({
+                'success': False,
+                'error': 'API provider must be anthropic or openai',
+                'code': 'INVALID_API_PROVIDER'
             }), 400
         
         # 배치 작업 ID 생성
@@ -319,9 +506,10 @@ def batch_generate():
         
         logger.info(f"Starting batch generation for {len(urls)} URLs (Job ID: {batch_job_id})")
         
-        # NONGBUXX 생성기 초기화
+        # NONGBUXX 생성기 초기화 (사용자 API 키 사용)
         generator = NongbuxxGenerator(
             api_provider=api_provider,
+            api_key=api_key,  # 사용자 API 키 전달
             save_intermediate=save_intermediate
         )
         
