@@ -267,6 +267,9 @@ async function handleFormSubmit(e) {
         hideAllSections();
         showProgressSection();
         
+        // 프로그레스 시뮬레이션 시작 (단일 URL: 30초 예상)
+        startProgressSimulation(30000);
+        
         const response = await fetch(`${API_BASE_URL}/api/generate`, {
             method: 'POST',
             headers: {
@@ -294,6 +297,7 @@ async function handleFormSubmit(e) {
         
     } catch (error) {
         console.error('Error:', error);
+        stopProgressSimulation();
         showErrorSection(error.message);
     }
 }
@@ -305,13 +309,20 @@ async function pollJobStatus(jobId) {
         const result = await response.json();
         
         if (result.status === 'completed') {
+            completeProgress();
             currentData = result.data;
-            showResultSection();
-            showToast('콘텐츠 생성이 완료되었습니다!', 'success');
+            setTimeout(() => {
+                showResultSection();
+                showToast('콘텐츠 생성이 완료되었습니다!', 'success');
+            }, 500); // 프로그레스 완료 애니메이션 후 결과 표시
         } else if (result.status === 'failed') {
+            stopProgressSimulation();
             showErrorSection(result.error || '작업이 실패했습니다.');
         } else if (result.status === 'in_progress') {
-            updateProgress(result.progress || 0);
+            // 백엔드에서 실제 progress가 있으면 사용, 없으면 시뮬레이션 계속
+            if (result.progress && result.progress > simulatedProgress) {
+                updateProgress(result.progress);
+            }
             setTimeout(() => pollJobStatus(jobId), 1000);
         }
     } catch (error) {
@@ -352,7 +363,15 @@ function showProgressSection() {
     if (elements.progressSection) {
         elements.progressSection.style.display = 'block';
     }
+    
+    // 프로그레스 바 초기화
+    updateProgress(0);
 }
+
+// 프로그레스 바 시뮬레이션 관련 변수
+let progressTimer = null;
+let simulatedProgress = 0;
+let estimatedDuration = 30000; // 30초 기본 예상 시간
 
 function updateProgress(percentage) {
     if (elements.progressFill) {
@@ -361,6 +380,59 @@ function updateProgress(percentage) {
     if (elements.progressText) {
         elements.progressText.textContent = `${Math.round(percentage)}%`;
     }
+}
+
+function startProgressSimulation(duration = 30000) {
+    // 기존 타이머 정리
+    if (progressTimer) {
+        clearInterval(progressTimer);
+    }
+    
+    simulatedProgress = 0;
+    estimatedDuration = duration;
+    
+    // 100ms마다 진행률 업데이트
+    progressTimer = setInterval(() => {
+        // 90%까지는 빠르게, 90% 이후는 천천히 진행
+        if (simulatedProgress < 90) {
+            simulatedProgress += Math.random() * 2 + 0.5; // 0.5-2.5% 증가
+        } else {
+            simulatedProgress += Math.random() * 0.5 + 0.1; // 0.1-0.6% 증가
+        }
+        
+        // 95%에서 정지 (실제 완료 시까지 대기)
+        if (simulatedProgress >= 95) {
+            simulatedProgress = 95;
+        }
+        
+        updateProgress(simulatedProgress);
+    }, 100);
+}
+
+function stopProgressSimulation() {
+    if (progressTimer) {
+        clearInterval(progressTimer);
+        progressTimer = null;
+    }
+}
+
+function completeProgress() {
+    stopProgressSimulation();
+    
+    // 부드러운 완료 애니메이션
+    const targetProgress = 100;
+    const currentProgress = simulatedProgress;
+    const step = (targetProgress - currentProgress) / 10;
+    
+    let animationProgress = currentProgress;
+    const completeAnimation = setInterval(() => {
+        animationProgress += step;
+        if (animationProgress >= targetProgress) {
+            animationProgress = targetProgress;
+            clearInterval(completeAnimation);
+        }
+        updateProgress(animationProgress);
+    }, 50);
 }
 
 function showResultSection() {
@@ -686,6 +758,10 @@ async function handleGenerateSelectedNews() {
         hideAllSections();
         showProgressSection();
         
+        // 배치 프로그레스 시뮬레이션 시작 (선택된 뉴스 개수 * 10초)
+        const estimatedTime = selectedNewsUrls.length * 10000; // 뉴스 하나당 10초
+        startProgressSimulation(estimatedTime);
+        
         const response = await fetch(`${API_BASE_URL}/api/batch-generate`, {
             method: 'POST',
             headers: {
@@ -705,21 +781,27 @@ async function handleGenerateSelectedNews() {
         const result = await response.json();
         
         if (result.success && result.data && result.data.results) {
-            // 배치 생성이 즉시 완료되므로 폴링 없이 바로 결과 처리
+            // 배치 생성이 즉시 완료되므로 프로그레스 완료 애니메이션 후 결과 처리
+            completeProgress();
             currentBatchData = result.data;
             generatedContentData = result.data.results;
-            showGeneratedContentListSection();
             
-            const successCount = result.data.summary ? result.data.summary.successful : 0;
-            const totalCount = result.data.summary ? result.data.summary.total : result.data.results.length;
-            
-            showToast(`일괄 콘텐츠 생성이 완료되었습니다! (성공: ${successCount}/${totalCount})`, 'success');
+            setTimeout(() => {
+                showGeneratedContentListSection();
+                
+                const successCount = result.data.summary ? result.data.summary.successful : 0;
+                const totalCount = result.data.summary ? result.data.summary.total : result.data.results.length;
+                
+                showToast(`일괄 콘텐츠 생성이 완료되었습니다! (성공: ${successCount}/${totalCount})`, 'success');
+            }, 500); // 프로그레스 완료 애니메이션 후 결과 표시
         } else {
+            stopProgressSimulation();
             throw new Error(result.error || '일괄 생성에 실패했습니다.');
         }
         
     } catch (error) {
         console.error('일괄 생성 오류:', error);
+        stopProgressSimulation();
         showErrorSection(error.message);
     }
 }
@@ -730,22 +812,32 @@ async function pollBatchJobStatus(jobId) {
         const result = await response.json();
         
         if (result.status === 'completed') {
+            completeProgress();
             // 상태 API에서 data가 없는 경우를 대비한 안전한 처리
             if (result.data && result.data.results) {
                 currentBatchData = result.data;
                 generatedContentData = result.data.results;
-                showGeneratedContentListSection();
-                showToast('일괄 콘텐츠 생성이 완료되었습니다!', 'success');
+                setTimeout(() => {
+                    showGeneratedContentListSection();
+                    showToast('일괄 콘텐츠 생성이 완료되었습니다!', 'success');
+                }, 500); // 프로그레스 완료 애니메이션 후 결과 표시
             } else {
                 // data가 없는 경우 에러 처리
-                showErrorSection('작업은 완료되었지만 결과 데이터를 찾을 수 없습니다.');
+                setTimeout(() => {
+                    showErrorSection('작업은 완료되었지만 결과 데이터를 찾을 수 없습니다.');
+                }, 500);
             }
         } else if (result.status === 'failed') {
+            stopProgressSimulation();
             showErrorSection(result.error || '일괄 작업이 실패했습니다.');
         } else if (result.status === 'in_progress') {
-            updateProgress(result.progress || 0);
+            // 백엔드에서 실제 progress가 있으면 사용, 없으면 시뮬레이션 계속
+            if (result.progress && result.progress > simulatedProgress) {
+                updateProgress(result.progress);
+            }
             setTimeout(() => pollBatchJobStatus(jobId), 1000);
         } else {
+            stopProgressSimulation();
             showErrorSection('알 수 없는 작업 상태입니다.');
         }
     } catch (error) {
@@ -882,18 +974,26 @@ function resetAllFeatures() {
     selectedNewsUrls = [];
     generatedContentData = [];
     
-    // 모든 섹션 숨기기
+    // 모든 섹션 숨기기 (이미 메인 뉴스 추출 섹션 표시됨)
     hideAllSections();
     
-    // 폼 초기화
-    resetForm();
+    // URL 입력 필드 초기화
+    const urlInputs = document.querySelectorAll('input[name="urlInput[]"]');
+    urlInputs.forEach(input => input.value = '');
     
-    // 뉴스 관련 섹션 숨기기
-    hideNewsExtractorSection();
+    // 추가 URL 입력 필드 제거
+    const additionalRows = document.querySelectorAll('.url-input-row:not(:first-child)');
+    additionalRows.forEach(row => row.remove());
     
-    // 입력 필드 초기화
+    // 뉴스 추출 입력 필드 초기화
     if (elements.newsKeyword) elements.newsKeyword.value = '';
     if (elements.newsCount) elements.newsCount.value = '10';
+    
+    // 메인 뉴스 추출 섹션 확실히 표시
+    showNewsExtractorSection();
+    
+    // 저장된 사용자 설정 초기화
+    clearUserPreferences();
     
     showToast('모든 기능이 초기화되었습니다.', 'info');
 }
@@ -938,9 +1038,6 @@ function resetForm() {
     
     urlInputCount = 1;
     updateUrlInputButtons();
-    
-    // 모든 섹션 숨기기
-    hideAllSections();
     
     // 상태 초기화
     currentJobId = null;
