@@ -62,4 +62,4 @@ converted_articles/
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp env.local

@@ -1,0 +1,21 @@
+{
+  "extracted_at": "2025-07-11T16:50:19.781047",
+  "source": "Yahoo Finance",
+  "search_keywords": [
+    "stock",
+    "market"
+  ],
+  "max_news": 3,
+  "total_count": 1,
+  "news_items": [
+    {
+      "title": "Investors push past tariff angst to power stocks to fresh all-time highsUS stocks hit records, and Nvidia closed above a $4 trillion market cap for the first time. Investors looked past tariffs and toward earnings season.",
+      "url": "https://finance.yahoo.com/news/investors-push-past-tariff-angst-040526010.html",
+      "keywords": [
+        "investors",
+        "past",
+        "stocks"
+      ]
+    }
+  ]
+}

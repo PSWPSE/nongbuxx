@@ -49,9 +49,9 @@ fi
 # Create new Railway project or link existing
 print_color "🔗 Setting up Railway project..." $BLUE
 
-if [ ! -f ".railway" ]; then
+if [ ! -f "railway.json" ]; then
     print_color "Creating new Railway project..." $BLUE
-    railway create
+    railway init
 else
     print_color "Using existing Railway project..." $GREEN
 fi
@@ -59,18 +59,18 @@ fi
 # Set environment variables in Railway
 print_color "⚙️  Setting production environment variables..." $BLUE
 
-railway vars set FLASK_ENV=production
-railway vars set PYTHONUNBUFFERED=1
-railway vars set DEBUG=False
+railway variables --set "FLASK_ENV=production"
+railway variables --set "PYTHONUNBUFFERED=1"
+railway variables --set "DEBUG=False"
 
 if [ ! -z "$ANTHROPIC_API_KEY" ]; then
     print_color "Setting ANTHROPIC_API_KEY..." $BLUE
-    railway vars set ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
+    railway variables --set "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
 fi
 
 if [ ! -z "$OPENAI_API_KEY" ]; then
     print_color "Setting OPENAI_API_KEY..." $BLUE
-    railway vars set OPENAI_API_KEY="$OPENAI_API_KEY"
+    railway variables --set "OPENAI_API_KEY=$OPENAI_API_KEY"
 fi
 
 # Deploy to Railway

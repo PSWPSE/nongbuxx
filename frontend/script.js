@@ -1,236 +1,189 @@
-// Global variables
+// 최적화된 JavaScript - 성능 개선 및 핵심 기능 중심
+// 전역 변수
 let currentJobId = null;
 let currentData = null;
 let currentBatchJobId = null;
 let currentBatchData = null;
-
-// URL inputs management
+let extractedNews = [];
+let selectedNewsUrls = [];
+let generatedContentData = [];
+let currentTheme = 'auto';
 let urlInputCount = 1;
-const maxUrlInputs = 3;
+const maxUrlInputs = 10;
+const API_BASE_URL = window.ENV?.API_BASE_URL || 'http://localhost:8081';
 
-// API Configuration
-const API_BASE_URL = window.ENV?.API_BASE_URL || 'http://localhost:8080';
+// DOM 요소 캐싱
+const elements = {
+    urlForm: document.getElementById('urlForm'),
+    urlInputsContainer: document.getElementById('urlInputsContainer'),
+    themeToggle: document.getElementById('themeToggle'),
+    themeIcon: document.getElementById('themeIcon'),
+    themeText: document.getElementById('themeText'),
+    newsExtractorBtn: document.getElementById('newsExtractorBtn'),
+    newsExtractorSection: document.getElementById('newsExtractorSection'),
+    newsKeyword: document.getElementById('newsKeyword'),
+    newsCount: document.getElementById('newsCount'),
+    extractNewsBtn: document.getElementById('extractNewsBtn'),
+    cancelNewsExtractorBtn: document.getElementById('cancelNewsExtractorBtn'),
+    newsSelectionSection: document.getElementById('newsSelectionSection'),
+    newsExtractionInfo: document.getElementById('newsExtractionInfo'),
+    newsList: document.getElementById('newsList'),
+    selectAllNewsBtn: document.getElementById('selectAllNewsBtn'),
+    deselectAllNewsBtn: document.getElementById('deselectAllNewsBtn'),
+    generateSelectedBtn: document.getElementById('generateSelectedBtn'),
+    generatedContentListSection: document.getElementById('generatedContentListSection'),
+    generatedContentList: document.getElementById('generatedContentList'),
+    downloadAllGeneratedBtn: document.getElementById('downloadAllGeneratedBtn'),
+    copyAllGeneratedBtn: document.getElementById('copyAllGeneratedBtn'),
+    resetAllBtn: document.getElementById('resetAllBtn'),
+    apiSettingsBtn: document.getElementById('apiSettingsBtn'),
+    apiStatus: document.getElementById('apiStatus'),
+    apiSettingsSection: document.getElementById('apiSettingsSection'),
+    apiProviderSelect: document.getElementById('apiProviderSelect'),
+    apiKeyInput: document.getElementById('apiKeyInput'),
+    validateApiKeyBtn: document.getElementById('validateApiKeyBtn'),
+    saveApiKeyBtn: document.getElementById('saveApiKeyBtn'),
+    deleteApiKeyBtn: document.getElementById('deleteApiKeyBtn'),
+    cancelApiSettingsBtn: document.getElementById('cancelApiSettingsBtn'),
+    apiValidationResult: document.getElementById('apiValidationResult'),
+    progressSection: document.getElementById('progressSection'),
+    progressTitle: document.getElementById('progressTitle'),
+    progressFill: document.getElementById('progressFill'),
+    progressText: document.getElementById('progressText'),
+    resultSection: document.getElementById('resultSection'),
+    markdownPreview: document.getElementById('markdownPreview'),
+    downloadBtn: document.getElementById('downloadBtn'),
+    copyBtn: document.getElementById('copyBtn'),
+    resetBtn: document.getElementById('resetBtn'),
+    errorSection: document.getElementById('errorSection'),
+    errorMessage: document.getElementById('errorMessage'),
+    retryBtn: document.getElementById('retryBtn'),
+    toastContainer: document.getElementById('toastContainer')
+};
 
-// DOM elements
-const urlForm = document.getElementById('urlForm');
-const urlInputsContainer = document.getElementById('urlInputsContainer');
-const batchSection = document.getElementById('batchSection');
-const batchUrls = document.getElementById('batchUrls');
-const processBatchBtn = document.getElementById('processBatchBtn');
-const cancelBatchBtn = document.getElementById('cancelBatchBtn');
-
-// API settings elements
-const apiSettingsBtn = document.getElementById('apiSettingsBtn');
-const apiStatus = document.getElementById('apiStatus');
-const apiSettingsSection = document.getElementById('apiSettingsSection');
-const apiProviderSelect = document.getElementById('apiProviderSelect');
-const apiKeyInput = document.getElementById('apiKeyInput');
-const toggleApiKeyBtn = document.getElementById('toggleApiKeyBtn');
-const validateApiKeyBtn = document.getElementById('validateApiKeyBtn');
-const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
-const deleteApiKeyBtn = document.getElementById('deleteApiKeyBtn');
-const cancelApiSettingsBtn = document.getElementById('cancelApiSettingsBtn');
-const apiValidationResult = document.getElementById('apiValidationResult');
-const progressSection = document.getElementById('progressSection');
-const progressTitle = document.getElementById('progressTitle');
-const progressFill = document.getElementById('progressFill');
-const progressText = document.getElementById('progressText');
-const resultSection = document.getElementById('resultSection');
-// const resultTitle = document.getElementById('resultTitle'); // Removed
-// const resultTime = document.getElementById('resultTime'); // Removed
-// const resultApi = document.getElementById('resultApi'); // Removed
-const markdownPreview = document.getElementById('markdownPreview');
-// const markdownCode = document.getElementById('markdownCode'); // Removed
-const downloadBtn = document.getElementById('downloadBtn');
-const copyBtn = document.getElementById('copyBtn');
-const resetBtn = document.getElementById('resetBtn');
-const batchResultSection = document.getElementById('batchResultSection');
-const batchSummary = document.getElementById('batchSummary');
-const batchResults = document.getElementById('batchResults');
-const downloadAllBtn = document.getElementById('downloadAllBtn');
-const resetBatchBtn = document.getElementById('resetBatchBtn');
-const errorSection = document.getElementById('errorSection');
-const errorMessage = document.getElementById('errorMessage');
-const retryBtn = document.getElementById('retryBtn');
-const toastContainer = document.getElementById('toastContainer');
-
-// Initialize the app
+// 앱 초기화
 document.addEventListener('DOMContentLoaded', function() {
     initEventListeners();
     loadApiSettings();
-    
-    // Initialize URL input buttons
+    initTheme();
     updateUrlInputButtons();
+    initKeyboardShortcuts();
+    loadUserPreferences();
     
-    // Check if marked.js is loaded
+    // 마크다운 라이브러리 확인
     if (typeof marked === 'undefined') {
-        showToast('마크다운 라이브러리를 로드할 수 없습니다.', 'error');
+        console.warn('마크다운 라이브러리를 로드할 수 없습니다.');
     }
-    
-    // Mobile optimizations
-    initMobileOptimizations();
 });
 
-// Mobile optimizations
-function initMobileOptimizations() {
-    // Prevent zoom on input focus for iOS
-    if (window.navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-        const inputs = document.querySelectorAll('input, textarea, select');
-        inputs.forEach(input => {
-            input.addEventListener('focus', function() {
-                if (this.style.fontSize !== '16px') {
-                    this.style.fontSize = '16px';
-                }
-            });
-        });
-    }
-    
-    // Add touch event optimization
-    const touchableElements = document.querySelectorAll('.btn, .tab-btn, .add-url-btn, .remove-url-btn');
-    touchableElements.forEach(element => {
-        element.style.touchAction = 'manipulation';
-        element.style.userSelect = 'none';
-        element.style.webkitUserSelect = 'none';
-        element.style.msUserSelect = 'none';
-    });
-    
-    // Handle virtual keyboard on mobile
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', function() {
-            // Adjust UI when virtual keyboard appears/disappears
-            const body = document.body;
-            if (window.visualViewport.height < window.innerHeight) {
-                body.style.paddingBottom = `${window.innerHeight - window.visualViewport.height}px`;
-            } else {
-                body.style.paddingBottom = '0px';
-            }
-        });
-    }
-    
-    // Prevent overscroll bounce on iOS
-    document.addEventListener('touchmove', function(e) {
-        if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
-            e.preventDefault();
-        }
-    }, { passive: false });
-    
-    // 터치 피드백 최소화
-    touchableElements.forEach(element => {
-        element.addEventListener('touchstart', function(e) {
-            this.style.opacity = '0.8';
-        });
-        
-        element.addEventListener('touchend', function(e) {
-            this.style.opacity = '';
-        });
-        
-        element.addEventListener('touchcancel', function(e) {
-            this.style.opacity = '';
-        });
-    });
-}
-
-// Apply mobile optimizations to new elements
-function applyMobileOptimizationsToNewElements(container) {
-    const newTouchableElements = container.querySelectorAll('.btn, .tab-btn, .add-url-btn, .remove-url-btn');
-    newTouchableElements.forEach(element => {
-        element.style.touchAction = 'manipulation';
-        element.style.userSelect = 'none';
-        element.style.webkitUserSelect = 'none';
-        element.style.msUserSelect = 'none';
-        
-        // 터치 피드백 최소화
-        element.addEventListener('touchstart', function(e) {
-            this.style.opacity = '0.8';
-        });
-        
-        element.addEventListener('touchend', function(e) {
-            this.style.opacity = '';
-        });
-        
-        element.addEventListener('touchcancel', function(e) {
-            this.style.opacity = '';
-        });
-    });
-    
-    // Apply iOS font size fix to new inputs
-    if (window.navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-        const newInputs = container.querySelectorAll('input, textarea, select');
-        newInputs.forEach(input => {
-            input.addEventListener('focus', function() {
-                if (this.style.fontSize !== '16px') {
-                    this.style.fontSize = '16px';
-                }
-            });
-        });
-    }
-}
-
-// Event listeners
+// 이벤트 리스너 초기화
 function initEventListeners() {
-    // Form submission
-    urlForm.addEventListener('submit', handleFormSubmit);
+    // 폼 제출
+    if (elements.urlForm) {
+        elements.urlForm.addEventListener('submit', handleFormSubmit);
+    }
     
-    // API settings
-    apiSettingsBtn.addEventListener('click', showApiSettingsSection);
-    cancelApiSettingsBtn.addEventListener('click', hideApiSettingsSection);
-    toggleApiKeyBtn.addEventListener('click', toggleApiKeyVisibility);
-    validateApiKeyBtn.addEventListener('click', validateApiKey);
-    saveApiKeyBtn.addEventListener('click', saveApiKey);
-    deleteApiKeyBtn.addEventListener('click', deleteApiKey);
-    apiProviderSelect.addEventListener('change', onApiProviderChange);
-    apiKeyInput.addEventListener('input', onApiKeyInput);
+    // 테마 토글
+    if (elements.themeToggle) {
+        elements.themeToggle.addEventListener('click', toggleTheme);
+    }
     
-    // URL input click-to-select-all functionality
-    initUrlInputSelectAll();
+    // 뉴스 추출 관련 (메인 흐름)
+    if (elements.extractNewsBtn) {
+        elements.extractNewsBtn.addEventListener('click', handleNewsExtraction);
+    }
     
-    // Batch handling (기존 배치 UI용)
-    processBatchBtn.addEventListener('click', handleBatchProcess);
-    cancelBatchBtn.addEventListener('click', hideBatchSection);
+    // URL 직접 입력 관련 (서브 흐름)
+    const directUrlBtn = document.getElementById('directUrlBtn');
+    if (directUrlBtn) {
+        directUrlBtn.addEventListener('click', showUrlInputSection);
+    }
+    const backToNewsExtractorBtn = document.getElementById('backToNewsExtractorBtn');
+    if (backToNewsExtractorBtn) {
+        backToNewsExtractorBtn.addEventListener('click', hideUrlInputSection);
+    }
+    const resetUrlInputBtn = document.getElementById('resetUrlInputBtn');
+    if (resetUrlInputBtn) {
+        resetUrlInputBtn.addEventListener('click', resetUrlInputForm);
+    }
+    if (elements.selectAllNewsBtn) {
+        elements.selectAllNewsBtn.addEventListener('click', selectAllNews);
+    }
+    if (elements.deselectAllNewsBtn) {
+        elements.deselectAllNewsBtn.addEventListener('click', deselectAllNews);
+    }
+    if (elements.generateSelectedBtn) {
+        elements.generateSelectedBtn.addEventListener('click', handleGenerateSelectedNews);
+    }
     
-    // Result actions
-    downloadBtn.addEventListener('click', downloadFile);
-    copyBtn.addEventListener('click', copyToClipboard);
-    resetBtn.addEventListener('click', resetForm);
-    downloadAllBtn.addEventListener('click', downloadAllFiles);
-    resetBatchBtn.addEventListener('click', resetForm);
-    retryBtn.addEventListener('click', retryGeneration);
+    // 생성된 콘텐츠 관련
+    if (elements.downloadAllGeneratedBtn) {
+        elements.downloadAllGeneratedBtn.addEventListener('click', downloadAllGeneratedContent);
+    }
+    if (elements.copyAllGeneratedBtn) {
+        elements.copyAllGeneratedBtn.addEventListener('click', copyAllGeneratedContent);
+    }
+    if (elements.resetAllBtn) {
+        elements.resetAllBtn.addEventListener('click', resetAllFeatures);
+    }
+    
+    // 뉴스 정렬 관련
+    const newsSortSelect = document.getElementById('newsSortSelect');
+    if (newsSortSelect) {
+        newsSortSelect.addEventListener('change', handleNewsSortChange);
+    }
+    
+    // API 설정 관련
+    if (elements.apiSettingsBtn) {
+        elements.apiSettingsBtn.addEventListener('click', showApiSettingsSection);
+    }
+    if (elements.apiProviderSelect) {
+        elements.apiProviderSelect.addEventListener('change', onApiProviderChange);
+    }
+    if (elements.apiKeyInput) {
+        elements.apiKeyInput.addEventListener('input', onApiKeyInput);
+    }
+    if (elements.validateApiKeyBtn) {
+        elements.validateApiKeyBtn.addEventListener('click', validateApiKey);
+    }
+    if (elements.saveApiKeyBtn) {
+        elements.saveApiKeyBtn.addEventListener('click', saveApiKey);
+    }
+    if (elements.deleteApiKeyBtn) {
+        elements.deleteApiKeyBtn.addEventListener('click', deleteApiKey);
+    }
+    if (elements.cancelApiSettingsBtn) {
+        elements.cancelApiSettingsBtn.addEventListener('click', hideApiSettingsSection);
+    }
+    
+    // 기타 버튼들
+    if (elements.downloadBtn) {
+        elements.downloadBtn.addEventListener('click', downloadFile);
+    }
+    if (elements.copyBtn) {
+        elements.copyBtn.addEventListener('click', copyToClipboard);
+    }
+    if (elements.resetBtn) {
+        elements.resetBtn.addEventListener('click', resetForm);
+    }
+    if (elements.retryBtn) {
+        elements.retryBtn.addEventListener('click', retryGeneration);
+    }
 }
 
-// URL 입력창 전체선택 기능 초기화
-function initUrlInputSelectAll() {
-    // 이벤트 위임을 사용하여 동적으로 생성되는 URL 입력창에도 적용
-    urlInputsContainer.addEventListener('click', function(e) {
-        if (e.target.matches('input[type="url"]')) {
-            // 첫 클릭 시에만 전체선택
-            if (!e.target.hasAttribute('data-clicked')) {
-                e.target.select();
-                e.target.setAttribute('data-clicked', 'true');
-                
-                // 포커스가 벗어나면 data-clicked 속성 제거
-                e.target.addEventListener('blur', function() {
-                    this.removeAttribute('data-clicked');
-                }, { once: true });
-            }
-        }
-    });
-}
-
-// URL inputs management functions
+// URL 입력 관리
 function addUrlInput(currentIndex) {
     if (urlInputCount >= maxUrlInputs) {
-        showToast('최대 3개의 URL까지 입력할 수 있습니다.', 'warning');
+        showToast(`최대 ${maxUrlInputs}개의 URL까지 입력할 수 있습니다.`, 'warning');
         return;
     }
     
     const newIndex = urlInputCount;
-    urlInputCount++;
+    const urlInputRow = document.createElement('div');
+    urlInputRow.className = 'url-input-row';
+    urlInputRow.setAttribute('data-index', newIndex);
     
-    const newRow = document.createElement('div');
-    newRow.className = 'url-input-row';
-    newRow.setAttribute('data-index', newIndex);
-    
-    newRow.innerHTML = `
+    urlInputRow.innerHTML = `
         <div class="form-group">
             <div class="input-with-buttons">
                 <input 
@@ -239,12 +192,11 @@ function addUrlInput(currentIndex) {
                     name="urlInput[]"
                     placeholder="https://news.example.com/article"
                     required
+                    data-clicked="false"
                 >
-                ${urlInputCount < maxUrlInputs ? 
-                    `<button type="button" class="btn btn-icon add-url-btn" onclick="addUrlInput(${newIndex})">
-                        <i class="fas fa-plus"></i>
-                    </button>` : ''
-                }
+                <button type="button" class="btn btn-icon add-url-btn" onclick="addUrlInput(${newIndex})">
+                    <i class="fas fa-plus"></i>
+                </button>
                 <button type="button" class="btn btn-icon remove-url-btn" onclick="removeUrlInput(${newIndex})">
                     <i class="fas fa-minus"></i>
                 </button>
@@ -252,623 +204,758 @@ function addUrlInput(currentIndex) {
         </div>
     `;
     
-    urlInputsContainer.appendChild(newRow);
-    
-    // Remove add button from previous row
-    const prevRow = document.querySelector(`[data-index="${currentIndex}"]`);
-    if (prevRow) {
-        const prevAddBtn = prevRow.querySelector('.add-url-btn');
-        if (prevAddBtn) {
-            prevAddBtn.remove();
-        }
-    }
-    
-    // Focus on new input
-    document.getElementById(`urlInput-${newIndex}`).focus();
-    
-    // Update button states
+    elements.urlInputsContainer.appendChild(urlInputRow);
+    urlInputCount++;
     updateUrlInputButtons();
-    
-    // Apply mobile optimizations to new buttons
-    applyMobileOptimizationsToNewElements(newRow);
 }
 
 function removeUrlInput(index) {
-    if (urlInputCount <= 1) {
-        showToast('최소 1개의 URL 입력창이 필요합니다.', 'warning');
-        return;
-    }
-    
-    const row = document.querySelector(`[data-index="${index}"]`);
-    if (row) {
-        row.remove();
+    const urlInputRow = document.querySelector(`[data-index="${index}"]`);
+    if (urlInputRow) {
+        urlInputRow.remove();
         urlInputCount--;
-        
-        // Find the last row and add the add button if needed
-        const lastRow = Array.from(urlInputsContainer.children).pop();
-        if (lastRow && urlInputCount < maxUrlInputs) {
-            const buttonContainer = lastRow.querySelector('.input-with-buttons');
-            const removeBtn = buttonContainer.querySelector('.remove-url-btn');
-            
-            if (!buttonContainer.querySelector('.add-url-btn')) {
-                const addBtn = document.createElement('button');
-                addBtn.type = 'button';
-                addBtn.className = 'btn btn-icon add-url-btn';
-                addBtn.innerHTML = '<i class="fas fa-plus"></i>';
-                addBtn.onclick = () => addUrlInput(parseInt(lastRow.getAttribute('data-index')));
-                
-                buttonContainer.insertBefore(addBtn, removeBtn);
-                
-                // Apply mobile optimizations to new button
-                applyMobileOptimizationsToNewElements(buttonContainer);
-            }
-        }
-        
         updateUrlInputButtons();
     }
 }
 
 function updateUrlInputButtons() {
-    const rows = urlInputsContainer.querySelectorAll('.url-input-row');
+    const rows = document.querySelectorAll('.url-input-row');
     rows.forEach((row, index) => {
+        const addBtn = row.querySelector('.add-url-btn');
         const removeBtn = row.querySelector('.remove-url-btn');
+        
+        if (addBtn) {
+            addBtn.style.display = (index === rows.length - 1 && urlInputCount < maxUrlInputs) ? 'block' : 'none';
+        }
         if (removeBtn) {
-            removeBtn.style.display = rows.length > 1 ? 'inline-flex' : 'none';
+            removeBtn.style.display = rows.length > 1 ? 'block' : 'none';
         }
     });
 }
 
 function getAllUrls() {
-    const urls = [];
-    const inputs = urlInputsContainer.querySelectorAll('input[type="url"]');
-    inputs.forEach(input => {
-        const url = input.value.trim();
-        if (url) {
-            urls.push(url);
-        }
-    });
-    return urls;
+    return Array.from(document.querySelectorAll('input[name="urlInput[]"]'))
+        .map(input => input.value.trim())
+        .filter(url => url);
 }
 
-// Form submission handler
+// 폼 제출 처리
 async function handleFormSubmit(e) {
     e.preventDefault();
     
     const urls = getAllUrls();
-    const apiSettings = getApiSettings();
-    
     if (urls.length === 0) {
-        showToast('URL을 입력해주세요.', 'error');
+        showToast('최소 하나의 URL을 입력해주세요.', 'error');
         return;
     }
     
-    // Validate URLs
+    // 유효한 URL인지 확인
     const invalidUrls = urls.filter(url => !isValidUrl(url));
     if (invalidUrls.length > 0) {
-        showToast(`잘못된 URL이 있습니다: ${invalidUrls.join(', ')}`, 'error');
+        showToast('유효하지 않은 URL이 있습니다.', 'error');
         return;
     }
     
-    if (!apiSettings) {
-        showToast('API 키를 설정해주세요.', 'error');
-        showApiSettingsSection();
-        return;
-    }
-    
-    try {
-        hideAllSections();
-        showProgressSection();
-        
-        if (urls.length === 1) {
-            // Single URL processing
-            const requestData = {
-                url: urls[0],
-                api_provider: apiSettings.provider,
-                api_key: apiSettings.key,
-                save_intermediate: false
-            };
-            
-            const response = await fetch(`${API_BASE_URL}/api/generate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestData)
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                currentJobId = data.job_id;
-                currentData = data.data;
-                showResultSection();
-                showToast('콘텐츠가 성공적으로 생성되었습니다!', 'success');
-            } else {
-                showErrorSection(data.error);
-                showToast('콘텐츠 생성에 실패했습니다.', 'error');
-            }
-        } else {
-            // Multiple URLs processing (batch)
-            progressTitle.textContent = `배치 처리 중... (${urls.length}개 URL)`;
-            
-            const requestData = {
-                urls: urls,
-                api_provider: apiSettings.provider,
-                api_key: apiSettings.key,
-                save_intermediate: false
-            };
-            
-            const response = await fetch(`${API_BASE_URL}/api/batch-generate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestData)
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                currentBatchJobId = data.job_id;
-                currentBatchData = data.data;
-                showBatchResultSection();
-                showToast('배치 처리가 성공적으로 완료되었습니다!', 'success');
-            } else {
-                showErrorSection(data.error);
-                showToast('배치 처리에 실패했습니다.', 'error');
-            }
-        }
-        
-    } catch (error) {
-        console.error('Error:', error);
-        showErrorSection('서버와의 통신에 실패했습니다.');
-        showToast('서버 연결에 실패했습니다.', 'error');
-    }
-}
-
-// Batch processing (기존 배치 UI용)
-function hideBatchSection() {
-    batchSection.style.display = 'none';
-    batchUrls.value = '';
-}
-
-async function handleBatchProcess() {
-    const urls = batchUrls.value.trim().split('\n').filter(url => url.trim());
+    // API 키 확인
     const apiSettings = getApiSettings();
-    
-    if (urls.length === 0) {
-        showToast('URL을 입력해주세요.', 'error');
-        return;
-    }
-    
-    if (!apiSettings) {
-        showToast('API 키를 설정해주세요.', 'error');
-        showApiSettingsSection();
-        return;
-    }
-    
-    // Validate URLs
-    const invalidUrls = urls.filter(url => !isValidUrl(url.trim()));
-    if (invalidUrls.length > 0) {
-        showToast(`잘못된 URL이 있습니다: ${invalidUrls.join(', ')}`, 'error');
+    if (!apiSettings.provider || !apiSettings.key) {
+        showToast('API 키를 먼저 설정해주세요.', 'error');
         return;
     }
     
     try {
         hideAllSections();
         showProgressSection();
-        progressTitle.textContent = `배치 처리 중... (${urls.length}개 URL)`;
         
-        const requestData = {
-            urls: urls.map(url => url.trim()),
-            api_provider: apiSettings.provider,
-            api_key: apiSettings.key,
-            save_intermediate: false
-        };
-        
-        const response = await fetch(`${API_BASE_URL}/api/batch`, {
+        const response = await fetch(`${API_BASE_URL}/api/generate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(requestData)
+            body: JSON.stringify({ 
+                url: urls[0], // 단일 URL 전송
+                api_provider: apiSettings.provider,
+                api_key: apiSettings.key
+            })
         });
         
-        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
-        if (data.success) {
-            currentBatchJobId = data.job_id;
-            currentBatchData = data.data;
-            showBatchResultSection();
-            showToast('배치 처리가 완료되었습니다!', 'success');
+        const result = await response.json();
+        
+        if (result.job_id) {
+            currentJobId = result.job_id;
+            pollJobStatus(result.job_id);
         } else {
-            showErrorSection(data.error);
-            showToast('배치 처리에 실패했습니다.', 'error');
+            throw new Error('작업 ID를 받지 못했습니다.');
         }
         
     } catch (error) {
-        console.error('Batch Error:', error);
-        showErrorSection('배치 처리 중 오류가 발생했습니다.');
-        showToast('배치 처리에 실패했습니다.', 'error');
+        console.error('Error:', error);
+        showErrorSection(error.message);
     }
 }
 
-// Section visibility management
+// 작업 상태 폴링
+async function pollJobStatus(jobId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/status/${jobId}`);
+        const result = await response.json();
+        
+        if (result.status === 'completed') {
+            currentData = result.data;
+            showResultSection();
+            showToast('콘텐츠 생성이 완료되었습니다!', 'success');
+        } else if (result.status === 'failed') {
+            showErrorSection(result.error || '작업이 실패했습니다.');
+        } else if (result.status === 'in_progress') {
+            updateProgress(result.progress || 0);
+            setTimeout(() => pollJobStatus(jobId), 1000);
+        }
+    } catch (error) {
+        console.error('Error polling job status:', error);
+        showErrorSection('작업 상태를 확인하는 중 오류가 발생했습니다.');
+    }
+}
+
+// 섹션 표시/숨기기
 function hideAllSections() {
     const sections = [
-        'progressSection', 'resultSection', 'batchResultSection', 'errorSection', 'apiSettingsSection'
+        elements.progressSection,
+        elements.resultSection,
+        elements.errorSection,
+        elements.newsSelectionSection,
+        elements.generatedContentListSection
     ];
-    sections.forEach(sectionId => {
-        document.getElementById(sectionId).style.display = 'none';
+    
+    sections.forEach(section => {
+        if (section) section.style.display = 'none';
     });
+    
+    // URL 입력 섹션 숨기기
+    const urlInputSection = document.getElementById('urlInputSection');
+    if (urlInputSection) {
+        urlInputSection.style.display = 'none';
+    }
+    
+    // 메인 뉴스 추출 섹션은 항상 표시
+    const newsExtractorSection = document.getElementById('newsExtractorSection');
+    if (newsExtractorSection) {
+        newsExtractorSection.style.display = 'block';
+    }
 }
 
 function showProgressSection() {
-    progressSection.style.display = 'block';
-    progressTitle.textContent = '처리 중...';
-    updateProgress(0);
-    
-    // Simulate progress
-    let progress = 0;
-    const interval = setInterval(() => {
-        progress += Math.random() * 20;
-        if (progress >= 90) {
-            progress = 90;
-            clearInterval(interval);
-        }
-        updateProgress(progress);
-    }, 500);
+    hideAllSections();
+    if (elements.progressSection) {
+        elements.progressSection.style.display = 'block';
+    }
 }
 
 function updateProgress(percentage) {
-    progressFill.style.width = percentage + '%';
-    progressText.textContent = Math.round(percentage) + '%';
+    if (elements.progressFill) {
+        elements.progressFill.style.width = `${percentage}%`;
+    }
+    if (elements.progressText) {
+        elements.progressText.textContent = `${Math.round(percentage)}%`;
+    }
 }
 
 function showResultSection() {
     hideAllSections();
-    resultSection.style.display = 'block';
-    
-    // Render markdown preview directly
-    if (typeof marked !== 'undefined') {
-        markdownPreview.innerHTML = marked.parse(currentData.content);
-    } else {
-        markdownPreview.innerHTML = '<p>마크다운 미리보기를 로드할 수 없습니다.</p>';
+    if (elements.resultSection) {
+        elements.resultSection.style.display = 'block';
     }
-}
-
-function showBatchResultSection() {
-    hideAllSections();
-    batchResultSection.style.display = 'block';
     
-    // Populate batch summary
-    const summary = currentBatchData.summary;
-    batchSummary.innerHTML = `
-        <h3>배치 처리 결과</h3>
-        <p><strong>총 처리:</strong> ${summary.total}개</p>
-        <p><strong>성공:</strong> ${summary.successful}개</p>
-        <p><strong>실패:</strong> ${summary.failed}개</p>
-    `;
-    
-    // Populate batch results
-    batchResults.innerHTML = '';
-    currentBatchData.results.forEach((result, index) => {
-        const item = document.createElement('div');
-        item.className = `batch-item ${result.success ? 'success' : 'error'}`;
-        
-        if (result.success) {
-            item.innerHTML = `
-                <h4>${result.title}</h4>
-                <p><strong>URL:</strong> ${result.url}</p>
-                <p><strong>처리 시간:</strong> ${new Date(result.timestamp).toLocaleString('ko-KR')}</p>
-                <div class="batch-actions">
-                    <button class="btn btn-success" onclick="downloadBatchItem(${index})">
-                        <i class="fas fa-download"></i> 다운로드
-                    </button>
-                    <button class="btn btn-info" onclick="previewBatchItem(${index})">
-                        <i class="fas fa-eye"></i> 미리보기
-                    </button>
-                    <button class="btn btn-copy" onclick="copyBatchItem(${index})">
-                        <i class="fas fa-copy"></i> 복사
-                    </button>
-                </div>
-            `;
-        } else {
-            item.innerHTML = `
-                <h4>처리 실패</h4>
-                <p><strong>URL:</strong> ${result.url}</p>
-                <p><strong>오류:</strong> ${result.error}</p>
-            `;
-        }
-        
-        batchResults.appendChild(item);
-    });
+    if (currentData && elements.markdownPreview) {
+        elements.markdownPreview.innerHTML = typeof marked !== 'undefined' ? 
+            marked.parse(currentData.content) : 
+            `<pre>${currentData.content}</pre>`;
+    }
 }
 
 function showErrorSection(message) {
     hideAllSections();
-    errorSection.style.display = 'block';
-    
-    // 에러 타입에 따라 다른 스타일과 아이콘 적용
-    let errorIcon = '⚠️';
-    let errorTitle = '오류 발생';
-    let errorClass = 'error-default';
-    
-    if (message.includes('차단')) {
-        errorIcon = '🚫';
-        errorTitle = '접근 차단';
-        errorClass = 'error-blocked';
-    } else if (message.includes('찾을 수 없습니다')) {
-        errorIcon = '🔍';
-        errorTitle = '페이지 없음';
-        errorClass = 'error-notfound';
-    } else if (message.includes('시간 초과')) {
-        errorIcon = '⏱️';
-        errorTitle = '시간 초과';
-        errorClass = 'error-timeout';
-    } else if (message.includes('네트워크')) {
-        errorIcon = '🌐';
-        errorTitle = '네트워크 오류';
-        errorClass = 'error-network';
-    } else if (message.includes('서버')) {
-        errorIcon = '🔧';
-        errorTitle = '서버 오류';
-        errorClass = 'error-server';
+    if (elements.errorSection) {
+        elements.errorSection.style.display = 'block';
     }
-    
-    // 에러 메시지를 더 구조적으로 표시
-    errorMessage.innerHTML = `
-        <div class="error-content ${errorClass}">
-            <div class="error-header">
-                <span class="error-icon">${errorIcon}</span>
-                <span class="error-title">${errorTitle}</span>
-            </div>
-            <div class="error-message">${message}</div>
-        </div>
-    `;
+    if (elements.errorMessage) {
+        elements.errorMessage.textContent = message;
+    }
 }
 
-// Tab switching - removed (no longer needed)
+// 뉴스 추출 관련 함수
+function showNewsExtractorSection() {
+    hideAllSections();
+    if (elements.newsExtractorSection) {
+        elements.newsExtractorSection.style.display = 'block';
+    }
+}
 
-// File operations
-async function downloadFile() {
-    if (!currentJobId) {
-        showToast('다운로드할 파일이 없습니다.', 'error');
+function hideNewsExtractorSection() {
+    if (elements.newsExtractorSection) {
+        elements.newsExtractorSection.style.display = 'none';
+    }
+}
+
+// URL 직접 입력 섹션 관리
+function showUrlInputSection() {
+    hideAllSections();
+    const urlInputSection = document.getElementById('urlInputSection');
+    if (urlInputSection) {
+        urlInputSection.style.display = 'block';
+    }
+}
+
+function hideUrlInputSection() {
+    const urlInputSection = document.getElementById('urlInputSection');
+    if (urlInputSection) {
+        urlInputSection.style.display = 'none';
+    }
+    // 메인 뉴스 추출 섹션은 항상 표시
+    const newsExtractorSection = document.getElementById('newsExtractorSection');
+    if (newsExtractorSection) {
+        newsExtractorSection.style.display = 'block';
+    }
+}
+
+function resetUrlInputForm() {
+    // URL 입력 폼 초기화
+    const urlInputs = document.querySelectorAll('input[name="urlInput[]"]');
+    urlInputs.forEach(input => {
+        input.value = '';
+    });
+    
+    // 추가된 URL 입력 필드들 제거 (첫 번째 제외)
+    const urlInputRows = document.querySelectorAll('.url-input-row');
+    urlInputRows.forEach((row, index) => {
+        if (index > 0) {
+            row.remove();
+        }
+    });
+    
+    urlInputCount = 1;
+    updateUrlInputButtons();
+    
+    showToast('URL 입력이 초기화되었습니다.', 'info');
+}
+
+async function handleNewsExtraction() {
+    const keyword = elements.newsKeyword ? elements.newsKeyword.value.trim() : '';
+    const count = elements.newsCount ? parseInt(elements.newsCount.value) || 10 : 10;
+    
+    if (count < 1 || count > 50) {
+        showToast('추출할 뉴스 개수는 1-50개 사이여야 합니다.', 'error');
         return;
     }
     
     try {
-        const response = await fetch(`${API_BASE_URL}/api/download/${currentJobId}`);
+        if (elements.extractNewsBtn) {
+            elements.extractNewsBtn.disabled = true;
+            elements.extractNewsBtn.innerHTML = '<div class="spinner"></div> 추출 중...';
+        }
         
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${currentData.title}_${currentData.timestamp}.md`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            showToast('파일이 다운로드되었습니다.', 'success');
+        const response = await fetch(`${API_BASE_URL}/api/extract-news-links`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ keyword, count })
+        });
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                showToast('해당 키워드로 뉴스를 찾을 수 없습니다.', 'warning');
+                return;
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        extractedNews = result.data ? result.data.news_items || [] : [];
+        
+        if (extractedNews.length === 0) {
+            showToast('추출된 뉴스가 없습니다.', 'warning');
+            return;
+        }
+        
+        showNewsSelectionSection();
+        showToast(`${extractedNews.length}개의 뉴스를 추출했습니다.`, 'success');
+        
+    } catch (error) {
+        console.error('뉴스 추출 오류:', error);
+        showToast('뉴스 추출 중 오류가 발생했습니다.', 'error');
+    } finally {
+        if (elements.extractNewsBtn) {
+            elements.extractNewsBtn.disabled = false;
+            elements.extractNewsBtn.innerHTML = '<i class="fas fa-search"></i> 뉴스 추출';
+        }
+    }
+}
+
+function showNewsSelectionSection() {
+    hideAllSections();
+    if (elements.newsSelectionSection) {
+        elements.newsSelectionSection.style.display = 'block';
+    }
+    
+    // 뉴스 추출 정보 표시
+    if (elements.newsExtractionInfo && extractedNews.length > 0) {
+        elements.newsExtractionInfo.innerHTML = `
+            <h3>뉴스 추출 완료</h3>
+            <p>총 ${extractedNews.length}개의 뉴스를 추출했습니다. 콘텐츠로 변환할 뉴스를 선택해주세요.</p>
+        `;
+    }
+    
+    displayNewsList();
+    updateSelectedCount();
+    saveUserPreferences();
+}
+
+function displayNewsList() {
+    if (!elements.newsList) return;
+    
+    // 현재 정렬 옵션 가져오기
+    const sortOption = document.getElementById('newsSortSelect')?.value || 'newest';
+    
+    // 뉴스 정렬
+    const sortedNews = getSortedNews(extractedNews, sortOption);
+    
+    elements.newsList.innerHTML = sortedNews.map((article, index) => `
+        <div class="news-item" data-index="${index}" data-url="${article.url}">
+            <div class="news-item-header">
+                <div class="news-checkbox" data-index="${index}"></div>
+                <div class="news-item-content">
+                    <h4 class="news-item-title">${article.title}</h4>
+                    <div class="news-item-url">${article.url}</div>
+                    <div class="news-item-keywords">
+                        ${article.keywords ? article.keywords.map(keyword => 
+                            `<span class="keyword-tag">${keyword}</span>`
+                        ).join('') : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    // 선택 상태 복원
+    restoreNewsSelection();
+    
+    // 클릭 이벤트 추가
+    elements.newsList.querySelectorAll('.news-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const url = this.dataset.url;
+            toggleNewsSelectionByUrl(url);
+        });
+    });
+}
+
+function getSortedNews(newsArray, sortOption) {
+    const sortedArray = [...newsArray];
+    
+    switch (sortOption) {
+        case 'newest':
+            // 최신순 (날짜가 있다면 날짜순, 없다면 순서 그대로)
+            return sortedArray.sort((a, b) => {
+                if (a.published_date && b.published_date) {
+                    return new Date(b.published_date) - new Date(a.published_date);
+                }
+                return 0; // 날짜가 없으면 원본 순서 유지
+            });
+        case 'oldest':
+            // 오래된순
+            return sortedArray.sort((a, b) => {
+                if (a.published_date && b.published_date) {
+                    return new Date(a.published_date) - new Date(b.published_date);
+                }
+                return 0;
+            });
+        case 'title':
+            // 제목순
+            return sortedArray.sort((a, b) => a.title.localeCompare(b.title));
+        default:
+            return sortedArray;
+    }
+}
+
+function handleNewsSortChange() {
+    displayNewsList();
+}
+
+function restoreNewsSelection() {
+    // 기존 선택 상태 복원
+    elements.newsList.querySelectorAll('.news-item').forEach(item => {
+        const url = item.dataset.url;
+        if (selectedNewsUrls.includes(url)) {
+            item.classList.add('selected');
+            item.querySelector('.news-checkbox').classList.add('checked');
+        }
+    });
+}
+
+function toggleNewsSelectionByUrl(url) {
+    const newsItem = elements.newsList.querySelector(`[data-url="${url}"]`);
+    const checkbox = newsItem.querySelector('.news-checkbox');
+    
+    if (selectedNewsUrls.includes(url)) {
+        // 선택 해제
+        selectedNewsUrls = selectedNewsUrls.filter(selectedUrl => selectedUrl !== url);
+        newsItem.classList.remove('selected');
+        checkbox.classList.remove('checked');
+    } else {
+        // 선택
+        selectedNewsUrls.push(url);
+        newsItem.classList.add('selected');
+        checkbox.classList.add('checked');
+    }
+    
+    updateSelectedCount();
+}
+
+function toggleNewsSelection(index) {
+    const newsItem = elements.newsList.querySelector(`[data-index="${index}"]`);
+    const checkbox = newsItem.querySelector('.news-checkbox');
+    const article = extractedNews[index];
+    
+    if (selectedNewsUrls.includes(article.url)) {
+        // 선택 해제
+        selectedNewsUrls = selectedNewsUrls.filter(url => url !== article.url);
+        newsItem.classList.remove('selected');
+        checkbox.classList.remove('checked');
+    } else {
+        // 선택
+        selectedNewsUrls.push(article.url);
+        newsItem.classList.add('selected');
+        checkbox.classList.add('checked');
+    }
+    
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    updateGenerateButtonState();
+}
+
+function updateGenerateButtonState() {
+    if (elements.generateSelectedBtn) {
+        elements.generateSelectedBtn.disabled = selectedNewsUrls.length === 0;
+        elements.generateSelectedBtn.innerHTML = selectedNewsUrls.length > 0 ? 
+            `<i class="fas fa-magic"></i> 선택된 뉴스 일괄 생성 (${selectedNewsUrls.length}개)` : 
+            '<i class="fas fa-magic"></i> 선택된 뉴스 일괄 생성';
+    }
+}
+
+function selectAllNews() {
+    selectedNewsUrls = extractedNews.map(article => article.url);
+    elements.newsList.querySelectorAll('.news-item').forEach(item => {
+        item.classList.add('selected');
+        item.querySelector('.news-checkbox').classList.add('checked');
+    });
+    updateSelectedCount();
+    saveUserPreferences();
+    showToast('모든 뉴스가 선택되었습니다.', 'info');
+}
+
+function deselectAllNews() {
+    selectedNewsUrls = [];
+    elements.newsList.querySelectorAll('.news-item').forEach(item => {
+        item.classList.remove('selected');
+        item.querySelector('.news-checkbox').classList.remove('checked');
+    });
+    updateSelectedCount();
+    saveUserPreferences();
+    showToast('모든 뉴스 선택이 해제되었습니다.', 'info');
+}
+
+async function handleGenerateSelectedNews() {
+    if (selectedNewsUrls.length === 0) {
+        showToast('선택된 뉴스가 없습니다.', 'warning');
+        return;
+    }
+    
+    // API 키 확인
+    const apiSettings = getApiSettings();
+    if (!apiSettings.provider || !apiSettings.key) {
+        showToast('API 키를 먼저 설정해주세요.', 'error');
+        return;
+    }
+    
+    try {
+        hideAllSections();
+        showProgressSection();
+        
+        const response = await fetch(`${API_BASE_URL}/api/batch-generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                urls: selectedNewsUrls,
+                api_provider: apiSettings.provider,
+                api_key: apiSettings.key
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.results) {
+            // 배치 생성이 즉시 완료되므로 폴링 없이 바로 결과 처리
+            currentBatchData = result.data;
+            generatedContentData = result.data.results;
+            showGeneratedContentListSection();
+            
+            const successCount = result.data.summary ? result.data.summary.successful : 0;
+            const totalCount = result.data.summary ? result.data.summary.total : result.data.results.length;
+            
+            showToast(`일괄 콘텐츠 생성이 완료되었습니다! (성공: ${successCount}/${totalCount})`, 'success');
         } else {
-            showToast('파일 다운로드에 실패했습니다.', 'error');
+            throw new Error(result.error || '일괄 생성에 실패했습니다.');
+        }
+        
+    } catch (error) {
+        console.error('일괄 생성 오류:', error);
+        showErrorSection(error.message);
+    }
+}
+
+async function pollBatchJobStatus(jobId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/status/${jobId}`);
+        const result = await response.json();
+        
+        if (result.status === 'completed') {
+            // 상태 API에서 data가 없는 경우를 대비한 안전한 처리
+            if (result.data && result.data.results) {
+                currentBatchData = result.data;
+                generatedContentData = result.data.results;
+                showGeneratedContentListSection();
+                showToast('일괄 콘텐츠 생성이 완료되었습니다!', 'success');
+            } else {
+                // data가 없는 경우 에러 처리
+                showErrorSection('작업은 완료되었지만 결과 데이터를 찾을 수 없습니다.');
+            }
+        } else if (result.status === 'failed') {
+            showErrorSection(result.error || '일괄 작업이 실패했습니다.');
+        } else if (result.status === 'in_progress') {
+            updateProgress(result.progress || 0);
+            setTimeout(() => pollBatchJobStatus(jobId), 1000);
+        } else {
+            showErrorSection('알 수 없는 작업 상태입니다.');
         }
     } catch (error) {
-        console.error('Download error:', error);
-        showToast('파일 다운로드에 실패했습니다.', 'error');
+        console.error('일괄 작업 상태 확인 오류:', error);
+        showErrorSection('일괄 작업 상태를 확인하는 중 오류가 발생했습니다.');
     }
 }
 
-async function copyToClipboard() {
-    if (!currentData) {
-        showToast('복사할 내용이 없습니다.', 'error');
-        return;
+function showGeneratedContentListSection() {
+    hideAllSections();
+    if (elements.generatedContentListSection) {
+        elements.generatedContentListSection.style.display = 'block';
     }
+    displayGeneratedContentList();
+}
+
+function displayGeneratedContentList() {
+    if (!elements.generatedContentList) return;
     
-    try {
-        await navigator.clipboard.writeText(currentData.content);
-        showToast('클립보드에 복사되었습니다.', 'success');
-    } catch (error) {
-        console.error('Copy error:', error);
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = currentData.content;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showToast('클립보드에 복사되었습니다.', 'success');
+    elements.generatedContentList.innerHTML = generatedContentData.map((item, index) => `
+        <div class="generated-content-item">
+            <div class="generated-content-header">
+                <div class="generated-content-title">${item.title || `콘텐츠 ${index + 1}`}</div>
+                <div class="generated-content-actions">
+                    <button class="btn btn-mini btn-preview" onclick="toggleContentPreview(${index})">
+                        <i class="fas fa-eye"></i> 미리보기
+                    </button>
+                    <button class="btn btn-mini btn-copy" onclick="copyGeneratedContent(${index})">
+                        <i class="fas fa-copy"></i> 복사
+                    </button>
+                    <button class="btn btn-mini btn-download" onclick="downloadGeneratedContent(${index})">
+                        <i class="fas fa-download"></i> 다운로드
+                    </button>
+                </div>
+            </div>
+            <div class="generated-content-preview" id="preview-${index}">
+                ${typeof marked !== 'undefined' ? marked.parse(item.content) : `<pre>${item.content}</pre>`}
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleContentPreview(index) {
+    const preview = document.getElementById(`preview-${index}`);
+    if (preview) {
+        preview.classList.toggle('show');
     }
 }
 
-// Batch file operations
-async function downloadBatchItem(index) {
-    const item = currentBatchData.results[index];
-    if (!item.success) return;
-    
-    const blob = new Blob([item.content], { type: 'text/markdown' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${item.title}_${item.timestamp}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    showToast('파일이 다운로드되었습니다.', 'success');
-}
-
-async function copyBatchItem(index) {
-    const item = currentBatchData.results[index];
-    if (!item.success) return;
+async function copyGeneratedContent(index) {
+    const item = generatedContentData[index];
+    if (!item) return;
     
     try {
         await navigator.clipboard.writeText(item.content);
         showToast('클립보드에 복사되었습니다.', 'success');
     } catch (error) {
-        console.error('Copy error:', error);
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = item.content;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showToast('클립보드에 복사되었습니다.', 'success');
+        console.error('복사 오류:', error);
+        showToast('복사 중 오류가 발생했습니다.', 'error');
     }
 }
 
-function previewBatchItem(index) {
-    const item = currentBatchData.results[index];
-    if (!item.success) return;
+function downloadGeneratedContent(index) {
+    const item = generatedContentData[index];
+    if (!item) return;
     
-    // Create a modal or new window for preview
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-    `;
+    const blob = new Blob([item.content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `content-${index + 1}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     
-    const content = document.createElement('div');
-    content.style.cssText = `
-        background: white;
-        border-radius: 10px;
-        padding: 30px;
-        max-width: 80%;
-        max-height: 80%;
-        overflow-y: auto;
-        position: relative;
-    `;
-    
-    const closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '&times;';
-    closeBtn.style.cssText = `
-        position: absolute;
-        top: 10px;
-        right: 15px;
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #666;
-    `;
-    
-    const title = document.createElement('h2');
-    title.textContent = item.title;
-    title.style.marginBottom = '20px';
-    
-    const preview = document.createElement('div');
-    if (typeof marked !== 'undefined') {
-        preview.innerHTML = marked.parse(item.content);
-    } else {
-        preview.innerHTML = `<pre>${item.content}</pre>`;
-    }
-    
-    content.appendChild(closeBtn);
-    content.appendChild(title);
-    content.appendChild(preview);
-    modal.appendChild(content);
-    document.body.appendChild(modal);
-    
-    // Close modal events
-    closeBtn.addEventListener('click', () => document.body.removeChild(modal));
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) document.body.removeChild(modal);
-    });
+    showToast('다운로드가 시작되었습니다.', 'success');
 }
 
-async function downloadAllFiles() {
-    if (!currentBatchData) {
-        showToast('다운로드할 파일이 없습니다.', 'error');
+async function downloadAllGeneratedContent() {
+    if (generatedContentData.length === 0) {
+        showToast('다운로드할 콘텐츠가 없습니다.', 'warning');
         return;
     }
     
-    const successfulResults = currentBatchData.results.filter(r => r.success);
-    
-    if (successfulResults.length === 0) {
-        showToast('다운로드할 파일이 없습니다.', 'error');
-        return;
-    }
-    
-    // Download each file
-    for (const result of successfulResults) {
-        const blob = new Blob([result.content], { type: 'text/markdown' });
-        const url = window.URL.createObjectURL(blob);
+    try {
+        const allContent = generatedContentData.map((item, index) => 
+            `# 콘텐츠 ${index + 1}\n\n${item.content}\n\n---\n\n`
+        ).join('');
+        
+        const blob = new Blob([allContent], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${result.title}_${result.timestamp}.md`;
+        a.download = `all-content-${Date.now()}.md`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        URL.revokeObjectURL(url);
         
-        // Small delay between downloads
-        await new Promise(resolve => setTimeout(resolve, 100));
+        showToast('전체 콘텐츠 다운로드가 시작되었습니다.', 'success');
+    } catch (error) {
+        console.error('전체 다운로드 오류:', error);
+        showToast('전체 다운로드 중 오류가 발생했습니다.', 'error');
     }
-    
-    showToast(`${successfulResults.length}개 파일이 다운로드되었습니다.`, 'success');
 }
 
-// Reset and retry
-function resetForm() {
-    // Reset URL input container to initial state
-    urlInputsContainer.innerHTML = `
-        <div class="url-input-row" data-index="0">
-            <div class="form-group">
-                <div class="input-with-buttons">
-                    <input 
-                        type="url" 
-                        id="urlInput-0" 
-                        name="urlInput[]"
-                        placeholder="https://news.example.com/article"
-                        required
-                    >
-                    <button type="button" class="btn btn-icon add-url-btn" onclick="addUrlInput(0)">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
+async function copyAllGeneratedContent() {
+    if (generatedContentData.length === 0) {
+        showToast('복사할 콘텐츠가 없습니다.', 'warning');
+        return;
+    }
     
-    // Reset counters
-    urlInputCount = 1;
-    
-    // Hide batch section
-    hideBatchSection();
-    
-    // Reset global variables
+    try {
+        const allContent = generatedContentData.map((item, index) => 
+            `# 콘텐츠 ${index + 1}\n\n${item.content}\n\n---\n\n`
+        ).join('');
+        
+        await navigator.clipboard.writeText(allContent);
+        showToast('전체 콘텐츠가 클립보드에 복사되었습니다.', 'success');
+    } catch (error) {
+        console.error('전체 복사 오류:', error);
+        showToast('전체 복사 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+function resetAllFeatures() {
+    // 모든 상태 초기화
     currentJobId = null;
     currentData = null;
     currentBatchJobId = null;
     currentBatchData = null;
+    extractedNews = [];
+    selectedNewsUrls = [];
+    generatedContentData = [];
     
-    // Hide all sections
+    // 모든 섹션 숨기기
     hideAllSections();
     
-    // Focus on URL input
-    document.getElementById('urlInput-0').focus();
+    // 폼 초기화
+    resetForm();
     
-    // Update button states
+    // 뉴스 관련 섹션 숨기기
+    hideNewsExtractorSection();
+    
+    // 입력 필드 초기화
+    if (elements.newsKeyword) elements.newsKeyword.value = '';
+    if (elements.newsCount) elements.newsCount.value = '10';
+    
+    showToast('모든 기능이 초기화되었습니다.', 'info');
+}
+
+// 파일 다운로드 및 복사 함수
+async function downloadFile() {
+    if (!currentData) return;
+    
+    const blob = new Blob([currentData.content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `content-${Date.now()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('다운로드가 시작되었습니다.', 'success');
+}
+
+async function copyToClipboard() {
+    if (!currentData) return;
+    
+    try {
+        await navigator.clipboard.writeText(currentData.content);
+        showToast('클립보드에 복사되었습니다.', 'success');
+    } catch (error) {
+        console.error('복사 오류:', error);
+        showToast('복사 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+function resetForm() {
+    // URL 입력 필드 초기화
+    const urlInputs = document.querySelectorAll('input[name="urlInput[]"]');
+    urlInputs.forEach(input => input.value = '');
+    
+    // 추가 URL 입력 필드 제거
+    const additionalRows = document.querySelectorAll('.url-input-row:not(:first-child)');
+    additionalRows.forEach(row => row.remove());
+    
+    urlInputCount = 1;
     updateUrlInputButtons();
+    
+    // 모든 섹션 숨기기
+    hideAllSections();
+    
+    // 상태 초기화
+    currentJobId = null;
+    currentData = null;
+    
+    showToast('폼이 초기화되었습니다.', 'info');
 }
 
 function retryGeneration() {
-    hideAllSections();
-    handleFormSubmit({ preventDefault: () => {} });
+    if (elements.urlForm) {
+        elements.urlForm.dispatchEvent(new Event('submit'));
+    }
 }
 
-// Utility functions
+// 유틸리티 함수
 function isValidUrl(string) {
     try {
         new URL(string);
@@ -883,178 +970,133 @@ function showToast(message, type = 'info') {
     toast.className = `toast ${type}`;
     toast.textContent = message;
     
-    toastContainer.appendChild(toast);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-        }
-    }, 5000);
+    if (elements.toastContainer) {
+        elements.toastContainer.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
 }
 
-// Error handling
-window.addEventListener('error', function(e) {
-    console.error('Global error:', e.error);
-    showToast('예상치 못한 오류가 발생했습니다.', 'error');
-});
-
-window.addEventListener('unhandledrejection', function(e) {
-    console.error('Unhandled promise rejection:', e.reason);
-    showToast('네트워크 오류가 발생했습니다.', 'error');
-});
-
-// API Settings Functions
+// API 설정 관련 함수
 function loadApiSettings() {
     const settings = getApiSettings();
-    if (settings) {
+    if (settings.provider && settings.key) {
         updateApiStatus(settings.provider, true);
-        apiProviderSelect.value = settings.provider;
-        apiKeyInput.value = settings.key;
-    } else {
-        updateApiStatus(null, false);
+        if (elements.apiProviderSelect) {
+            elements.apiProviderSelect.value = settings.provider;
+        }
     }
 }
 
 function getApiSettings() {
-    const settings = localStorage.getItem('nongbuxx_api_settings');
-    return settings ? JSON.parse(settings) : null;
+    return {
+        provider: localStorage.getItem('apiProvider') || 'anthropic',
+        key: localStorage.getItem('apiKey') || ''
+    };
 }
 
 function saveApiSettings(provider, key) {
-    const settings = {
-        provider: provider,
-        key: key,
-        timestamp: Date.now()
-    };
-    localStorage.setItem('nongbuxx_api_settings', JSON.stringify(settings));
+    localStorage.setItem('apiProvider', provider);
+    localStorage.setItem('apiKey', key);
 }
 
 function deleteApiSettings() {
-    localStorage.removeItem('nongbuxx_api_settings');
+    localStorage.removeItem('apiProvider');
+    localStorage.removeItem('apiKey');
 }
 
 function updateApiStatus(provider, isConfigured) {
-    const statusElement = apiStatus.querySelector('.status-text');
-    if (isConfigured) {
-        statusElement.textContent = 'AI활성';
-        apiStatus.className = 'api-status-simple configured';
-    } else {
-        statusElement.textContent = 'AI비활성';
-        apiStatus.className = 'api-status-simple not-configured';
+    if (elements.apiStatus) {
+        elements.apiStatus.classList.toggle('configured', isConfigured);
+        const statusText = elements.apiStatus.querySelector('.status-text');
+        if (statusText) {
+            statusText.textContent = isConfigured ? `${provider} 활성` : 'AI 비활성';
+        }
     }
 }
 
 function showApiSettingsSection() {
     hideAllSections();
-    apiSettingsSection.style.display = 'block';
-    
-    // Reset form
-    const settings = getApiSettings();
-    if (settings) {
-        apiProviderSelect.value = settings.provider;
-        apiKeyInput.value = settings.key;
-    } else {
-        apiProviderSelect.value = 'anthropic';
-        apiKeyInput.value = '';
+    if (elements.apiSettingsSection) {
+        elements.apiSettingsSection.style.display = 'block';
     }
     
-    // Reset validation result
-    apiValidationResult.className = 'api-validation-result';
-    apiValidationResult.textContent = '';
-    
-    // Reset buttons
-    saveApiKeyBtn.disabled = true;
-    
-    apiKeyInput.focus();
+    const settings = getApiSettings();
+    if (elements.apiProviderSelect) {
+        elements.apiProviderSelect.value = settings.provider;
+    }
+    if (elements.apiKeyInput) {
+        elements.apiKeyInput.value = settings.key;
+    }
 }
 
 function hideApiSettingsSection() {
-    apiSettingsSection.style.display = 'none';
-}
-
-function toggleApiKeyVisibility() {
-    const isPassword = apiKeyInput.type === 'password';
-    apiKeyInput.type = isPassword ? 'text' : 'password';
-    
-    const icon = toggleApiKeyBtn.querySelector('i');
-    icon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+    if (elements.apiSettingsSection) {
+        elements.apiSettingsSection.style.display = 'none';
+    }
 }
 
 function onApiProviderChange() {
-    // Reset validation when provider changes
-    apiValidationResult.className = 'api-validation-result';
-    apiValidationResult.textContent = '';
-    saveApiKeyBtn.disabled = true;
-    
-    // Clear API key when provider changes
-    apiKeyInput.value = '';
-    
-    // Update placeholder
-    const placeholder = apiProviderSelect.value === 'anthropic' ? 'sk-ant-...' : 'sk-...';
-    apiKeyInput.placeholder = placeholder;
-    
-    // Focus on API key input for user convenience
-    apiKeyInput.focus();
+    const settings = getApiSettings();
+    if (elements.apiProviderSelect) {
+        settings.provider = elements.apiProviderSelect.value;
+        saveApiSettings(settings.provider, settings.key);
+    }
 }
 
 function onApiKeyInput() {
-    // Reset validation when key changes
-    apiValidationResult.className = 'api-validation-result';
-    apiValidationResult.textContent = '';
-    saveApiKeyBtn.disabled = true;
+    // 실시간 검증은 제거하고 단순화
 }
 
 async function validateApiKey() {
-    const provider = apiProviderSelect.value;
-    const key = apiKeyInput.value.trim();
+    const provider = elements.apiProviderSelect ? elements.apiProviderSelect.value : 'anthropic';
+    const key = elements.apiKeyInput ? elements.apiKeyInput.value.trim() : '';
     
     if (!key) {
         showToast('API 키를 입력해주세요.', 'error');
         return;
     }
     
-    // Show loading state
-    apiValidationResult.className = 'api-validation-result loading';
-    apiValidationResult.innerHTML = '<div class="spinner"></div>API 키 유효성 확인 중...';
-    
     try {
-        const response = await fetch(`${API_BASE_URL}/api/validate-api-key`, {
+        if (elements.validateApiKeyBtn) {
+            elements.validateApiKeyBtn.disabled = true;
+            elements.validateApiKeyBtn.innerHTML = '<div class="spinner"></div> 검증 중...';
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/api/validate-key`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                api_provider: provider,
-                api_key: key
-            })
+            body: JSON.stringify({ api_provider: provider, api_key: key })
         });
         
-        const data = await response.json();
+        const result = await response.json();
         
-        if (data.success) {
-            apiValidationResult.className = 'api-validation-result success';
-            apiValidationResult.textContent = `✓ API 키가 유효합니다 (${data.provider === 'anthropic' ? 'Anthropic Claude' : 'OpenAI GPT-4'})`;
-            saveApiKeyBtn.disabled = false;
-            showToast('API 키가 유효합니다!', 'success');
+        if (result.success) {
+            showToast('API 키가 유효합니다.', 'success');
+            saveApiSettings(provider, key);
+            updateApiStatus(provider, true);
         } else {
-            apiValidationResult.className = 'api-validation-result error';
-            apiValidationResult.textContent = `✗ ${data.error}`;
-            saveApiKeyBtn.disabled = true;
-            showToast('API 키 유효성 확인에 실패했습니다.', 'error');
+            showToast(result.error || 'API 키가 유효하지 않습니다.', 'error');
         }
+        
     } catch (error) {
-        console.error('API validation error:', error);
-        apiValidationResult.className = 'api-validation-result error';
-        apiValidationResult.textContent = '✗ 서버 연결에 실패했습니다.';
-        saveApiKeyBtn.disabled = true;
-        showToast('서버 연결에 실패했습니다.', 'error');
+        console.error('API 키 검증 오류:', error);
+        showToast('API 키 검증 중 오류가 발생했습니다.', 'error');
+    } finally {
+        if (elements.validateApiKeyBtn) {
+            elements.validateApiKeyBtn.disabled = false;
+            elements.validateApiKeyBtn.innerHTML = '<i class="fas fa-check"></i> 키 검증';
+        }
     }
 }
 
 function saveApiKey() {
-    const provider = apiProviderSelect.value;
-    const key = apiKeyInput.value.trim();
+    const provider = elements.apiProviderSelect ? elements.apiProviderSelect.value : 'anthropic';
+    const key = elements.apiKeyInput ? elements.apiKeyInput.value.trim() : '';
     
     if (!key) {
         showToast('API 키를 입력해주세요.', 'error');
@@ -1064,33 +1106,210 @@ function saveApiKey() {
     saveApiSettings(provider, key);
     updateApiStatus(provider, true);
     hideApiSettingsSection();
-    showToast('API 키가 저장되었습니다!', 'success');
+    showToast('API 키가 저장되었습니다.', 'success');
 }
 
 function deleteApiKey() {
-    if (confirm('저장된 API 키를 삭제하시겠습니까?')) {
-        deleteApiSettings();
-        updateApiStatus(null, false);
-        hideApiSettingsSection();
-        
-        // Clear form
-        apiKeyInput.value = '';
-        apiValidationResult.className = 'api-validation-result';
-        apiValidationResult.textContent = '';
-        
-        showToast('API 키가 삭제되었습니다.', 'success');
+    deleteApiSettings();
+    updateApiStatus('', false);
+    hideApiSettingsSection();
+    showToast('API 키가 삭제되었습니다.', 'info');
+}
+
+// 테마 관련 함수
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'auto';
+    setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+    currentTheme = theme;
+    localStorage.setItem('theme', theme);
+    
+    const root = document.documentElement;
+    
+    if (theme === 'auto') {
+        root.removeAttribute('data-theme');
+    } else {
+        root.setAttribute('data-theme', theme);
+    }
+    
+    updateThemeToggle(getCurrentDisplayTheme());
+}
+
+function updateThemeToggle(displayTheme) {
+    if (elements.themeIcon && elements.themeText) {
+        if (displayTheme === 'dark') {
+            elements.themeIcon.className = 'fas fa-sun';
+            elements.themeText.textContent = '라이트 모드';
+        } else {
+            elements.themeIcon.className = 'fas fa-moon';
+            elements.themeText.textContent = '다크 모드';
+        }
     }
 }
 
-// Service worker registration (optional, for offline support)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-                console.log('ServiceWorker registration successful');
-            })
-            .catch(function(error) {
-                console.log('ServiceWorker registration failed');
-            });
+function toggleTheme() {
+    const themes = ['light', 'dark', 'auto'];
+    const currentIndex = themes.indexOf(currentTheme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
+    
+    const themeNames = {
+        'light': '라이트 모드',
+        'dark': '다크 모드',
+        'auto': '자동 모드'
+    };
+    
+    showToast(`${themeNames[currentTheme]}로 변경되었습니다.`, 'info');
+}
+
+function getCurrentDisplayTheme() {
+    if (currentTheme === 'auto') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return currentTheme;
+}
+
+// 사용자 편의기능
+function initKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+A (전체 선택)
+        if (e.ctrlKey && e.key === 'a') {
+            const newsSelectionSection = document.getElementById('newsSelectionSection');
+            if (newsSelectionSection && newsSelectionSection.style.display !== 'none') {
+                e.preventDefault();
+                selectAllNews();
+            }
+        }
+        
+        // Ctrl+D (전체 해제)
+        if (e.ctrlKey && e.key === 'd') {
+            const newsSelectionSection = document.getElementById('newsSelectionSection');
+            if (newsSelectionSection && newsSelectionSection.style.display !== 'none') {
+                e.preventDefault();
+                deselectAllNews();
+            }
+        }
+        
+        // Escape (뒤로가기)
+        if (e.key === 'Escape') {
+            handleEscapeKey();
+        }
+        
+        // Enter (기본 액션)
+        if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+            handleEnterKey(e);
+        }
     });
-} 
+}
+
+function handleEscapeKey() {
+    // 현재 활성 섹션에 따라 뒤로가기 처리
+    const urlInputSection = document.getElementById('urlInputSection');
+    const newsSelectionSection = document.getElementById('newsSelectionSection');
+    const generatedContentListSection = document.getElementById('generatedContentListSection');
+    const apiSettingsSection = document.getElementById('apiSettingsSection');
+    
+    if (apiSettingsSection && apiSettingsSection.style.display !== 'none') {
+        hideApiSettingsSection();
+    } else if (urlInputSection && urlInputSection.style.display !== 'none') {
+        hideUrlInputSection();
+    } else if (generatedContentListSection && generatedContentListSection.style.display !== 'none') {
+        hideAllSections();
+    } else if (newsSelectionSection && newsSelectionSection.style.display !== 'none') {
+        hideAllSections();
+    }
+}
+
+function handleEnterKey(e) {
+    // 포커스된 요소가 입력 필드가 아닌 경우에만 처리
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        return;
+    }
+    
+    // 현재 활성 섹션의 주요 액션 실행
+    const newsExtractorSection = document.getElementById('newsExtractorSection');
+    const newsSelectionSection = document.getElementById('newsSelectionSection');
+    
+    if (newsExtractorSection && newsExtractorSection.style.display !== 'none') {
+        const extractBtn = document.getElementById('extractNewsBtn');
+        if (extractBtn && !extractBtn.disabled) {
+            extractBtn.click();
+        }
+    } else if (newsSelectionSection && newsSelectionSection.style.display !== 'none') {
+        const generateBtn = document.getElementById('generateSelectedBtn');
+        if (generateBtn && !generateBtn.disabled) {
+            generateBtn.click();
+        }
+    }
+}
+
+function saveUserPreferences() {
+    const preferences = {
+        selectedNewsUrls: selectedNewsUrls,
+        newsSort: document.getElementById('newsSortSelect')?.value || 'newest',
+        lastKeyword: document.getElementById('newsKeyword')?.value || '',
+        lastCount: document.getElementById('newsCount')?.value || 10,
+        timestamp: Date.now()
+    };
+    
+    localStorage.setItem('nongbuxx_preferences', JSON.stringify(preferences));
+}
+
+function loadUserPreferences() {
+    try {
+        const saved = localStorage.getItem('nongbuxx_preferences');
+        if (!saved) return;
+        
+        const preferences = JSON.parse(saved);
+        
+        // 1시간 이내 데이터만 복원
+        if (Date.now() - preferences.timestamp > 3600000) {
+            localStorage.removeItem('nongbuxx_preferences');
+            return;
+        }
+        
+        // 설정 복원
+        if (preferences.newsSort) {
+            const sortSelect = document.getElementById('newsSortSelect');
+            if (sortSelect) {
+                sortSelect.value = preferences.newsSort;
+            }
+        }
+        
+        if (preferences.lastKeyword) {
+            const keywordInput = document.getElementById('newsKeyword');
+            if (keywordInput) {
+                keywordInput.value = preferences.lastKeyword;
+            }
+        }
+        
+        if (preferences.lastCount) {
+            const countInput = document.getElementById('newsCount');
+            if (countInput) {
+                countInput.value = preferences.lastCount;
+            }
+        }
+        
+        // 선택된 뉴스 URL은 뉴스 추출 후에 복원
+        if (preferences.selectedNewsUrls && Array.isArray(preferences.selectedNewsUrls)) {
+            selectedNewsUrls = preferences.selectedNewsUrls;
+        }
+        
+    } catch (error) {
+        console.warn('사용자 설정 로드 중 오류:', error);
+        localStorage.removeItem('nongbuxx_preferences');
+    }
+}
+
+function clearUserPreferences() {
+    localStorage.removeItem('nongbuxx_preferences');
+}
+
+// 전역 함수로 노출 (HTML에서 사용)
+window.addUrlInput = addUrlInput;
+window.removeUrlInput = removeUrlInput;
+window.toggleContentPreview = toggleContentPreview;
+window.copyGeneratedContent = copyGeneratedContent;
+window.downloadGeneratedContent = downloadGeneratedContent; 

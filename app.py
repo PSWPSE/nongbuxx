@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, abort
 from flask_cors import CORS
 import os
 import traceback
@@ -16,13 +16,14 @@ load_dotenv('env.local')
 
 # Import our existing modules
 from nongbuxx_generator import NongbuxxGenerator
+from url_extractor import YahooFinanceNewsExtractor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize Flask app with frontend as static folder
+app = Flask(__name__, static_folder='frontend', static_url_path='/static')
 
 # CORS configuration for production deployment
 CORS(app, origins=[
@@ -50,12 +51,14 @@ active_jobs = {}
 @app.route('/')
 def index():
     """메인 페이지"""
-    return send_from_directory('static', 'index.html')
+    return send_from_directory('frontend', 'index.html')
 
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """정적 파일 제공"""
-    return send_from_directory('static', filename)
+# 정적 파일은 Flask가 자동으로 처리합니다 (static_folder 설정)
+
+@app.route('/favicon.ico')
+def favicon():
+    """favicon 요청 처리"""
+    return '', 204  # No Content 응답으로 favicon 요청 무시
 
 @app.route('/api/health', methods=['GET', 'OPTIONS'])
 def health_check():
@@ -73,7 +76,7 @@ def health_check():
         'version': '1.0.0'
     })
 
-@app.route('/api/validate-api-key', methods=['POST', 'OPTIONS'])
+@app.route('/api/validate-key', methods=['POST', 'OPTIONS'])
 def validate_api_key():
     """API 키 유효성 검증 엔드포인트"""
     if request.method == 'OPTIONS':
@@ -577,6 +580,85 @@ def batch_generate():
             'code': 'INTERNAL_ERROR'
         }), 500
 
+@app.route('/api/extract-news-links', methods=['POST', 'OPTIONS'])
+def extract_news_links():
+    """
+    뉴스 링크 추출 API
+    
+    Request Body:
+    {
+        "keyword": "Tesla AI",     // optional: 검색 키워드
+        "count": 10               // optional: 추출할 뉴스 개수 (기본값: 10)
+    }
+    """
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
+    
+    try:
+        data = request.get_json() or {}
+        
+        keyword = data.get('keyword', '').strip()
+        count = data.get('count', 10)
+        
+        # 입력값 검증
+        if count < 1 or count > 50:
+            return jsonify({
+                'success': False,
+                'error': '뉴스 개수는 1~50개 사이여야 합니다.',
+                'code': 'INVALID_COUNT'
+            }), 400
+        
+        logger.info(f"Starting news extraction - keyword: '{keyword}', count: {count}")
+        
+        # 뉴스 추출기 초기화
+        extractor = YahooFinanceNewsExtractor(
+            search_keywords=keyword if keyword else None,
+            max_news=count
+        )
+        
+        # 뉴스 추출 실행
+        news_items = extractor.extract_latest_news()
+        
+        if not news_items:
+            if keyword:
+                return jsonify({
+                    'success': False,
+                    'error': f"'{keyword}' 키워드와 관련된 뉴스를 찾을 수 없습니다.",
+                    'code': 'NO_NEWS_FOUND'
+                }), 404
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': '최신 뉴스를 찾을 수 없습니다.',
+                    'code': 'NO_NEWS_FOUND'
+                }), 404
+        
+        logger.info(f"News extraction completed: {len(news_items)} articles found")
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'keyword': keyword,
+                'count': len(news_items),
+                'news_items': news_items
+            }
+        })
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"News extraction error: {error_msg}")
+        logger.error(traceback.format_exc())
+        
+        return jsonify({
+            'success': False,
+            'error': f'뉴스 추출 중 오류가 발생했습니다: {error_msg}',
+            'code': 'EXTRACTION_ERROR'
+        }), 500
+
 @app.errorhandler(413)
 def request_entity_too_large(error):
     return jsonify({
@@ -587,11 +669,22 @@ def request_entity_too_large(error):
 
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({
-        'success': False,
-        'error': 'Not found',
-        'code': 'NOT_FOUND'
-    }), 404
+    """404 에러 처리"""
+    # API 요청인 경우 JSON 응답
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'success': False,
+            'error': 'API endpoint not found',
+            'code': 'NOT_FOUND',
+            'path': request.path
+        }), 404
+    
+    # favicon 요청은 빈 응답
+    if request.path.endswith('.ico'):
+        return '', 204
+    
+    # 기타 요청은 메인 페이지로 리다이렉트
+    return send_from_directory('frontend', 'index.html')
 
 @app.errorhandler(500)
 def internal_error(error):
