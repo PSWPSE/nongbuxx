@@ -347,9 +347,9 @@ def generate_content():
             error_msg = result['error']
             if '차단' in error_msg or '403' in error_msg:
                 # 웹사이트에서 접근을 차단한 경우
-            return jsonify({
-                'success': False,
-                'job_id': job_id,
+                return jsonify({
+                    'success': False,
+                    'job_id': job_id,
                     'error': error_msg,
                     'code': 'ACCESS_BLOCKED'
                 }), 403
@@ -367,7 +367,7 @@ def generate_content():
                     'success': False,
                     'job_id': job_id,
                     'error': error_msg,
-                'code': 'GENERATION_FAILED'
+                    'code': 'GENERATION_FAILED'
             }), 500
             
     except Exception as e:
@@ -1306,12 +1306,12 @@ def not_found(error):
     """404 에러 처리"""
     # API 요청인 경우 JSON 응답
     if request.path.startswith('/api/'):
-    return jsonify({
-        'success': False,
+        return jsonify({
+            'success': False,
             'error': 'API endpoint not found',
             'code': 'NOT_FOUND',
             'path': request.path
-    }), 404
+        }), 404
     
     # favicon 요청은 빈 응답
     if request.path.endswith('.ico'):
