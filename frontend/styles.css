@@ -776,3 +776,521 @@ textarea:focus-visible {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
+
+/* ============================================================================
+   출처 관리 스타일
+   ============================================================================ */
+
+/* 출처 선택 컨테이너 */
+.source-selection-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.selected-sources {
+    flex: 1;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-background);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    transition: border-color 0.2s ease;
+}
+
+.selected-sources:hover {
+    border-color: var(--primary-color);
+}
+
+.source-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 12px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.source-tag .remove {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.source-tag .remove:hover {
+    opacity: 1;
+}
+
+.loading {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* 출처 목록 */
+.sources-list {
+    margin-top: 20px;
+}
+
+.source-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: var(--card-background);
+    transition: all 0.2s ease;
+}
+
+.source-item:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.source-item.inactive {
+    opacity: 0.6;
+    background: var(--background-color);
+}
+
+.source-info {
+    flex: 1;
+}
+
+.source-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.source-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.source-status {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.source-status.active {
+    background: #10b981;
+    color: white;
+}
+
+.source-status.inactive {
+    background: #ef4444;
+    color: white;
+}
+
+.source-url {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    word-break: break-all;
+}
+
+.source-description {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.source-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.btn-mini {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    min-width: auto;
+}
+
+/* 모달 스타일 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--card-background);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 2px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+/* 체크박스 스타일 */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background: var(--input-background);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* 출처 선택 목록 */
+.source-selection-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 16px 0;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-background);
+}
+
+.source-selection-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.source-selection-item:last-child {
+    border-bottom: none;
+}
+
+.source-selection-item:hover {
+    background: var(--hover-background);
+}
+
+.source-selection-item.selected {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: var(--primary-color);
+}
+
+.source-selection-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.source-selection-item.selected .source-selection-checkbox {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.source-selection-item.selected .source-selection-checkbox::after {
+    content: '✓';
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.source-selection-info {
+    flex: 1;
+}
+
+.source-selection-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.source-selection-url {
+    font-size: 12px;
+    color: var(--text-secondary);
+    word-break: break-all;
+}
+
+/* 다크 모드 지원 */
+[data-theme="dark"] .source-item {
+    border-color: #374151;
+    background: #1f2937;
+}
+
+[data-theme="dark"] .source-item:hover {
+    border-color: var(--primary-color);
+    background: #111827;
+}
+
+[data-theme="dark"] .modal-content {
+    background: #1f2937;
+}
+
+[data-theme="dark"] .modal-header {
+    border-color: #374151;
+}
+
+[data-theme="dark"] .modal-actions {
+    border-color: #374151;
+}
+
+[data-theme="dark"] .source-selection-list {
+    background: #111827;
+    border-color: #374151;
+}
+
+[data-theme="dark"] .source-selection-item {
+    border-color: #374151;
+}
+
+[data-theme="dark"] .source-selection-item:hover {
+    background: #374151;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .source-selection-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .source-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .source-header {
+        flex-wrap: wrap;
+    }
+    
+    .source-actions {
+        justify-content: center;
+        border-top: 1px solid var(--border-color);
+        padding-top: 12px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 20px;
+        max-height: 90vh;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+    
+    .modal-actions .btn {
+        width: 100%;
+    }
+}
+
+/* ============================================================================
+   뉴스 리스트 출처 표시 스타일
+   ============================================================================ */
+
+.news-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+}
+
+.news-source-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.news-source-tag i {
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+/* 다중 출처 컬러 구분 */
+.news-source-tag[data-source-id="yahoo_finance"] {
+    background: linear-gradient(135deg, #7c2d12, #ea580c);
+}
+
+.news-source-tag[data-source-id="reuters"] {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+}
+
+.news-source-tag[data-source-id="bloomberg"] {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+}
+
+.news-source-tag[data-source-id="marketwatch"] {
+    background: linear-gradient(135deg, #059669, #10b981);
+}
+
+.news-source-tag[data-source-id="cnbc"] {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+}
+
+/* 출처별 통계 표시 */
+.news-extraction-stats {
+    display: flex;
+    gap: 12px;
+    margin: 16px 0;
+    padding: 12px;
+    background: var(--card-background);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.source-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--input-background);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.source-stat .count {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* 다크 모드 지원 */
+[data-theme="dark"] .news-extraction-stats {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+[data-theme="dark"] .source-stat {
+    background: #111827;
+}
+
+/* 반응형 디자인 추가 */
+@media (max-width: 768px) {
+    .news-item-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .news-source-tag {
+        align-self: flex-start;
+    }
+    
+    .news-extraction-stats {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .news-extraction-stats {
+        margin: 12px 0;
+        padding: 8px;
+    }
+    
+    .source-stat {
+        font-size: 12px;
+    }
+}

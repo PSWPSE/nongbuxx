@@ -583,12 +583,13 @@ def batch_generate():
 @app.route('/api/extract-news-links', methods=['POST', 'OPTIONS'])
 def extract_news_links():
     """
-    뉴스 링크 추출 API
+    뉴스 링크 추출 API (다중 출처 지원)
     
     Request Body:
     {
-        "keyword": "Tesla AI",     // optional: 검색 키워드
-        "count": 10               // optional: 추출할 뉴스 개수 (기본값: 10)
+        "keyword": "Tesla AI",           // optional: 검색 키워드
+        "count": 10,                    // optional: 추출할 뉴스 개수 (기본값: 10)
+        "sources": ["yahoo_finance"]     // optional: 출처 ID 배열 (기본값: 활성화된 모든 출처)
     }
     """
     if request.method == 'OPTIONS':
@@ -603,6 +604,7 @@ def extract_news_links():
         
         keyword = data.get('keyword', '').strip()
         count = data.get('count', 10)
+        requested_sources = data.get('sources', [])
         
         # 입력값 검증
         if count < 1 or count > 50:
@@ -612,45 +614,107 @@ def extract_news_links():
                 'code': 'INVALID_COUNT'
             }), 400
         
-        logger.info(f"Starting news extraction - keyword: '{keyword}', count: {count}")
+        # 사용할 출처 결정
+        available_sources = load_sources()
         
-        # 뉴스 추출기 초기화
-        extractor = YahooFinanceNewsExtractor(
-            search_keywords=keyword if keyword else None,
-            max_news=count
-        )
-        
-        # 뉴스 추출 실행
-        news_items = extractor.extract_latest_news()
-        
-        if not news_items:
-            if keyword:
+        if requested_sources:
+            # 요청된 출처만 사용
+            selected_sources = [s for s in available_sources if s['id'] in requested_sources and s.get('active', True)]
+            if not selected_sources:
                 return jsonify({
                     'success': False,
-                    'error': f"'{keyword}' 키워드와 관련된 뉴스를 찾을 수 없습니다.",
-                    'code': 'NO_NEWS_FOUND'
-                }), 404
-            else:
+                    'error': '요청된 출처 중 활성화된 출처가 없습니다.',
+                    'code': 'NO_ACTIVE_SOURCES'
+                }), 400
+        else:
+            # 활성화된 모든 출처 사용
+            selected_sources = [s for s in available_sources if s.get('active', True)]
+            if not selected_sources:
                 return jsonify({
                     'success': False,
-                    'error': '최신 뉴스를 찾을 수 없습니다.',
-                    'code': 'NO_NEWS_FOUND'
-                }), 404
+                    'error': '활성화된 출처가 없습니다.',
+                    'code': 'NO_ACTIVE_SOURCES'
+                }), 400
         
-        logger.info(f"News extraction completed: {len(news_items)} articles found")
+        logger.info(f"Starting multi-source news extraction - keyword: '{keyword}', count: {count}, sources: {[s['id'] for s in selected_sources]}")
+        
+        # 각 출처에서 뉴스 추출
+        all_news_items = []
+        source_results = []
+        
+        for source in selected_sources:
+            try:
+                source_news = extract_news_from_source(source, keyword, count)
+                
+                # 출처 정보와 함께 뉴스 아이템 저장
+                for item in source_news:
+                    item['source_id'] = source['id']
+                    item['source_name'] = source['name']
+                
+                all_news_items.extend(source_news)
+                
+                source_results.append({
+                    'source_id': source['id'],
+                    'source_name': source['name'],
+                    'count': len(source_news),
+                    'success': True
+                })
+                
+                logger.info(f"Extracted {len(source_news)} news from {source['name']}")
+                
+            except Exception as e:
+                logger.error(f"Failed to extract news from {source['name']}: {str(e)}")
+                source_results.append({
+                    'source_id': source['id'],
+                    'source_name': source['name'],
+                    'count': 0,
+                    'success': False,
+                    'error': str(e)
+                })
+        
+        # 중복 제거 (URL 기준)
+        unique_news = []
+        seen_urls = set()
+        
+        for item in all_news_items:
+            if item['url'] not in seen_urls:
+                unique_news.append(item)
+                seen_urls.add(item['url'])
+        
+        # 결과가 없는 경우
+        if not unique_news:
+            return jsonify({
+                'success': False,
+                'error': f"'{keyword}' 키워드와 관련된 뉴스를 찾을 수 없습니다." if keyword else '뉴스를 찾을 수 없습니다.',
+                'code': 'NO_NEWS_FOUND',
+                'source_results': source_results
+            }), 404
+        
+        # 관련도 순으로 정렬 (키워드가 있는 경우)
+        if keyword:
+            keyword_lower = keyword.lower()
+            unique_news.sort(key=lambda x: (
+                keyword_lower in x['title'].lower(),
+                sum(1 for kw in x.get('keywords', []) if keyword_lower in kw.lower())
+            ), reverse=True)
+        
+        logger.info(f"Multi-source news extraction completed: {len(unique_news)} unique articles from {len(selected_sources)} sources")
         
         return jsonify({
             'success': True,
             'data': {
                 'keyword': keyword,
-                'count': len(news_items),
-                'news_items': news_items
+                'count': len(unique_news),
+                'total_extracted': len(all_news_items),
+                'unique_count': len(unique_news),
+                'news_items': unique_news,
+                'source_results': source_results
             }
         })
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"News extraction error: {error_msg}")
+        logger.error(f"Multi-source news extraction error: {error_msg}")
         logger.error(traceback.format_exc())
         
         return jsonify({
@@ -658,6 +722,390 @@ def extract_news_links():
             'error': f'뉴스 추출 중 오류가 발생했습니다: {error_msg}',
             'code': 'EXTRACTION_ERROR'
         }), 500
+
+def extract_news_from_source(source, keyword, count):
+    """특정 출처에서 뉴스 추출"""
+    try:
+        if source['parser_type'] == 'yahoo_finance':
+            # Yahoo Finance 뉴스 추출
+            extractor = YahooFinanceNewsExtractor(
+                search_keywords=keyword if keyword else None,
+                max_news=count
+            )
+            return extractor.extract_latest_news()
+        
+        elif source['parser_type'] == 'universal' or source['parser_type'] == 'generic':
+            # 범용 뉴스 추출기 사용
+            from url_extractor import UniversalNewsExtractor
+            extractor = UniversalNewsExtractor(
+                base_url=source['url'],
+                search_keywords=keyword if keyword else None,
+                max_news=count
+            )
+            return extractor.extract_news()
+        
+        else:
+            # 알려지지 않은 파서 타입도 범용 파서로 처리
+            logger.warning(f"Unknown parser type: {source['parser_type']} for source: {source['name']}, using universal parser")
+            from url_extractor import UniversalNewsExtractor
+            extractor = UniversalNewsExtractor(
+                base_url=source['url'],
+                search_keywords=keyword if keyword else None,
+                max_news=count
+            )
+            return extractor.extract_news()
+            
+    except Exception as e:
+        logger.error(f"Error extracting news from {source['name']}: {str(e)}")
+        raise e
+
+# ============================================================================
+# 출처 관리 API
+# ============================================================================
+
+def load_sources():
+    """출처 정보를 JSON 파일에서 로드"""
+    sources_file = Path('data/sources.json')
+    try:
+        if sources_file.exists():
+            with open(sources_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get('sources', [])
+        else:
+            # 기본 출처 데이터로 파일 생성
+            default_sources = [{
+                "id": "yahoo_finance",
+                "name": "Yahoo Finance",
+                "url": "https://finance.yahoo.com/topic/latest-news/",
+                "parser_type": "yahoo_finance",
+                "active": True,
+                "description": "글로벌 금융 뉴스 및 시장 정보",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }]
+            save_sources(default_sources)
+            return default_sources
+    except Exception as e:
+        logger.error(f"Failed to load sources: {e}")
+        return []
+
+def save_sources(sources):
+    """출처 정보를 JSON 파일에 저장"""
+    sources_file = Path('data/sources.json')
+    try:
+        # data 디렉토리 생성
+        sources_file.parent.mkdir(exist_ok=True)
+        
+        data = {
+            "sources": sources,
+            "updated_at": datetime.now().isoformat()
+        }
+        
+        with open(sources_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save sources: {e}")
+        return False
+
+def find_source_by_id(source_id):
+    """ID로 출처 찾기"""
+    sources = load_sources()
+    return next((source for source in sources if source['id'] == source_id), None)
+
+def validate_source_data(data):
+    """출처 데이터 유효성 검증"""
+    required_fields = ['name', 'url']
+    for field in required_fields:
+        if not data.get(field):
+            return False, f'{field} is required'
+    
+    # URL 유효성 검증
+    url = data.get('url', '')
+    if not url.startswith(('http://', 'https://')):
+        return False, 'Invalid URL format'
+    
+    return True, None
+
+@app.route('/api/sources', methods=['GET', 'OPTIONS'])
+def get_sources():
+    """모든 출처 조회"""
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
+    
+    try:
+        sources = load_sources()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'sources': sources,
+                'total_count': len(sources)
+            }
+        })
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Failed to get sources: {error_msg}")
+        
+        return jsonify({
+            'success': False,
+            'error': f'출처 목록을 불러오는 중 오류가 발생했습니다: {error_msg}',
+            'code': 'SOURCES_LOAD_ERROR'
+        }), 500
+
+@app.route('/api/sources', methods=['POST'])
+def create_source():
+    """새 출처 등록"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Request data is required',
+                'code': 'MISSING_DATA'
+            }), 400
+        
+        # 데이터 유효성 검증
+        is_valid, error_msg = validate_source_data(data)
+        if not is_valid:
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'code': 'INVALID_DATA'
+            }), 400
+        
+        # 기존 출처 로드
+        sources = load_sources()
+        
+        # 고유 ID 생성
+        source_id = data.get('id') or f"source_{uuid.uuid4().hex[:8]}"
+        
+        # ID 중복 확인
+        if any(source['id'] == source_id for source in sources):
+            return jsonify({
+                'success': False,
+                'error': 'Source ID already exists',
+                'code': 'DUPLICATE_ID'
+            }), 400
+        
+        # 새 출처 객체 생성
+        new_source = {
+            'id': source_id,
+            'name': data['name'],
+            'url': data['url'],
+            'parser_type': data.get('parser_type', 'generic'),
+            'active': data.get('active', True),
+            'description': data.get('description', ''),
+            'created_at': datetime.now().isoformat(),
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        # 출처 목록에 추가
+        sources.append(new_source)
+        
+        # 저장
+        if save_sources(sources):
+            logger.info(f"New source created: {source_id} - {new_source['name']}")
+            
+            return jsonify({
+                'success': True,
+                'data': new_source,
+                'message': '출처가 성공적으로 등록되었습니다.'
+            }), 201
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to save source',
+                'code': 'SAVE_ERROR'
+            }), 500
+            
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Failed to create source: {error_msg}")
+        logger.error(traceback.format_exc())
+        
+        return jsonify({
+            'success': False,
+            'error': f'출처 등록 중 오류가 발생했습니다: {error_msg}',
+            'code': 'CREATE_SOURCE_ERROR'
+        }), 500
+
+@app.route('/api/sources/<source_id>', methods=['GET', 'OPTIONS'])
+def get_source(source_id):
+    """특정 출처 조회"""
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
+    
+    try:
+        source = find_source_by_id(source_id)
+        
+        if not source:
+            return jsonify({
+                'success': False,
+                'error': 'Source not found',
+                'code': 'SOURCE_NOT_FOUND'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'data': source
+        })
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Failed to get source {source_id}: {error_msg}")
+        
+        return jsonify({
+            'success': False,
+            'error': f'출처 조회 중 오류가 발생했습니다: {error_msg}',
+            'code': 'GET_SOURCE_ERROR'
+        }), 500
+
+@app.route('/api/sources/<source_id>', methods=['PUT'])
+def update_source(source_id):
+    """출처 수정"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Request data is required',
+                'code': 'MISSING_DATA'
+            }), 400
+        
+        # 데이터 유효성 검증
+        is_valid, error_msg = validate_source_data(data)
+        if not is_valid:
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'code': 'INVALID_DATA'
+            }), 400
+        
+        # 기존 출처 로드
+        sources = load_sources()
+        
+        # 출처 찾기
+        source_index = next((i for i, source in enumerate(sources) if source['id'] == source_id), None)
+        
+        if source_index is None:
+            return jsonify({
+                'success': False,
+                'error': 'Source not found',
+                'code': 'SOURCE_NOT_FOUND'
+            }), 404
+        
+        # 출처 정보 업데이트
+        existing_source = sources[source_index]
+        updated_source = {
+            **existing_source,
+            'name': data['name'],
+            'url': data['url'],
+            'parser_type': data.get('parser_type', existing_source.get('parser_type', 'generic')),
+            'active': data.get('active', existing_source.get('active', True)),
+            'description': data.get('description', existing_source.get('description', '')),
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        sources[source_index] = updated_source
+        
+        # 저장
+        if save_sources(sources):
+            logger.info(f"Source updated: {source_id} - {updated_source['name']}")
+            
+            return jsonify({
+                'success': True,
+                'data': updated_source,
+                'message': '출처가 성공적으로 수정되었습니다.'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to save source',
+                'code': 'SAVE_ERROR'
+            }), 500
+            
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Failed to update source {source_id}: {error_msg}")
+        logger.error(traceback.format_exc())
+        
+        return jsonify({
+            'success': False,
+            'error': f'출처 수정 중 오류가 발생했습니다: {error_msg}',
+            'code': 'UPDATE_SOURCE_ERROR'
+        }), 500
+
+@app.route('/api/sources/<source_id>', methods=['DELETE'])
+def delete_source(source_id):
+    """출처 삭제"""
+    try:
+        # 기존 출처 로드
+        sources = load_sources()
+        
+        # 출처 찾기
+        source_index = next((i for i, source in enumerate(sources) if source['id'] == source_id), None)
+        
+        if source_index is None:
+            return jsonify({
+                'success': False,
+                'error': 'Source not found',
+                'code': 'SOURCE_NOT_FOUND'
+            }), 404
+        
+        # 마지막 출처인지 확인 (최소 1개는 유지)
+        if len(sources) <= 1:
+            return jsonify({
+                'success': False,
+                'error': '최소 하나의 출처는 유지되어야 합니다.',
+                'code': 'MINIMUM_SOURCES_REQUIRED'
+            }), 400
+        
+        # 출처 삭제
+        deleted_source = sources.pop(source_index)
+        
+        # 저장
+        if save_sources(sources):
+            logger.info(f"Source deleted: {source_id} - {deleted_source['name']}")
+            
+            return jsonify({
+                'success': True,
+                'data': deleted_source,
+                'message': '출처가 성공적으로 삭제되었습니다.'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to save sources',
+                'code': 'SAVE_ERROR'
+            }), 500
+            
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Failed to delete source {source_id}: {error_msg}")
+        logger.error(traceback.format_exc())
+        
+        return jsonify({
+            'success': False,
+            'error': f'출처 삭제 중 오류가 발생했습니다: {error_msg}',
+            'code': 'DELETE_SOURCE_ERROR'
+        }), 500
+
+# ============================================================================
+# 기존 에러 핸들러들
+# ============================================================================
 
 @app.errorhandler(413)
 def request_entity_too_large(error):

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-Yahoo Finance 뉴스 추출기 (url_extractor.py)
+범용 뉴스 추출기 (url_extractor.py)
 
 기능:
-- Yahoo Finance 최신 뉴스 URL과 제목, 주요키워드 3개 추출
+- 다양한 뉴스 사이트에서 뉴스 추출
+- Yahoo Finance 뉴스 추출 (기존)
+- 범용 뉴스 사이트 추출 (신규)
 - 키워드 기반 뉴스 검색 및 필터링
 - 추출 개수 사용자 지정
 - 광고성 콘텐츠 자동 필터링
 - JSON 파일로 결과 저장
-- 콘솔 출력으로 결과 확인
 
 사용법:
     python url_extractor.py                          # 최신 뉴스 10개 추출
@@ -16,20 +17,11 @@ Yahoo Finance 뉴스 추출기 (url_extractor.py)
     python url_extractor.py -n 20                    # 최신 뉴스 20개 추출
     python url_extractor.py -k "Bitcoin" -n 15       # Bitcoin 관련 뉴스 15개 추출
 
-옵션:
-    -k, --keyword: 검색할 키워드 (공백으로 구분하여 여러 키워드 가능)
-    -n, --number: 추출할 뉴스 개수 (기본값: 10)
-    -o, --output: 출력 파일명 (기본값: yahoo_finance_news.json)
-
-출력 파일:
-    yahoo_finance_news.json - 추출된 뉴스 데이터가 JSON 형식으로 저장됨
-
-주요 특징:
-- 실제 뉴스 기사만 추출 (네비게이션 링크 제외)
-- 키워드 기반 스마트 검색 및 필터링
-- 자동 키워드 추출 (불용어 제거)
-- 중복 뉴스 제거
-- 사용자 에이전트 로테이션으로 안정적 수집
+새로운 기능:
+- 범용 뉴스 사이트 지원
+- 자동 RSS 피드 감지
+- 메타 태그 기반 뉴스 추출
+- 다양한 뉴스 사이트 구조 지원
 """
 
 import requests
@@ -43,6 +35,309 @@ from datetime import datetime
 from fake_useragent import UserAgent
 import argparse
 import sys
+import feedparser
+from typing import List, Dict, Optional
+
+class UniversalNewsExtractor:
+    """범용 뉴스 추출기"""
+    
+    def __init__(self, base_url: str, search_keywords=None, max_news=10):
+        self.base_url = base_url
+        self.domain = urlparse(base_url).netloc
+        self.ua = UserAgent()
+        self.search_keywords = search_keywords or []
+        self.max_news = max_news
+        
+        # 검색 키워드 전처리
+        if isinstance(self.search_keywords, str):
+            self.search_keywords = [keyword.strip().lower() for keyword in self.search_keywords.split()]
+        else:
+            self.search_keywords = [keyword.strip().lower() for keyword in self.search_keywords]
+        
+        # 뉴스 선택자 패턴 (일반적인 뉴스 사이트 구조)
+        self.news_selectors = [
+            'article h1 a', 'article h2 a', 'article h3 a',
+            '.news-item a', '.article-item a', '.story-item a',
+            'h1 a', 'h2 a', 'h3 a',
+            '.headline a', '.title a', '.news-title a',
+            '[class*="headline"] a', '[class*="title"] a',
+            '[class*="article"] a', '[class*="news"] a',
+            '.entry-title a', '.post-title a'
+        ]
+        
+        # 제외할 URL 패턴
+        self.exclude_patterns = [
+            r'#', r'javascript:', r'mailto:', r'tel:',
+            r'/tag/', r'/category/', r'/author/', r'/search/',
+            r'/login', r'/register', r'/subscribe', r'/about',
+            r'/contact', r'/privacy', r'/terms', r'/advertise'
+        ]
+        
+        # 불용어 (키워드 추출 시 제외)
+        self.stop_words = {
+            'the', 'is', 'at', 'which', 'on', 'and', 'or', 'but', 'in', 'with',
+            'a', 'an', 'as', 'are', 'was', 'were', 'been', 'be', 'have', 'has',
+            'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may',
+            'might', 'must', 'can', 'to', 'of', 'for', 'by', 'from', 'up', 'about',
+            'into', 'through', 'during', 'before', 'after', 'above', 'below', 'out',
+            'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here',
+            'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each',
+            'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not',
+            'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'now',
+            'says', 'said', 'according', 'report', 'reports', 'news', 'article',
+            'story', 'finance', 'yahoo', 'latest', 'today', 'new', 'this', 'that',
+            'these', 'those', 'breaking', 'updated', 'read', 'more', 'click'
+        }
+    
+    def get_page_content(self, url: str) -> Optional[str]:
+        """웹 페이지 내용 가져오기"""
+        try:
+            headers = {
+                'User-Agent': self.ua.random,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Cache-Control': 'max-age=0'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+            
+            return response.text
+            
+        except requests.RequestException as e:
+            print(f"페이지 요청 중 오류 발생: {e}")
+            return None
+    
+    def try_rss_feed(self, url: str) -> List[Dict]:
+        """RSS 피드 시도 (입력 URL 기반 + 도메인 기반)"""
+        try:
+            # 일반적인 RSS 피드 경로들
+            rss_paths = [
+                '/rss', '/rss.xml', '/feed', '/feed.xml',
+                '/rss/news', '/feeds/news', '/news/rss',
+                '/atom.xml', '/index.xml'
+            ]
+            
+            base_domain = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+            
+            # 1. 입력된 URL 기반으로 RSS 피드 시도 (우선)
+            parsed_url = urlparse(url)
+            if parsed_url.path and parsed_url.path != '/':
+                print(f"입력된 URL 기반 RSS 피드 시도: {url}")
+                
+                # 입력된 URL에 RSS 경로 추가해서 시도
+                for path in rss_paths:
+                    try:
+                        # 입력 URL의 경로에 RSS 경로 추가
+                        rss_url = url.rstrip('/') + path
+                        feed = feedparser.parse(rss_url)
+                        
+                        if feed.entries:
+                            print(f"RSS 피드 발견: {rss_url}")
+                            news_items = []
+                            
+                            for entry in feed.entries[:self.max_news]:
+                                if hasattr(entry, 'title') and hasattr(entry, 'link'):
+                                    news_items.append({
+                                        'title': str(entry.title),
+                                        'url': entry.link,
+                                        'keywords': self.extract_keywords(str(entry.title)),
+                                        'published_date': getattr(entry, 'published', '')
+                                    })
+                            
+                            if news_items:
+                                return news_items
+                                
+                    except Exception as e:
+                        continue
+            
+            # 2. 도메인 기반 RSS 피드 시도 (백업)
+            print(f"도메인 기반 RSS 피드 시도: {base_domain}")
+            for path in rss_paths:
+                try:
+                    rss_url = base_domain + path
+                    feed = feedparser.parse(rss_url)
+                    
+                    if feed.entries:
+                        print(f"RSS 피드 발견: {rss_url}")
+                        news_items = []
+                        
+                        for entry in feed.entries[:self.max_news]:
+                            if hasattr(entry, 'title') and hasattr(entry, 'link'):
+                                news_items.append({
+                                    'title': str(entry.title),
+                                    'url': entry.link,
+                                    'keywords': self.extract_keywords(str(entry.title)),
+                                    'published_date': getattr(entry, 'published', '')
+                                })
+                        
+                        if news_items:
+                            return news_items
+                            
+                except Exception as e:
+                    continue
+            
+            return []
+            
+        except Exception as e:
+            print(f"RSS 피드 추출 중 오류: {e}")
+            return []
+    
+    def extract_news_from_html(self, html_content: str) -> List[Dict]:
+        """HTML에서 뉴스 링크 추출"""
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            found_links = []
+            
+            # 다양한 선택자로 뉴스 링크 찾기
+            for selector in self.news_selectors:
+                try:
+                    links = soup.select(selector)
+                    for link in links:
+                        href = link.get('href')
+                        if href:
+                            found_links.append({
+                                'element': link,
+                                'title': link.get_text(strip=True),
+                                'url': href
+                            })
+                except Exception as e:
+                    continue
+            
+            # 중복 제거 및 정리
+            unique_links = {}
+            for link in found_links:
+                url = link['url']
+                title = link['title']
+                
+                # 상대 URL을 절대 URL로 변환
+                if url.startswith('/'):
+                    url = urljoin(self.base_url, url)
+                elif not url.startswith('http'):
+                    continue
+                
+                # 제외할 URL 패턴 체크
+                if any(re.search(pattern, url, re.IGNORECASE) for pattern in self.exclude_patterns):
+                    continue
+                
+                # 제목이 너무 짧거나 비어있는 경우 제외
+                if not title or len(title.strip()) < 10:
+                    continue
+                
+                # 중복 URL 제거
+                if url not in unique_links:
+                    unique_links[url] = {
+                        'title': title,
+                        'url': url,
+                        'keywords': self.extract_keywords(title)
+                    }
+            
+            return list(unique_links.values())
+            
+        except Exception as e:
+            print(f"HTML 파싱 중 오류: {e}")
+            return []
+    
+    def extract_keywords(self, text: str, num_keywords: int = 3) -> List[str]:
+        """텍스트에서 주요 키워드 추출"""
+        if not text:
+            return []
+            
+        # 텍스트 정제
+        text = text.lower()
+        text = re.sub(r'[^a-zA-Z가-힣\s]', ' ', text)
+        
+        # 단어 분리
+        words = text.split()
+        
+        # 불용어 제거 및 길이 필터링
+        filtered_words = [
+            word for word in words 
+            if word not in self.stop_words and len(word) > 2
+        ]
+        
+        # 빈도수 계산
+        word_freq = Counter(filtered_words)
+        
+        # 상위 키워드 반환
+        return [word for word, _ in word_freq.most_common(num_keywords)]
+    
+    def matches_keywords(self, title: str, url: str = "") -> bool:
+        """키워드와 매치되는지 확인"""
+        if not self.search_keywords:
+            return True
+        
+        search_text = (title + " " + url).lower()
+        return any(keyword in search_text for keyword in self.search_keywords)
+    
+    def calculate_relevance_score(self, title: str, url: str = "") -> float:
+        """키워드 관련성 점수 계산"""
+        if not self.search_keywords:
+            return 1.0
+        
+        search_text = (title + " " + url).lower()
+        score = 0
+        
+        for keyword in self.search_keywords:
+            title_count = title.lower().count(keyword) * 2
+            url_count = url.lower().count(keyword)
+            score += title_count + url_count
+        
+        return score
+    
+    def extract_news(self) -> List[Dict]:
+        """뉴스 추출 (입력 URL 직접 파싱 우선, RSS 백업)"""
+        print(f"뉴스 추출 시작: {self.base_url}")
+        
+        # 1. 입력된 URL에서 직접 HTML 파싱 시도 (우선)
+        html_content = self.get_page_content(self.base_url)
+        if html_content:
+            print(f"입력된 URL에서 직접 HTML 파싱 시도: {self.base_url}")
+            news_items = self.extract_news_from_html(html_content)
+            
+            if news_items:
+                # 키워드 필터링
+                if self.search_keywords:
+                    filtered_items = []
+                    for item in news_items:
+                        if self.matches_keywords(item['title'], item['url']):
+                            item['relevance_score'] = self.calculate_relevance_score(item['title'], item['url'])
+                            filtered_items.append(item)
+                    
+                    # 관련성 점수 순으로 정렬
+                    filtered_items.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
+                    result = filtered_items[:self.max_news]
+                else:
+                    result = news_items[:self.max_news]
+                
+                if result:
+                    print(f"HTML 파싱에서 {len(result)}개 뉴스 추출 완료")
+                    return result
+            
+            print("HTML 파싱에서 뉴스를 찾을 수 없음, RSS 백업 시도")
+        else:
+            print("HTML 내용을 가져올 수 없음, RSS 백업 시도")
+        
+        # 2. RSS 피드 백업 시도
+        rss_news = self.try_rss_feed(self.base_url)
+        if rss_news:
+            filtered_news = []
+            for news in rss_news:
+                if self.matches_keywords(news['title'], news['url']):
+                    filtered_news.append(news)
+            
+            if filtered_news:
+                print(f"RSS 백업에서 {len(filtered_news)}개 뉴스 추출")
+                return filtered_news[:self.max_news]
+        
+        print("HTML 파싱과 RSS 백업 모두 실패")
+        return []
 
 class YahooFinanceNewsExtractor:
     def __init__(self, search_keywords=None, max_news=10):
@@ -488,16 +783,25 @@ class YahooFinanceNewsExtractor:
 def parse_arguments():
     """명령행 인자 파싱"""
     parser = argparse.ArgumentParser(
-        description='Yahoo Finance 뉴스 추출기',
+        description='범용 뉴스 추출기 (Yahoo Finance + 기타 사이트)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 사용 예시:
-  python url_extractor.py                          # 최신 뉴스 10개 추출
-  python url_extractor.py -k "Tesla AI"            # Tesla AI 관련 뉴스 추출
-  python url_extractor.py -n 20                    # 최신 뉴스 20개 추출
-  python url_extractor.py -k "Bitcoin" -n 15       # Bitcoin 관련 뉴스 15개 추출
-  python url_extractor.py -k "NVIDIA stock" -o nvidia_news.json
+  python url_extractor.py                          # Yahoo Finance 최신 뉴스 10개 추출
+  python url_extractor.py -k "Tesla AI"            # Yahoo Finance에서 Tesla AI 관련 뉴스 추출
+  python url_extractor.py -n 20                    # Yahoo Finance 최신 뉴스 20개 추출
+  python url_extractor.py -k "Bitcoin" -n 15       # Yahoo Finance에서 Bitcoin 관련 뉴스 15개 추출
+  python url_extractor.py -u "https://finance.yahoo.com/topic/latest-news/" -n 5
+                                                    # 특정 URL에서 뉴스 5개 추출
+  python url_extractor.py -u "https://cnn.com" -k "technology" -n 10
+                                                    # CNN에서 technology 관련 뉴스 10개 추출
         """
+    )
+    
+    parser.add_argument(
+        '-u', '--url',
+        type=str,
+        help='추출할 뉴스 사이트 URL (예: "https://finance.yahoo.com/topic/latest-news/")'
     )
     
     parser.add_argument(
@@ -516,8 +820,8 @@ def parse_arguments():
     parser.add_argument(
         '-o', '--output',
         type=str,
-        default='yahoo_finance_news.json',
-        help='출력 파일명 (기본값: yahoo_finance_news.json)'
+        default='extracted_news.json',
+        help='출력 파일명 (기본값: extracted_news.json)'
     )
     
     return parser.parse_args()
@@ -527,26 +831,93 @@ def main():
     args = parse_arguments()
     
     print("="*80)
-    print("           Yahoo Finance 뉴스 추출기")
-    print("="*80)
+    if args.url:
+        print("           범용 뉴스 추출기")
+        print("="*80)
+        print(f"추출 URL: {args.url}")
+        
+        if args.keyword:
+            print(f"검색 키워드: {args.keyword}")
+            search_keywords = args.keyword
+        else:
+            print("모드: 전체 뉴스 추출")
+            search_keywords = None
+        
+        print(f"추출 개수: {args.number}개")
+        print(f"출력 파일: {args.output}")
+        print("="*80)
+        
+        # UniversalNewsExtractor 사용
+        extractor = UniversalNewsExtractor(
+            base_url=args.url,
+            search_keywords=search_keywords,
+            max_news=args.number
+        )
+        
+        try:
+            news_items = extractor.extract_news()
+            
+            if news_items:
+                # 결과 출력
+                print("\n" + "="*80)
+                if search_keywords:
+                    print(f"'{search_keywords}' 키워드 관련 뉴스 추출 결과")
+                else:
+                    print("뉴스 추출 결과")
+                print("="*80)
+                
+                for i, item in enumerate(news_items, 1):
+                    print(f"\n{i}. {item['title']}")
+                    print(f"   URL: {item['url']}")
+                    print(f"   주요 키워드: {', '.join(item['keywords']) if item['keywords'] else '없음'}")
+                    print("-" * 80)
+                
+                # JSON 파일로 저장
+                data = {
+                    'extracted_at': datetime.now().isoformat(),
+                    'source': args.url,
+                    'search_keywords': search_keywords,
+                    'max_news': args.number,
+                    'total_count': len(news_items),
+                    'news_items': news_items
+                }
+                
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                
+                print(f"\n결과가 '{args.output}' 파일에 저장되었습니다.")
+                
+            else:
+                if search_keywords:
+                    print(f"'{search_keywords}' 키워드와 관련된 뉴스를 찾을 수 없습니다.")
+                else:
+                    print("뉴스를 추출할 수 없습니다.")
+        
+        except Exception as e:
+            print(f"실행 중 오류가 발생했습니다: {e}")
     
-    if args.keyword:
-        print(f"검색 키워드: {args.keyword}")
-        search_keywords = args.keyword
     else:
-        print("모드: 최신 뉴스 추출")
-        search_keywords = None
-    
-    print(f"추출 개수: {args.number}개")
-    print(f"출력 파일: {args.output}")
-    print("필터링: 광고성 콘텐츠 자동 제외")
-    print("="*80)
-    
-    extractor = YahooFinanceNewsExtractor(
-        search_keywords=search_keywords,
-        max_news=args.number
-    )
-    extractor.run(args.output)
+        # 기존 Yahoo Finance 추출기 사용
+        print("           Yahoo Finance 뉴스 추출기")
+        print("="*80)
+        
+        if args.keyword:
+            print(f"검색 키워드: {args.keyword}")
+            search_keywords = args.keyword
+        else:
+            print("모드: 최신 뉴스 추출")
+            search_keywords = None
+        
+        print(f"추출 개수: {args.number}개")
+        print(f"출력 파일: {args.output}")
+        print("필터링: 광고성 콘텐츠 자동 제외")
+        print("="*80)
+        
+        extractor = YahooFinanceNewsExtractor(
+            search_keywords=search_keywords,
+            max_news=args.number
+        )
+        extractor.run(args.output)
 
 if __name__ == "__main__":
     main() 

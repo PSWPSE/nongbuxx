@@ -1,0 +1,27 @@
+{
+  "extracted_at": "2025-07-12T10:13:01.925428",
+  "source": "https://finance.yahoo.com/topic/stock-market-news/",
+  "search_keywords": null,
+  "max_news": 2,
+  "total_count": 2,
+  "news_items": [
+    {
+      "title": "Paccar (PCAR) Falls More Steeply Than Broader Market: What Investors Need to KnowPaccar (PCAR) closed at $97.21 in the latest trading session, marking a -2.03% move from the prior day.",
+      "url": "https://finance.yahoo.com/news/paccar-pcar-falls-more-steeply-220004831.html",
+      "keywords": [
+        "pcar",
+        "paccar",
+        "falls"
+      ]
+    },
+    {
+      "title": "Why IonQ, Inc. (IONQ) Dipped More Than Broader Market TodayThe latest trading day saw IonQ, Inc. (IONQ) settling at $41.81, representing a -8.97% change from its previous close.",
+      "url": "https://finance.yahoo.com/news/why-ionq-inc-ionq-dipped-215004601.html",
+      "keywords": [
+        "ionq",
+        "inc",
+        "dipped"
+      ]
+    }
+  ]
+}
