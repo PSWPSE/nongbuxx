@@ -1,0 +1,144 @@
+---
+description: "효과적인 디버깅과 테스팅을 위한 가이드라인"
+---
+
+# 🔍 디버깅 & 테스팅 가이드라인
+
+## 🚨 **문제 발생 시 즉시 실행할 명령어들**
+
+### 1️⃣ **서버 상태 확인**
+```bash
+# 프로세스 확인
+ps aux | grep "python3 app.py"
+lsof -i :8080 :3000
+
+# API 엔드포인트 테스트
+curl -s http://localhost:8080/api/health
+curl -s http://localhost:8080/api/sources/extractable
+```
+
+### 2️⃣ **캐시 관련 문제**
+```bash
+# Python 캐시 제거
+find . -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
+# 브라우저 캐시 제거 (개발자 도구에서)
+localStorage.clear()
+sessionStorage.clear()
+location.reload(true)
+```
+
+### 3️⃣ **Import/참조 문제**
+```bash
+# 클래스/함수 참조 찾기
+grep -r "ClassName" . --include="*.py"
+grep -r "functionName" . --include="*.js"
+
+# Import 테스트
+python3 -c "from module import ClassName"
+```
+
+## 🧪 **테스트 시나리오**
+
+### Backend API 테스트
+```bash
+# 1. 기본 엔드포인트
+curl -s http://localhost:8080/api/sources | jq .
+
+# 2. Extractable 소스 확인
+curl -s http://localhost:8080/api/sources/extractable | jq '.data.sources[].id'
+
+# 3. 뉴스 추출 테스트 (새 소스 ID 사용)
+curl -s -X POST http://localhost:8080/api/extract-news-links \
+  -H "Content-Type: application/json" \
+  -d '{"sources":["yahoo_finance_latest","yahoo_finance_crypto"],"count":2}' | jq .
+```
+
+### Frontend 테스트
+```javascript
+// 개발자 도구 콘솔에서 실행
+// 1. 소스 로드 테스트
+fetch('/api/sources/extractable').then(r => r.json()).then(console.log)
+
+// 2. 선택된 소스 확인
+console.log('Selected sources:', selectedSourceIds)
+console.log('Available sources:', availableSources)
+
+// 3. 뉴스 추출 테스트
+fetch('/api/extract-news-links', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({sources: ['yahoo_finance_latest'], count: 1})
+}).then(r => r.json()).then(console.log)
+```
+
+## 🎯 **디버깅 체크리스트**
+
+### Import/클래스 문제
+- [ ] 클래스명이 정확한가?
+- [ ] 모든 파일에서 새로운 클래스명 사용하는가?
+- [ ] Python 캐시 제거했는가?
+
+### URL/API 문제  
+- [ ] 엔드포인트 URL이 정확한가?
+- [ ] Flask 라우팅 순서가 올바른가?
+- [ ] full_url이 올바르게 생성되는가?
+
+### 데이터 일관성 문제
+- [ ] Backend와 Frontend가 같은 ID 사용하는가?
+- [ ] localStorage에 구버전 데이터 없는가?
+- [ ] API 응답 스키마가 예상과 일치하는가?
+
+## 📊 **로그 모니터링**
+
+### 중요한 로그 패턴들
+```bash
+# 에러 로그 모니터링
+tail -f 터미널로그 | grep -E "(ERROR|404|400|500|Exception)"
+
+# 성공적인 추출 확인
+tail -f 터미널로그 | grep -E "(✅|추출|completed)"
+
+# 소스 관련 로그
+tail -f 터미널로그 | grep -i "source"
+```
+
+## 🔧 **개발 환경 리셋**
+
+### 완전 초기화 스크립트
+```bash
+#!/bin/bash
+# 전체 개발 환경 리셋
+
+echo "🔄 서버 프로세스 종료..."
+pkill -f "python3 app.py" || true
+pkill -f "python3 -m http.server" || true
+
+echo "🧹 캐시 제거..."
+find . -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
+echo "⏳ 3초 대기..."
+sleep 3
+
+echo "🚀 백엔드 서버 시작..."
+cd /Users/alphabridge/nongbuxx
+PYTHONDONTWRITEBYTECODE=1 python3 app.py &
+
+echo "🌐 프론트엔드 서버 시작..."
+cd frontend
+python3 -m http.server 3000 &
+
+echo "✅ 리셋 완료!"
+echo "Backend: http://localhost:8080"
+echo "Frontend: http://localhost:3000"
+```
+
+## 💡 **디버깅 팁**
+
+- **단계적 접근**: Backend 먼저, Frontend 나중에
+- **로그 우선**: 에러 메시지를 정확히 읽기
+- **캐시 의심**: 문제가 이상하면 캐시 문제일 가능성 높음
+- **API 테스트**: Frontend 문제 전에 Backend API 먼저 확인
+
+---
+**🔧 복잡한 문제일수록 기본부터 차근차근 확인하세요!**

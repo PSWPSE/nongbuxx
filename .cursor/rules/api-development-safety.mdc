@@ -1,0 +1,142 @@
+---
+alwaysApply: true
+description: "API 개발 시 재발 방지를 위한 안전 체크리스트와 가이드라인"
+---
+
+# 🚨 API 개발 안전 가이드라인
+
+## 📋 **필수 체크리스트 (매 수정 시 확인)**
+
+### 🔄 **Import/Export 일관성**
+- [ ] 클래스명 변경 시 **모든 import 구문** 업데이트 확인
+- [ ] `grep -r "OldClassName" .` 로 누락된 참조 검색
+- [ ] 캐시 제거: `find . -name "__pycache__" -exec rm -rf {} +`
+
+### 🌐 **URL 처리 일관성**
+- [ ] 상대 경로(`/path`) vs 절대 URL(`https://domain.com/path`) 혼용 금지
+- [ ] `full_url` 생성 로직 검증: `parent_url.rstrip('/') + child_url`
+- [ ] URL 스킴 누락 방지: 항상 `http://` 또는 `https://` 포함
+
+### 🛣️ **Flask 라우팅 순서**
+```python
+# ✅ 올바른 순서: 구체적 경로 먼저
+@app.route('/api/sources/extractable')  # 구체적
+@app.route('/api/sources/<source_id>')  # 일반적
+
+# ❌ 잘못된 순서
+@app.route('/api/sources/<source_id>')  # 모든 요청 먹음
+@app.route('/api/sources/extractable')  # 도달 불가
+```
+
+### 🏗️ **계층적 구조 변경 시**
+- [ ] **Backend**: [sources.json](mdc:data/sources.json) 구조 업데이트
+- [ ] **Backend**: API 함수들 (`get_all_extractable_sources()` 등) in [app.py](mdc:app.py)
+- [ ] **Frontend**: 새로운 소스 ID 사용 in [script.js](mdc:frontend/script.js)
+- [ ] **캐시**: 브라우저 localStorage/sessionStorage 초기화
+- [ ] **테스트**: 모든 소스 ID로 API 호출 테스트
+
+## 🔧 **개발 프로세스**
+
+### 1️⃣ **변경 전 백업**
+```bash
+# 중요 파일 백업
+cp data/sources.json data/sources.json.backup
+cp app.py app.py.backup
+```
+
+### 2️⃣ **단계별 테스트**
+```bash
+# 1. Backend API 단독 테스트
+curl -s "http://localhost:8080/api/sources/extractable"
+curl -s -X POST "http://localhost:8080/api/extract-news-links" -d '{"sources":["NEW_ID"]}'
+
+# 2. Frontend에서 API 호출 확인
+console.log('Available sources:', availableSources)
+console.log('Selected sources:', selectedSourceIds)
+```
+
+### 3️⃣ **서버 재시작 프로토콜**
+```bash
+# 완전한 프로세스 종료
+pkill -f "python3 app.py"
+lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+sleep 3
+
+# 캐시 제거 후 재시작
+find . -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+PYTHONDONTWRITEBYTECODE=1 python3 app.py
+```
+
+## 🚫 **금지 사항**
+
+### ❌ **하지 말아야 할 것들**
+- 부분적 업데이트 (Frontend만 또는 Backend만)
+- 구버전 ID와 신버전 ID 혼재
+- 서버 재시작 없이 중요 변경사항 적용
+- localhost 캐시 무시
+
+### ❌ **위험한 패턴들**
+```javascript
+// 나쁜 예: 하드코딩된 구버전 ID
+selectedSourceIds = ['yahoo_finance', 'source_004b8459']
+
+// 좋은 예: API에서 동적으로 로드
+const response = await fetch('/api/sources/extractable')
+selectedSourceIds = response.data.sources.map(s => s.id)
+```
+
+## 🎯 **에러 발생 시 디버깅 순서**
+
+### 1️⃣ **Import 에러**
+```bash
+python3 -c "from MODULE import CLASS" # 직접 테스트
+grep -r "OLD_NAME" . --include="*.py" # 누락 검색
+```
+
+### 2️⃣ **URL 에러**
+```bash
+# URL 생성 확인
+python3 -c "from app import get_all_extractable_sources; print([s['full_url'] for s in get_all_extractable_sources()])"
+```
+
+### 3️⃣ **404/400 에러**
+```bash
+# 라우팅 확인
+python3 -c "from app import app; [print(rule.rule, rule.endpoint) for rule in app.url_map.iter_rules() if 'sources' in rule.rule]"
+```
+
+### 4️⃣ **캐시 문제**
+```javascript
+// 브라우저 콘솔에서 실행
+localStorage.clear()
+sessionStorage.clear()
+location.reload(true)
+```
+
+## 📊 **배포 전 최종 검증**
+
+```bash
+# 1. 모든 엔드포인트 테스트
+curl http://localhost:8080/api/sources
+curl http://localhost:8080/api/sources/extractable  
+curl -X POST http://localhost:8080/api/extract-news-links -d '{"sources":["ID1","ID2"]}'
+
+# 2. 프론트엔드 동작 확인
+open http://localhost:3000
+# - 출처 선택 화면 정상 로드
+# - 뉴스 추출 정상 동작
+# - 에러 메시지 없음
+
+# 3. 로그 확인
+tail -f 터미널로그 | grep -E "(ERROR|404|400|500)"
+```
+
+## 💡 **예방 팁**
+
+- **변경 범위 파악**: 한 파일 수정이 다른 파일에 미치는 영향 체크
+- **점진적 배포**: Backend 먼저, Frontend 나중에
+- **테스트 자동화**: 중요 API는 스크립트로 자동 테스트
+- **문서화**: 변경사항을 CHANGELOG에 기록
+
+---
+**⚠️ 이 체크리스트를 무시하면 시스템 전체가 무너질 수 있습니다!**
