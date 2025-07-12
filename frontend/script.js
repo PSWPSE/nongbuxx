@@ -10,7 +10,7 @@ let generatedContentData = [];
 let currentTheme = 'auto';
 let urlInputCount = 1;
 const maxUrlInputs = 10;
-const API_BASE_URL = window.ENV?.API_BASE_URL || 'http://localhost:8081';
+const API_BASE_URL = window.ENV?.API_BASE_URL || 'http://localhost:8080';
 
 // DOM 요소 캐싱
 const elements = {
@@ -36,16 +36,21 @@ const elements = {
     downloadAllGeneratedBtn: document.getElementById('downloadAllGeneratedBtn'),
     copyAllGeneratedBtn: document.getElementById('copyAllGeneratedBtn'),
     resetAllBtn: document.getElementById('resetAllBtn'),
+    
+    // API 키 설정 모달 관련 요소들
     apiSettingsBtn: document.getElementById('apiSettingsBtn'),
     apiStatus: document.getElementById('apiStatus'),
-    apiSettingsSection: document.getElementById('apiSettingsSection'),
+    apiSettingsModalSection: document.getElementById('apiSettingsModalSection'),
+    apiSettingsModalOverlay: document.getElementById('apiSettingsModalOverlay'),
+    closeApiSettingsModalBtn: document.getElementById('closeApiSettingsModalBtn'),
     apiProviderSelect: document.getElementById('apiProviderSelect'),
     apiKeyInput: document.getElementById('apiKeyInput'),
+    toggleApiKeyBtn: document.getElementById('toggleApiKeyBtn'),
     validateApiKeyBtn: document.getElementById('validateApiKeyBtn'),
     saveApiKeyBtn: document.getElementById('saveApiKeyBtn'),
     deleteApiKeyBtn: document.getElementById('deleteApiKeyBtn'),
-    cancelApiSettingsBtn: document.getElementById('cancelApiSettingsBtn'),
     apiValidationResult: document.getElementById('apiValidationResult'),
+    
     progressSection: document.getElementById('progressSection'),
     progressTitle: document.getElementById('progressTitle'),
     progressFill: document.getElementById('progressFill'),
@@ -63,7 +68,7 @@ const elements = {
     // 출처 관리 관련 요소들
     sourceManagementBtn: document.getElementById('sourceManagementBtn'),
     sourceManagementSection: document.getElementById('sourceManagementSection'),
-    cancelSourceManagementBtn: document.getElementById('cancelSourceManagementBtn'),
+    closeSourceManagementBtn: document.getElementById('closeSourceManagementBtn'),
     sourcesList: document.getElementById('sourcesList'),
     addSourceBtn: document.getElementById('addSourceBtn'),
     
@@ -73,11 +78,23 @@ const elements = {
     sourceSelectionModalSection: document.getElementById('sourceSelectionModalSection'),
     sourceSelectionModalOverlay: document.getElementById('sourceSelectionModalOverlay'),
     closeSourceSelectionModalBtn: document.getElementById('closeSourceSelectionModalBtn'),
-    sourceSelectionList: document.getElementById('sourceSelectionList'),
+    
+    // 2단계 선택 시스템 요소들
+    step1Nav: document.getElementById('step1Nav'),
+    step2Nav: document.getElementById('step2Nav'),
+    step1Content: document.getElementById('step1Content'),
+    step2Content: document.getElementById('step2Content'),
+    sourceTypeList: document.getElementById('sourceTypeList'),
+    subcategorySelectionList: document.getElementById('subcategorySelectionList'),
+    nextToStep2Btn: document.getElementById('nextToStep2Btn'),
+    backToStep1Btn: document.getElementById('backToStep1Btn'),
+    selectedSourceName: document.getElementById('selectedSourceName'),
+    selectionSummary: document.getElementById('selectionSummary'),
+    selectedItemsSummary: document.getElementById('selectedItemsSummary'),
+    
     selectAllSourcesBtn: document.getElementById('selectAllSourcesBtn'),
     deselectAllSourcesBtn: document.getElementById('deselectAllSourcesBtn'),
     confirmSourceSelectionBtn: document.getElementById('confirmSourceSelectionBtn'),
-    cancelSourceSelectionBtn: document.getElementById('cancelSourceSelectionBtn'),
     
     // 출처 추가/수정 모달 관련 요소들
     sourceModalSection: document.getElementById('sourceModalSection'),
@@ -87,11 +104,17 @@ const elements = {
     sourceForm: document.getElementById('sourceForm'),
     sourceNameInput: document.getElementById('sourceNameInput'),
     sourceUrlInput: document.getElementById('sourceUrlInput'),
+    sourceIsParentCheckbox: document.getElementById('sourceIsParentCheckbox'),
     sourceParserTypeSelect: document.getElementById('sourceParserTypeSelect'),
     sourceDescriptionInput: document.getElementById('sourceDescriptionInput'),
     sourceActiveCheckbox: document.getElementById('sourceActiveCheckbox'),
     saveSourceBtn: document.getElementById('saveSourceBtn'),
-    cancelSourceBtn: document.getElementById('cancelSourceBtn')
+    
+    // 서브 카테고리 관련 요소들
+    subcategoriesSection: document.getElementById('subcategoriesSection'),
+    subcategoriesList: document.getElementById('subcategoriesList'),
+    addSubcategoryBtn: document.getElementById('addSubcategoryBtn'),
+    parserTypeGroup: document.getElementById('parserTypeGroup')
 };
 
 // 앱 초기화
@@ -178,15 +201,28 @@ function initEventListeners() {
         newsSortSelect.addEventListener('change', handleNewsSortChange);
     }
     
-    // API 설정 관련
+    // API 설정 모달 관련
     if (elements.apiSettingsBtn) {
-        elements.apiSettingsBtn.addEventListener('click', showApiSettingsSection);
+        elements.apiSettingsBtn.addEventListener('click', showApiSettingsModal);
+    }
+    if (elements.closeApiSettingsModalBtn) {
+        elements.closeApiSettingsModalBtn.addEventListener('click', hideApiSettingsModal);
+    }
+    if (elements.apiSettingsModalOverlay) {
+        elements.apiSettingsModalOverlay.addEventListener('click', function(e) {
+            if (e.target === elements.apiSettingsModalOverlay) {
+                hideApiSettingsModal();
+            }
+        });
     }
     if (elements.apiProviderSelect) {
         elements.apiProviderSelect.addEventListener('change', onApiProviderChange);
     }
     if (elements.apiKeyInput) {
         elements.apiKeyInput.addEventListener('input', onApiKeyInput);
+    }
+    if (elements.toggleApiKeyBtn) {
+        elements.toggleApiKeyBtn.addEventListener('click', toggleApiKeyVisibility);
     }
     if (elements.validateApiKeyBtn) {
         elements.validateApiKeyBtn.addEventListener('click', validateApiKey);
@@ -197,16 +233,13 @@ function initEventListeners() {
     if (elements.deleteApiKeyBtn) {
         elements.deleteApiKeyBtn.addEventListener('click', deleteApiKey);
     }
-    if (elements.cancelApiSettingsBtn) {
-        elements.cancelApiSettingsBtn.addEventListener('click', hideApiSettingsSection);
-    }
     
     // 출처 관리 관련
     if (elements.sourceManagementBtn) {
-        elements.sourceManagementBtn.addEventListener('click', showSourceManagementSection);
+        elements.sourceManagementBtn.addEventListener('click', showSourceManagementModal);
     }
-    if (elements.cancelSourceManagementBtn) {
-        elements.cancelSourceManagementBtn.addEventListener('click', hideSourceManagementSection);
+    if (elements.closeSourceManagementBtn) {
+        elements.closeSourceManagementBtn.addEventListener('click', hideSourceManagementModal);
     }
     if (elements.addSourceBtn) {
         elements.addSourceBtn.addEventListener('click', showAddSourceModal);
@@ -220,7 +253,7 @@ function initEventListeners() {
         elements.closeSourceSelectionModalBtn.addEventListener('click', hideSourceSelectionModal);
     }
     if (elements.sourceSelectionModalOverlay) {
-        elements.sourceSelectionModalOverlay.addEventListener('click', (e) => {
+        elements.sourceSelectionModalOverlay.addEventListener('click', function(e) {
             if (e.target === elements.sourceSelectionModalOverlay) {
                 hideSourceSelectionModal();
             }
@@ -235,26 +268,26 @@ function initEventListeners() {
     if (elements.confirmSourceSelectionBtn) {
         elements.confirmSourceSelectionBtn.addEventListener('click', confirmSourceSelection);
     }
-    if (elements.cancelSourceSelectionBtn) {
-        elements.cancelSourceSelectionBtn.addEventListener('click', hideSourceSelectionModal);
-    }
     
     // 출처 추가/수정 모달 관련
     if (elements.closeSourceModalBtn) {
         elements.closeSourceModalBtn.addEventListener('click', hideSourceModal);
     }
     if (elements.sourceModalOverlay) {
-        elements.sourceModalOverlay.addEventListener('click', (e) => {
+        elements.sourceModalOverlay.addEventListener('click', function(e) {
             if (e.target === elements.sourceModalOverlay) {
                 hideSourceModal();
             }
         });
     }
+    if (elements.sourceIsParentCheckbox) {
+        elements.sourceIsParentCheckbox.addEventListener('change', toggleParentSourceFields);
+    }
+    if (elements.addSubcategoryBtn) {
+        elements.addSubcategoryBtn.addEventListener('click', addSubcategoryForm);
+    }
     if (elements.saveSourceBtn) {
         elements.saveSourceBtn.addEventListener('click', saveSource);
-    }
-    if (elements.cancelSourceBtn) {
-        elements.cancelSourceBtn.addEventListener('click', hideSourceModal);
     }
     
     // 기타 버튼들
@@ -269,6 +302,14 @@ function initEventListeners() {
     }
     if (elements.retryBtn) {
         elements.retryBtn.addEventListener('click', retryGeneration);
+    }
+    
+    // 2단계 선택 시스템 이벤트 리스너
+    if (elements.nextToStep2Btn) {
+        elements.nextToStep2Btn.addEventListener('click', goToStep2);
+    }
+    if (elements.backToStep1Btn) {
+        elements.backToStep1Btn.addEventListener('click', goToStep1);
     }
 }
 
@@ -296,7 +337,7 @@ function addUrlInput(currentIndex) {
                     data-clicked="false"
                 >
                 <button type="button" class="btn btn-icon add-url-btn" onclick="addUrlInput(${newIndex})">
-                    <i class="fas fa-plus"></i>
+                        <i class="fas fa-plus"></i>
                 </button>
                 <button type="button" class="btn btn-icon remove-url-btn" onclick="removeUrlInput(${newIndex})">
                     <i class="fas fa-minus"></i>
@@ -391,12 +432,12 @@ async function generateContent(contentType = 'standard') {
         // 프로그레스 시뮬레이션 시작 (블로그 콘텐츠는 더 오래 걸림)
         const duration = contentType === 'blog' ? 45000 : 30000;
         startProgressSimulation(duration);
-        
-        const response = await fetch(`${API_BASE_URL}/api/generate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            
+            const response = await fetch(`${API_BASE_URL}/api/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             body: JSON.stringify({ 
                 url: urls[0], // 단일 URL 전송
                 api_provider: apiSettings.provider,
@@ -414,7 +455,7 @@ async function generateContent(contentType = 'standard') {
         if (result.job_id) {
             currentJobId = result.job_id;
             pollJobStatus(result.job_id);
-        } else {
+            } else {
             throw new Error('작업 ID를 받지 못했습니다.');
         }
         
@@ -524,7 +565,7 @@ function startProgressSimulation(duration = 30000) {
         // 90%까지는 빠르게, 90% 이후는 천천히 진행
         if (simulatedProgress < 90) {
             simulatedProgress += Math.random() * 2 + 0.5; // 0.5-2.5% 증가
-        } else {
+            } else {
             simulatedProgress += Math.random() * 0.5 + 0.1; // 0.1-0.6% 증가
         }
         
@@ -662,16 +703,18 @@ async function handleNewsExtraction() {
             elements.extractNewsBtn.innerHTML = '<div class="spinner"></div> 추출 중...';
         }
         
+        const requestData = {
+            keyword, 
+            count,
+            sources: selectedSourceIds  // 선택된 출처들 전송
+        };
+        
         const response = await fetch(`${API_BASE_URL}/api/extract-news-links`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ 
-                keyword, 
-                count,
-                sources: selectedSourceIds  // 선택된 출처들 전송
-            })
+            body: JSON.stringify(requestData)
         });
         
         if (!response.ok) {
@@ -1214,12 +1257,12 @@ async function downloadFile() {
     
     const blob = new Blob([currentData.content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+        const a = document.createElement('a');
+        a.href = url;
     a.download = `content-${Date.now()}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
     showToast('다운로드가 시작되었습니다.', 'success');
@@ -1279,8 +1322,8 @@ function showToast(message, type = 'info') {
     
     if (elements.toastContainer) {
         elements.toastContainer.appendChild(toast);
-        
-        setTimeout(() => {
+    
+    setTimeout(() => {
             toast.remove();
         }, 3000);
     }
@@ -1324,10 +1367,10 @@ function updateApiStatus(provider, isConfigured) {
     }
 }
 
-function showApiSettingsSection() {
+function showApiSettingsModal() {
     hideAllSections();
-    if (elements.apiSettingsSection) {
-        elements.apiSettingsSection.style.display = 'block';
+    if (elements.apiSettingsModalSection) {
+        elements.apiSettingsModalSection.style.display = 'block';
     }
     
     const settings = getApiSettings();
@@ -1339,9 +1382,9 @@ function showApiSettingsSection() {
     }
 }
 
-function hideApiSettingsSection() {
-    if (elements.apiSettingsSection) {
-        elements.apiSettingsSection.style.display = 'none';
+function hideApiSettingsModal() {
+    if (elements.apiSettingsModalSection) {
+        elements.apiSettingsModalSection.style.display = 'none';
     }
 }
 
@@ -1412,14 +1455,14 @@ function saveApiKey() {
     
     saveApiSettings(provider, key);
     updateApiStatus(provider, true);
-    hideApiSettingsSection();
+    hideApiSettingsModal();
     showToast('API 키가 저장되었습니다.', 'success');
 }
 
 function deleteApiKey() {
-    deleteApiSettings();
+        deleteApiSettings();
     updateApiStatus('', false);
-    hideApiSettingsSection();
+        hideApiSettingsModal();
     showToast('API 키가 삭제되었습니다.', 'info');
 }
 
@@ -1516,10 +1559,10 @@ function handleEscapeKey() {
     const urlInputSection = document.getElementById('urlInputSection');
     const newsSelectionSection = document.getElementById('newsSelectionSection');
     const generatedContentListSection = document.getElementById('generatedContentListSection');
-    const apiSettingsSection = document.getElementById('apiSettingsSection');
+    const apiSettingsSection = document.getElementById('apiSettingsModalSection');
     
     if (apiSettingsSection && apiSettingsSection.style.display !== 'none') {
-        hideApiSettingsSection();
+        hideApiSettingsModal();
     } else if (urlInputSection && urlInputSection.style.display !== 'none') {
         hideUrlInputSection();
     } else if (generatedContentListSection && generatedContentListSection.style.display !== 'none') {
@@ -1630,7 +1673,7 @@ function clearUserPreferences() {
 
 async function loadAvailableSources() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/sources`);
+        const response = await fetch(`${API_BASE_URL}/api/sources/extractable`);
         const result = await response.json();
         
         if (result.success) {
@@ -1642,7 +1685,7 @@ async function loadAvailableSources() {
                 .map(source => source.id);
             
             updateSelectedSourcesDisplay();
-            console.log(`${availableSources.length}개의 출처를 로드했습니다.`);
+            console.log(`${availableSources.length}개의 추출 가능한 출처를 로드했습니다.`);
         } else {
             throw new Error(result.error);
         }
@@ -1650,15 +1693,31 @@ async function loadAvailableSources() {
         console.error('출처 로드 오류:', error);
         showToast('출처 정보를 불러오는 중 오류가 발생했습니다.', 'error');
         
-        // 기본 출처 설정
-        availableSources = [{
-            id: 'yahoo_finance',
-            name: 'Yahoo Finance',
-            url: 'https://finance.yahoo.com/topic/latest-news/',
-            active: true,
-            description: '글로벌 금융 뉴스 및 시장 정보'
-        }];
-        selectedSourceIds = ['yahoo_finance'];
+        // 기본 출처 설정 (계층적 구조 기반)
+        availableSources = [
+            {
+                id: 'yahoo_finance_latest',
+                name: 'Latest News',
+                full_url: 'https://finance.yahoo.com/topic/latest-news/',
+                active: true,
+                description: 'Yahoo Finance 최신 뉴스'
+            },
+            {
+                id: 'yahoo_finance_crypto',
+                name: 'Crypto',
+                full_url: 'https://finance.yahoo.com/topic/crypto/',
+                active: true,
+                description: 'Yahoo Finance 암호화폐 뉴스'
+            },
+            {
+                id: 'yahoo_finance_tech',
+                name: 'Tech',
+                full_url: 'https://finance.yahoo.com/topic/tech/',
+                active: true,
+                description: 'Yahoo Finance 기술 뉴스'
+            }
+        ];
+        selectedSourceIds = ['yahoo_finance_latest'];
         updateSelectedSourcesDisplay();
     }
 }
@@ -1692,7 +1751,7 @@ function removeSelectedSource(sourceId) {
     }
 }
 
-function showSourceManagementSection() {
+function showSourceManagementModal() {
     hideAllSections();
     if (elements.sourceManagementSection) {
         elements.sourceManagementSection.style.display = 'block';
@@ -1700,7 +1759,7 @@ function showSourceManagementSection() {
     }
 }
 
-function hideSourceManagementSection() {
+function hideSourceManagementModal() {
     if (elements.sourceManagementSection) {
         elements.sourceManagementSection.style.display = 'none';
     }
@@ -1712,37 +1771,80 @@ function displaySourcesList() {
     
     if (availableSources.length === 0) {
         elements.sourcesList.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                <i class="fas fa-globe" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
-                <p>등록된 출처가 없습니다.</p>
-                <p>새 출처를 추가해보세요.</p>
+            <div class="no-sources">
+                <i class="fas fa-globe"></i>
+                <h4>등록된 출처가 없습니다</h4>
+                <p>새 출처를 추가하여 뉴스 추출을 시작해보세요.</p>
             </div>
         `;
         return;
     }
     
-    elements.sourcesList.innerHTML = availableSources.map(source => `
-        <div class="source-item ${source.active ? '' : 'inactive'}">
-            <div class="source-info">
-                <div class="source-header">
-                    <span class="source-name">${source.name}</span>
-                    <span class="source-status ${source.active ? 'active' : 'inactive'}">
-                        ${source.active ? '활성' : '비활성'}
-                    </span>
+    elements.sourcesList.innerHTML = '';
+    
+    availableSources.forEach(source => {
+        const sourceElement = document.createElement('div');
+        sourceElement.className = `source-item ${source.active ? 'active' : 'inactive'}`;
+        
+        let subcategoriesHtml = '';
+        if (source.is_parent && source.subcategories && source.subcategories.length > 0) {
+            subcategoriesHtml = `
+                <div class="subcategories-display">
+                    <h5><i class="fas fa-list"></i> 서브 카테고리 (${source.subcategories.length}개)</h5>
+                    <div class="subcategories-grid">
+                        ${source.subcategories.map(sub => `
+                            <div class="subcategory-card ${sub.active ? 'active' : 'inactive'}">
+                                <div class="subcategory-info">
+                                    <h6><i class="fas fa-tag"></i> ${sub.name}</h6>
+                                    <div class="subcategory-url">${sub.url}</div>
+                                    <div>
+                                        <span class="subcategory-parser">${sub.parser_type || 'universal'}</span>
+                                        <span class="subcategory-status ${sub.active ? 'active' : 'inactive'}">
+                                            ${sub.active ? '활성' : '비활성'}
+                                        </span>
+                                    </div>
+                                    ${sub.description ? `<div style="margin-top: 6px; font-size: 0.8rem; color: var(--text-secondary); font-style: italic;">${sub.description}</div>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
-                <div class="source-url">${source.url}</div>
-                ${source.description ? `<div class="source-description">${source.description}</div>` : ''}
+            `;
+        }
+        
+        sourceElement.innerHTML = `
+            <div class="source-header">
+                <div class="source-info">
+                    <div class="source-name">
+                        <i class="fas ${source.is_parent ? 'fa-sitemap' : 'fa-globe'}"></i>
+                        ${source.name}
+                        ${source.is_parent ? '<span class="parent-badge">상위 출처</span>' : ''}
+                    </div>
+                    <div class="source-meta">
+                        <div class="source-url">${source.url}</div>
+                        ${!source.is_parent ? `<span class="source-parser">${source.parser_type || 'universal'}</span>` : ''}
+                        <span class="source-status ${source.active ? 'active' : 'inactive'}">
+                            ${source.active ? '활성' : '비활성'}
+                        </span>
+                    </div>
+                    ${source.description ? `<div class="source-description">${source.description}</div>` : ''}
+                </div>
+                <div class="source-actions">
+                    <button type="button" class="btn btn-primary" onclick="editSource('${source.id}')">
+                        <i class="fas fa-edit"></i>
+                        수정
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="deleteSource('${source.id}')">
+                        <i class="fas fa-trash"></i>
+                        삭제
+                    </button>
+                </div>
             </div>
-            <div class="source-actions">
-                <button class="btn btn-mini btn-info" onclick="editSource('${source.id}')">
-                    <i class="fas fa-edit"></i> 수정
-                </button>
-                <button class="btn btn-mini btn-danger" onclick="deleteSource('${source.id}')">
-                    <i class="fas fa-trash"></i> 삭제
-                </button>
-            </div>
-        </div>
-    `).join('');
+            ${subcategoriesHtml}
+        `;
+        
+        elements.sourcesList.appendChild(sourceElement);
+    });
 }
 
 function showAddSourceModal() {
@@ -1765,7 +1867,10 @@ function showAddSourceModal() {
 
 function editSource(sourceId) {
     const source = availableSources.find(s => s.id === sourceId);
-    if (!source) return;
+    if (!source) {
+        showToast('출처를 찾을 수 없습니다.', 'error');
+        return;
+    }
     
     currentEditingSource = source;
     
@@ -1773,12 +1878,85 @@ function editSource(sourceId) {
         elements.sourceModalTitle.innerHTML = '<i class="fas fa-edit"></i> 출처 수정';
     }
     
-    // 폼에 기존 데이터 채우기
-    if (elements.sourceNameInput) elements.sourceNameInput.value = source.name;
-    if (elements.sourceUrlInput) elements.sourceUrlInput.value = source.url;
-    if (elements.sourceParserTypeSelect) elements.sourceParserTypeSelect.value = source.parser_type || 'yahoo_finance';
+    // 폼 초기화
+    if (elements.sourceForm) {
+        elements.sourceForm.reset();
+    }
+    
+    // 기본 정보 채우기
+    if (elements.sourceNameInput) elements.sourceNameInput.value = source.name || '';
+    if (elements.sourceUrlInput) elements.sourceUrlInput.value = source.url || '';
     if (elements.sourceDescriptionInput) elements.sourceDescriptionInput.value = source.description || '';
-    if (elements.sourceActiveCheckbox) elements.sourceActiveCheckbox.checked = source.active;
+    if (elements.sourceActiveCheckbox) elements.sourceActiveCheckbox.checked = source.active !== false;
+    
+    // 부모 출처 여부 설정
+    if (elements.sourceIsParentCheckbox) {
+        elements.sourceIsParentCheckbox.checked = source.is_parent === true;
+        toggleParentSourceFields(); // UI 상태 업데이트
+    }
+    
+    // 부모 출처가 아닌 경우 파서 타입 설정
+    if (!source.is_parent) {
+        if (elements.sourceParserTypeSelect) {
+            elements.sourceParserTypeSelect.value = source.parser_type || 'universal';
+        }
+    }
+    
+    // 부모 출처인 경우 서브 카테고리 데이터 복원
+    if (source.is_parent && source.subcategories && source.subcategories.length > 0) {
+        // 서브 카테고리 리스트 초기화
+        if (elements.subcategoriesList) {
+            elements.subcategoriesList.innerHTML = '';
+        }
+        
+        // 각 서브 카테고리 폼 생성
+        source.subcategories.forEach((subcategory, index) => {
+            const subcategoryId = `subcategory-${Date.now()}-${index}`;
+            const subcategoryHtml = `
+                <div class="subcategory-item" data-subcategory-id="${subcategoryId}">
+                    <div class="subcategory-header">
+                        <h5><i class="fas fa-tag"></i> 서브 카테고리 ${index + 1}</h5>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeSubcategoryForm('${subcategoryId}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="subcategory-form">
+                        <div class="form-group">
+                            <label>이름 *</label>
+                            <input type="text" class="subcategory-name" value="${subcategory.name || ''}" placeholder="예: Latest News, Tech, Crypto" required>
+                        </div>
+                        <div class="form-group">
+                            <label>URL 경로 *</label>
+                            <input type="text" class="subcategory-url" value="${subcategory.url || ''}" placeholder="예: /topic/latest-news/" required>
+                        </div>
+                        <div class="form-group">
+                            <label>파서 타입</label>
+                            <select class="subcategory-parser-type">
+                                <option value="universal" ${subcategory.parser_type === 'universal' ? 'selected' : ''}>Universal</option>
+                                <option value="yahoo_finance" ${subcategory.parser_type === 'yahoo_finance' ? 'selected' : ''}>Yahoo Finance</option>
+                                <option value="generic" ${subcategory.parser_type === 'generic' ? 'selected' : ''}>일반</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>설명</label>
+                            <textarea class="subcategory-description" rows="2" placeholder="서브 카테고리 설명">${subcategory.description || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="subcategory-active" ${subcategory.active !== false ? 'checked' : ''}>
+                                <span class="checkmark"></span>
+                                활성화
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (elements.subcategoriesList) {
+                elements.subcategoriesList.insertAdjacentHTML('beforeend', subcategoryHtml);
+            }
+        });
+    }
     
     showSourceModal();
 }
@@ -1896,7 +2074,8 @@ async function saveSource() {
 function showSourceSelectionModal() {
     if (elements.sourceSelectionModalSection) {
         elements.sourceSelectionModalSection.style.display = 'block';
-        displaySourceSelectionList();
+        resetSelectionSteps();
+        displaySourceTypes();
     }
 }
 
@@ -1904,136 +2083,560 @@ function hideSourceSelectionModal() {
     if (elements.sourceSelectionModalSection) {
         elements.sourceSelectionModalSection.style.display = 'none';
     }
+    resetSelectionSteps();
 }
 
-function displaySourceSelectionList() {
-    if (!elements.sourceSelectionList) return;
+function resetSelectionSteps() {
+    // 단계 네비게이션 리셋
+    if (elements.step1Nav) elements.step1Nav.classList.add('active');
+    if (elements.step2Nav) elements.step2Nav.classList.remove('active', 'completed');
     
-    elements.sourceSelectionList.innerHTML = availableSources
-        .filter(source => source.active)
-        .map(source => `
-            <div class="source-selection-item ${selectedSourceIds.includes(source.id) ? 'selected' : ''}" 
-                 onclick="toggleSourceSelection('${source.id}')">
-                <div class="source-selection-checkbox"></div>
-                <div class="source-selection-info">
-                    <div class="source-selection-name">${source.name}</div>
-                    <div class="source-selection-url">${source.url}</div>
-                </div>
-            </div>
-        `).join('');
+    // 콘텐츠 표시 리셋
+    if (elements.step1Content) elements.step1Content.style.display = 'block';
+    if (elements.step2Content) elements.step2Content.style.display = 'none';
+    if (elements.selectionSummary) elements.selectionSummary.style.display = 'none';
+    
+    // 상태 리셋
+    currentSelectedParentSource = null;
+    tempSelectedSubcategories = [];
+    
+    // 버튼 상태 리셋
+    if (elements.nextToStep2Btn) elements.nextToStep2Btn.disabled = true;
 }
 
-function toggleSourceSelection(sourceId) {
-    if (selectedSourceIds.includes(sourceId)) {
-        selectedSourceIds = selectedSourceIds.filter(id => id !== sourceId);
-    } else {
-        selectedSourceIds.push(sourceId);
+function displaySourceTypes() {
+    if (!elements.sourceTypeList) return;
+    
+    elements.sourceTypeList.innerHTML = '';
+    
+    // 부모 출처들과 독립 출처들을 분리
+    const parentSources = availableSources.filter(source => source.is_parent);
+    const standaloneSources = availableSources.filter(source => !source.is_parent);
+    
+    // 부모 출처들 표시
+    parentSources.forEach(source => {
+        const subcategoryCount = source.subcategories ? source.subcategories.filter(sub => sub.active).length : 0;
+        
+        const sourceTypeCard = document.createElement('div');
+        sourceTypeCard.className = 'source-type-card';
+        sourceTypeCard.dataset.sourceId = source.id;
+        
+        sourceTypeCard.innerHTML = `
+            <div class="source-icon">
+                <i class="fas fa-sitemap"></i>
+            </div>
+            <div class="source-name">${source.name}</div>
+            <div class="source-description">${source.description || '다양한 카테고리의 뉴스를 제공합니다'}</div>
+            <div class="source-stats">
+                <span>상위 출처</span>
+                <span class="subcategory-count">${subcategoryCount}개 카테고리</span>
+            </div>
+        `;
+        
+        sourceTypeCard.addEventListener('click', () => selectSourceType(source));
+        elements.sourceTypeList.appendChild(sourceTypeCard);
+    });
+    
+    // 독립 출처들 표시
+    standaloneSources.forEach(source => {
+        const sourceTypeCard = document.createElement('div');
+        sourceTypeCard.className = 'source-type-card';
+        sourceTypeCard.dataset.sourceId = source.id;
+        
+        sourceTypeCard.innerHTML = `
+            <div class="source-icon">
+                <i class="fas fa-globe"></i>
+            </div>
+            <div class="source-name">${source.name}</div>
+            <div class="source-description">${source.description || '단일 출처 뉴스를 제공합니다'}</div>
+            <div class="source-stats">
+                <span>독립 출처</span>
+                <span class="subcategory-count">직접 추출</span>
+            </div>
+        `;
+        
+        sourceTypeCard.addEventListener('click', () => selectSourceType(source));
+        elements.sourceTypeList.appendChild(sourceTypeCard);
+    });
+}
+
+function selectSourceType(source) {
+    // 이전 선택 해제
+    elements.sourceTypeList.querySelectorAll('.source-type-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // 새 선택 표시
+    const selectedCard = elements.sourceTypeList.querySelector(`[data-source-id="${source.id}"]`);
+    if (selectedCard) {
+        selectedCard.classList.add('selected');
     }
     
-    displaySourceSelectionList();
+    currentSelectedParentSource = source;
+    
+    // 다음 단계 버튼 활성화
+    if (elements.nextToStep2Btn) {
+        elements.nextToStep2Btn.disabled = false;
+    }
+}
+
+function goToStep2() {
+    if (!currentSelectedParentSource) return;
+    
+    // 단계 네비게이션 업데이트
+    if (elements.step1Nav) {
+        elements.step1Nav.classList.remove('active');
+        elements.step1Nav.classList.add('completed');
+    }
+    if (elements.step2Nav) elements.step2Nav.classList.add('active');
+    
+    // 콘텐츠 전환
+    if (elements.step1Content) elements.step1Content.style.display = 'none';
+    if (elements.step2Content) elements.step2Content.style.display = 'block';
+    
+    // 선택된 출처명 표시
+    if (elements.selectedSourceName) {
+        elements.selectedSourceName.textContent = `${currentSelectedParentSource.name}의 카테고리를 선택해주세요`;
+    }
+    
+    // 독립 출처인 경우 바로 확인
+    if (!currentSelectedParentSource.is_parent) {
+        window.selectedSourceIds = [currentSelectedParentSource.id];
+        updateSelectionSummary();
+        if (elements.selectionSummary) elements.selectionSummary.style.display = 'block';
+        return;
+    }
+    
+    // 서브 카테고리 표시
+    displaySubcategories();
+}
+
+function displaySubcategories() {
+    if (!elements.subcategorySelectionList || !currentSelectedParentSource) return;
+    
+    elements.subcategorySelectionList.innerHTML = '';
+    
+    if (!currentSelectedParentSource.subcategories || currentSelectedParentSource.subcategories.length === 0) {
+        elements.subcategorySelectionList.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 16px;"></i>
+                <p>이 출처에는 서브 카테고리가 없습니다.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    currentSelectedParentSource.subcategories.forEach(subcategory => {
+        const subcategoryCard = document.createElement('div');
+        subcategoryCard.className = 'subcategory-selection-card';
+        subcategoryCard.dataset.subcategoryId = subcategory.id;
+        
+        subcategoryCard.innerHTML = `
+            <div class="category-checkbox"></div>
+            <div class="category-icon">
+                <i class="fas fa-tag"></i>
+            </div>
+            <div class="category-name">${subcategory.name}</div>
+            <div class="category-url">${currentSelectedParentSource.url}${subcategory.url}</div>
+            ${subcategory.description ? `<div class="category-description">${subcategory.description}</div>` : ''}
+            <div class="category-meta">
+                <span class="category-parser">${subcategory.parser_type || 'universal'}</span>
+                <span class="category-status ${subcategory.active ? 'active' : 'inactive'}">
+                    ${subcategory.active ? '활성' : '비활성'}
+                </span>
+            </div>
+        `;
+        
+        subcategoryCard.addEventListener('click', () => toggleSubcategorySelection(subcategory.id));
+        elements.subcategorySelectionList.appendChild(subcategoryCard);
+    });
+}
+
+function toggleSubcategorySelection(subcategoryId) {
+    const index = tempSelectedSubcategories.indexOf(subcategoryId);
+    
+    if (index > -1) {
+        tempSelectedSubcategories.splice(index, 1);
+    } else {
+        tempSelectedSubcategories.push(subcategoryId);
+    }
+    
+    updateSubcategorySelectionDisplay();
+    updateSelectionSummary();
+}
+
+function updateSubcategorySelectionDisplay() {
+    if (!elements.subcategorySelectionList) return;
+    
+    elements.subcategorySelectionList.querySelectorAll('.subcategory-selection-card').forEach(card => {
+        const subcategoryId = card.dataset.subcategoryId;
+        const isSelected = tempSelectedSubcategories.includes(subcategoryId);
+        
+        if (isSelected) {
+            card.classList.add('selected');
+        } else {
+            card.classList.remove('selected');
+        }
+    });
 }
 
 function selectAllSources() {
-    selectedSourceIds = availableSources
-        .filter(source => source.active)
-        .map(source => source.id);
+    if (!currentSelectedParentSource || !currentSelectedParentSource.subcategories) return;
     
-    displaySourceSelectionList();
+    tempSelectedSubcategories = currentSelectedParentSource.subcategories
+        .filter(sub => sub.active)
+        .map(sub => sub.id);
+    
+    updateSubcategorySelectionDisplay();
+    updateSelectionSummary();
 }
 
 function deselectAllSources() {
-    selectedSourceIds = [];
-    displaySourceSelectionList();
+    tempSelectedSubcategories = [];
+    updateSubcategorySelectionDisplay();
+    updateSelectionSummary();
+}
+
+function updateSelectionSummary() {
+    if (!elements.selectedItemsSummary) return;
+    
+    let selectedItems = [];
+    
+    if (currentSelectedParentSource) {
+        if (currentSelectedParentSource.is_parent && tempSelectedSubcategories.length > 0) {
+            // 부모 출처의 서브 카테고리들
+            tempSelectedSubcategories.forEach(subId => {
+                const subcategory = currentSelectedParentSource.subcategories.find(sub => sub.id === subId);
+                if (subcategory) {
+                    selectedItems.push(`${currentSelectedParentSource.name} - ${subcategory.name}`);
+                }
+            });
+        } else if (!currentSelectedParentSource.is_parent) {
+            // 독립 출처
+            selectedItems.push(currentSelectedParentSource.name);
+        }
+    }
+    
+    elements.selectedItemsSummary.innerHTML = selectedItems.map(item => `
+        <span class="selected-item-tag">
+            <i class="fas fa-check"></i>
+            ${item}
+        </span>
+    `).join('');
+    
+    if (selectedItems.length > 0 && elements.selectionSummary) {
+        elements.selectionSummary.style.display = 'block';
+    }
+}
+
+function goToStep1() {
+    // 단계 네비게이션 업데이트
+    if (elements.step1Nav) {
+        elements.step1Nav.classList.add('active');
+        elements.step1Nav.classList.remove('completed');
+    }
+    if (elements.step2Nav) {
+        elements.step2Nav.classList.remove('active');
+    }
+    
+    // 콘텐츠 전환
+    if (elements.step1Content) elements.step1Content.style.display = 'block';
+    if (elements.step2Content) elements.step2Content.style.display = 'none';
+    if (elements.selectionSummary) elements.selectionSummary.style.display = 'none';
+    
+    // 2단계 상태 리셋
+    tempSelectedSubcategories = [];
 }
 
 function confirmSourceSelection() {
-    if (selectedSourceIds.length === 0) {
-        showToast('최소 하나의 출처를 선택해주세요.', 'warning');
-        return;
-    }
-    
-    updateSelectedSourcesDisplay();
-    hideSourceSelectionModal();
-    showToast(`${selectedSourceIds.length}개의 출처가 선택되었습니다.`, 'success');
-}
-
-// 기존 뉴스 추출 함수 수정
-async function handleNewsExtraction() {
-    const keyword = elements.newsKeyword ? elements.newsKeyword.value.trim() : '';
-    const count = elements.newsCount ? parseInt(elements.newsCount.value) || 10 : 10;
-    
-    if (count < 1 || count > 50) {
-        showToast('추출할 뉴스 개수는 1-50개 사이여야 합니다.', 'error');
-        return;
-    }
-    
-    if (selectedSourceIds.length === 0) {
+    if (!currentSelectedParentSource) {
         showToast('출처를 선택해주세요.', 'error');
         return;
     }
     
-    try {
-        if (elements.extractNewsBtn) {
-            elements.extractNewsBtn.disabled = true;
-            elements.extractNewsBtn.innerHTML = '<div class="spinner"></div> 추출 중...';
+    // 선택된 항목들을 전역 상태에 저장
+    if (currentSelectedParentSource.is_parent) {
+        if (tempSelectedSubcategories.length === 0) {
+            showToast('최소 하나의 카테고리를 선택해주세요.', 'error');
+            return;
         }
+        window.selectedSourceIds = [...tempSelectedSubcategories];
+    } else {
+        window.selectedSourceIds = [currentSelectedParentSource.id];
+    }
+    
+    // 모달 닫기 및 메인 화면 업데이트
+    hideSourceSelectionModal();
+    updateSelectedSourcesDisplay();
+    saveUserPreferences();
+    
+    showToast(`${window.selectedSourceIds.length}개 출처가 선택되었습니다.`, 'success');
+}
+
+// ============================================================================
+// 계층적 출처 관리 함수들
+// ============================================================================
+
+function toggleParentSourceFields() {
+    if (!elements.sourceIsParentCheckbox) return;
+    
+    const isParent = elements.sourceIsParentCheckbox.checked;
+    
+    if (isParent) {
+        elements.subcategoriesSection.style.display = 'block';
+        elements.parserTypeGroup.style.display = 'none';
+    } else {
+        elements.subcategoriesSection.style.display = 'none';
+        elements.parserTypeGroup.style.display = 'block';
+        // 서브 카테고리 리스트 비우기
+        elements.subcategoriesList.innerHTML = '';
+    }
+}
+
+function addSubcategoryForm() {
+    if (!elements.subcategoriesList) return;
+    
+    const subcategoryId = `subcategory-${Date.now()}`;
+    const subcategoryHtml = `
+        <div class="subcategory-item" data-subcategory-id="${subcategoryId}">
+            <div class="subcategory-header">
+                <h5><i class="fas fa-tag"></i> 서브 카테고리</h5>
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeSubcategoryForm('${subcategoryId}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="subcategory-form">
+                <div class="form-group">
+                    <label>이름 *</label>
+                    <input type="text" class="subcategory-name" placeholder="예: Latest News, Tech, Crypto" required>
+                </div>
+                <div class="form-group">
+                    <label>URL 경로 *</label>
+                    <input type="text" class="subcategory-url" placeholder="예: /topic/latest-news/" required>
+                </div>
+                <div class="form-group">
+                    <label>파서 타입</label>
+                    <select class="subcategory-parser-type">
+                        <option value="universal">Universal</option>
+                        <option value="yahoo_finance">Yahoo Finance</option>
+                        <option value="generic">일반</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>설명</label>
+                    <textarea class="subcategory-description" rows="2" placeholder="서브 카테고리 설명"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="subcategory-active" checked>
+                        <span class="checkmark"></span>
+                        활성화
+                    </label>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    elements.subcategoriesList.insertAdjacentHTML('beforeend', subcategoryHtml);
+}
+
+function removeSubcategoryForm(subcategoryId) {
+    const subcategoryElement = document.querySelector(`[data-subcategory-id="${subcategoryId}"]`);
+    if (subcategoryElement) {
+        subcategoryElement.remove();
+    }
+}
+
+function getSubcategoriesData() {
+    const subcategoryItems = document.querySelectorAll('.subcategory-item');
+    const subcategories = [];
+    
+    subcategoryItems.forEach(item => {
+        const name = item.querySelector('.subcategory-name').value.trim();
+        const url = item.querySelector('.subcategory-url').value.trim();
+        const parserType = item.querySelector('.subcategory-parser-type').value;
+        const description = item.querySelector('.subcategory-description').value.trim();
+        const active = item.querySelector('.subcategory-active').checked;
         
-        const response = await fetch(`${API_BASE_URL}/api/extract-news-links`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                keyword, 
-                count,
-                sources: selectedSourceIds  // 선택된 출처들 전송
-            })
-        });
+        if (name && url) {
+            subcategories.push({
+                name,
+                url,
+                parser_type: parserType,
+                description,
+                active
+            });
+        }
+    });
+    
+    return subcategories;
+}
+
+// 계층적 출처 목록 표시 함수 재정의
+function displaySourcesList() {
+    if (!elements.sourcesList) return;
+    
+    if (availableSources.length === 0) {
+        elements.sourcesList.innerHTML = '<div class="no-sources">등록된 출처가 없습니다.</div>';
+        return;
+    }
+    
+    elements.sourcesList.innerHTML = '';
+    
+    availableSources.forEach(source => {
+        const sourceHtml = `
+            <div class="source-item ${source.active ? 'active' : 'inactive'}">
+                <div class="source-header">
+                    <div class="source-info">
+                        <h4>
+                            <i class="fas ${source.is_parent ? 'fa-sitemap' : 'fa-globe'}"></i>
+                            ${source.name}
+                            ${source.is_parent ? '<span class="parent-badge">상위 출처</span>' : ''}
+                        </h4>
+                        <div class="source-meta">
+                            <span class="source-url">${source.url}</span>
+                            ${!source.is_parent ? `<span class="source-parser">${source.parser_type}</span>` : ''}
+                            <span class="source-status ${source.active ? 'active' : 'inactive'}">
+                                ${source.active ? '활성' : '비활성'}
+                            </span>
+                        </div>
+                        ${source.description ? `<p class="source-description">${source.description}</p>` : ''}
+                    </div>
+                    <div class="source-actions">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="editSource('${source.id}')">
+                            <i class="fas fa-edit"></i>
+                            수정
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteSource('${source.id}')">
+                            <i class="fas fa-trash"></i>
+                            삭제
+                        </button>
+                    </div>
+                </div>
+                
+                ${source.is_parent && source.subcategories && source.subcategories.length > 0 ? `
+                    <div class="subcategories-display">
+                        <h5><i class="fas fa-list"></i> 서브 카테고리</h5>
+                        <div class="subcategories-grid">
+                            ${source.subcategories.map(sub => `
+                                <div class="subcategory-card ${sub.active ? 'active' : 'inactive'}">
+                                    <div class="subcategory-info">
+                                        <h6>${sub.name}</h6>
+                                        <span class="subcategory-url">${sub.url}</span>
+                                        <span class="subcategory-parser">${sub.parser_type}</span>
+                                        <span class="subcategory-status ${sub.active ? 'active' : 'inactive'}">
+                                            ${sub.active ? '활성' : '비활성'}
+                                        </span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
         
-        if (!response.ok) {
-            if (response.status === 404) {
-                showToast('해당 키워드로 뉴스를 찾을 수 없습니다.', 'warning');
-                return;
-            }
-            throw new Error(`HTTP error! status: ${response.status}`);
+        elements.sourcesList.insertAdjacentHTML('beforeend', sourceHtml);
+    });
+}
+
+// 계층적 출처 선택 리스트 표시 함수 재정의
+function displaySourceSelectionList() {
+    // 이 함수는 새로운 2단계 선택 시스템으로 대체됨
+    console.log('이 함수는 더 이상 사용되지 않습니다. showSourceSelectionModal을 사용하세요.');
+}
+
+// 출처 저장 함수 재정의 (계층적 구조 지원)
+async function saveSource() {
+    if (!elements.sourceNameInput || !elements.sourceUrlInput) return;
+    
+    const isParent = elements.sourceIsParentCheckbox ? elements.sourceIsParentCheckbox.checked : false;
+    
+    const formData = {
+        name: elements.sourceNameInput.value.trim(),
+        url: elements.sourceUrlInput.value.trim(),
+        is_parent: isParent,
+        active: elements.sourceActiveCheckbox ? elements.sourceActiveCheckbox.checked : true,
+        description: elements.sourceDescriptionInput ? elements.sourceDescriptionInput.value.trim() : ''
+    };
+    
+    // 단독 출처인 경우에만 parser_type 추가
+    if (!isParent) {
+        formData.parser_type = elements.sourceParserTypeSelect ? elements.sourceParserTypeSelect.value : 'universal';
+    }
+    
+    // 상위 출처인 경우 서브 카테고리 추가
+    if (isParent) {
+        formData.subcategories = getSubcategoriesData();
+        
+        if (formData.subcategories.length === 0) {
+            showToast('상위 출처는 최소 하나의 서브 카테고리가 필요합니다.', 'error');
+            return;
+        }
+    }
+    
+    // 유효성 검증
+    if (!formData.name) {
+        showToast('출처명을 입력해주세요.', 'error');
+        return;
+    }
+    
+    if (!formData.url) {
+        showToast('URL을 입력해주세요.', 'error');
+        return;
+    }
+    
+    if (!isValidUrl(formData.url)) {
+        showToast('올바른 URL 형식을 입력해주세요.', 'error');
+        return;
+    }
+    
+    try {
+        let response;
+        
+        if (currentEditingSource) {
+            // 수정
+            response = await fetch(`${API_BASE_URL}/api/sources/${currentEditingSource.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+        } else {
+            // 추가
+            response = await fetch(`${API_BASE_URL}/api/sources`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
         }
         
         const result = await response.json();
-        extractedNews = result.data ? result.data.news_items || [] : [];
         
-        if (extractedNews.length === 0) {
-            showToast('추출된 뉴스가 없습니다.', 'warning');
-            return;
-        }
-        
-        // 출처별 결과 표시
-        if (result.data.source_results) {
-            const sourceResults = result.data.source_results;
-            const successSources = sourceResults.filter(s => s.success);
-            const failedSources = sourceResults.filter(s => !s.success);
+        if (result.success) {
+            const action = currentEditingSource ? '수정' : '추가';
+            showToast(`출처가 성공적으로 ${action}되었습니다.`, 'success');
             
-            let message = `${extractedNews.length}개의 뉴스를 추출했습니다.`;
-            if (successSources.length > 0) {
-                message += ` (성공: ${successSources.map(s => s.source_name).join(', ')})`;
-            }
-            if (failedSources.length > 0) {
-                message += ` (실패: ${failedSources.length}개 출처)`;
-            }
-            
-            showToast(message, 'success');
+            // 출처 목록 새로고침
+            await loadAvailableSources();
+            displaySourcesList();
+            hideSourceModal();
         } else {
-            showToast(`${extractedNews.length}개의 뉴스를 추출했습니다.`, 'success');
+            throw new Error(result.error);
         }
-        
-        showNewsSelectionSection();
-        
     } catch (error) {
-        console.error('뉴스 추출 오류:', error);
-        showToast('뉴스 추출 중 오류가 발생했습니다.', 'error');
-    } finally {
-        if (elements.extractNewsBtn) {
-            elements.extractNewsBtn.disabled = false;
-            elements.extractNewsBtn.innerHTML = '<i class="fas fa-search"></i> 뉴스 추출';
-        }
+        console.error('출처 저장 오류:', error);
+        showToast('출처 저장 중 오류가 발생했습니다.', 'error');
     }
-} 
+}
+
+// API 키 토글 기능
+function toggleApiKeyVisibility() {
+    const apiKeyInput = elements.apiKeyInput;
+    const toggleBtn = elements.toggleApiKeyBtn;
+    
+    if (apiKeyInput && toggleBtn) {
+        const isPassword = apiKeyInput.type === 'password';
+        apiKeyInput.type = isPassword ? 'text' : 'password';
+        toggleBtn.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+    }
+}

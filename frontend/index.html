@@ -223,10 +223,17 @@
                 </div>
             </section>
 
-            <!-- API Key Settings Section (Hidden by default) -->
-            <section class="api-settings-section" id="apiSettingsSection" style="display: none;">
-                <div class="input-card">
-                    <h2><i class="fas fa-key"></i> API 키 설정</h2>
+            <!-- API Key Settings Modal Section (Changed to Modal) -->
+            <section class="api-settings-modal-section" id="apiSettingsModalSection" style="display: none;">
+                <div class="modal-overlay" id="apiSettingsModalOverlay">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-key"></i> API 키 설정</h3>
+                            <button type="button" id="closeApiSettingsModalBtn" class="btn btn-icon">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
                     <div class="form-group">
                         <label for="apiProviderSelect">API 제공자</label>
                         <select id="apiProviderSelect">
@@ -248,7 +255,8 @@
                             </button>
                         </div>
                     </div>
-                    <div class="form-actions">
+                        
+                        <div class="modal-actions">
                         <button type="button" id="validateApiKeyBtn" class="btn btn-info">
                             <i class="fas fa-check"></i>
                             유효성 확인
@@ -261,39 +269,38 @@
                             <i class="fas fa-trash"></i>
                             삭제
                         </button>
-                        <button type="button" id="cancelApiSettingsBtn" class="btn btn-secondary">
-                            <i class="fas fa-times"></i>
-                            취소
-                        </button>
+                        </div>
+                        
+                        <div class="api-validation-result" id="apiValidationResult"></div>
                     </div>
-                    <div class="api-validation-result" id="apiValidationResult"></div>
                 </div>
             </section>
 
-            <!-- Source Management Section (Hidden by default) -->
+            <!-- Source Management Section (Already Modal-like) -->
             <section class="source-management-section" id="sourceManagementSection" style="display: none;">
-                <div class="input-card">
-                    <div class="card-header">
-                        <h2><i class="fas fa-globe"></i> 출처 관리</h2>
-                        <div class="header-controls">
-                            <button type="button" id="addSourceBtn" class="btn btn-success">
-                                <i class="fas fa-plus"></i>
-                                새 출처 추가
-                            </button>
-                            <button type="button" id="cancelSourceManagementBtn" class="btn btn-secondary">
-                                <i class="fas fa-times"></i>
-                                닫기
-                            </button>
+                <div class="modal-overlay">
+                    <div class="modal-content large-modal">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-globe"></i> 출처 관리</h3>
+                            <div class="header-controls">
+                                <button type="button" id="addSourceBtn" class="btn btn-success">
+                                    <i class="fas fa-plus"></i>
+                                    새 출처 추가
+                                </button>
+                                <button type="button" id="closeSourceManagementBtn" class="btn btn-icon">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="sources-list" id="sourcesList">
+                            <!-- 출처 목록이 여기에 표시됩니다 -->
                         </div>
                     </div>
-                    
-                    <div class="sources-list" id="sourcesList">
-                        <!-- 출처 목록이 여기에 표시됩니다 -->
-                    </div>
                 </div>
             </section>
 
-            <!-- Add/Edit Source Modal Section (Hidden by default) -->
+            <!-- Add/Edit Source Modal Section -->
             <section class="source-modal-section" id="sourceModalSection" style="display: none;">
                 <div class="modal-overlay" id="sourceModalOverlay">
                     <div class="modal-content">
@@ -310,7 +317,7 @@
                                 <input 
                                     type="text" 
                                     id="sourceNameInput" 
-                                    placeholder="예: Reuters, Bloomberg"
+                                    placeholder="예: Yahoo Finance, Reuters"
                                     required
                                 >
                             </div>
@@ -320,14 +327,23 @@
                                 <input 
                                     type="url" 
                                     id="sourceUrlInput" 
-                                    placeholder="https://www.reuters.com/business/"
+                                    placeholder="https://finance.yahoo.com/"
                                     required
                                 >
                             </div>
                             
                             <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sourceIsParentCheckbox">
+                                    <span class="checkmark"></span>
+                                    상위 출처 (서브 카테고리 포함)
+                                </label>
+                            </div>
+                            
+                            <div class="form-group" id="parserTypeGroup">
                                 <label for="sourceParserTypeSelect">파서 타입</label>
                                 <select id="sourceParserTypeSelect">
+                                    <option value="universal">Universal</option>
                                     <option value="yahoo_finance">Yahoo Finance</option>
                                     <option value="generic">일반 (향후 지원)</option>
                                 </select>
@@ -349,6 +365,21 @@
                                     활성화
                                 </label>
                             </div>
+                            
+                            <!-- 서브 카테고리 섹션 -->
+                            <div class="subcategories-section" id="subcategoriesSection" style="display: none;">
+                                <div class="subcategories-header">
+                                    <h4><i class="fas fa-list"></i> 서브 카테고리</h4>
+                                    <button type="button" id="addSubcategoryBtn" class="btn btn-success btn-sm">
+                                        <i class="fas fa-plus"></i>
+                                        서브 카테고리 추가
+                                    </button>
+                                </div>
+                                
+                                <div class="subcategories-list" id="subcategoriesList">
+                                    <!-- 서브 카테고리 목록이 여기에 표시됩니다 -->
+                                </div>
+                            </div>
                         </form>
                         
                         <div class="modal-actions">
@@ -356,47 +387,96 @@
                                 <i class="fas fa-save"></i>
                                 저장
                             </button>
-                            <button type="button" id="cancelSourceBtn" class="btn btn-secondary">
-                                <i class="fas fa-times"></i>
-                                취소
-                            </button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Source Selection Modal Section (Hidden by default) -->
+            <!-- Source Selection Modal Section -->
             <section class="source-selection-modal-section" id="sourceSelectionModalSection" style="display: none;">
                 <div class="modal-overlay" id="sourceSelectionModalOverlay">
-                    <div class="modal-content">
+                    <div class="modal-content large-modal">
                         <div class="modal-header">
                             <h3><i class="fas fa-check-square"></i> 출처 선택</h3>
                             <button type="button" id="closeSourceSelectionModalBtn" class="btn btn-icon">
-                                <i class="fas fa-times"></i>
+                            <i class="fas fa-times"></i>
                             </button>
                         </div>
                         
-                        <div class="source-selection-list" id="sourceSelectionList">
-                            <!-- 출처 선택 목록이 여기에 표시됩니다 -->
+                        <!-- 선택 단계 네비게이션 -->
+                        <div class="source-selection-nav">
+                            <div class="nav-step active" id="step1Nav">
+                                <span class="step-number">1</span>
+                                <span class="step-title">출처 종류 선택</span>
+                            </div>
+                            <div class="nav-arrow">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                            <div class="nav-step" id="step2Nav">
+                                <span class="step-number">2</span>
+                                <span class="step-title">세부 카테고리 선택</span>
+                            </div>
                         </div>
                         
-                        <div class="modal-actions">
-                            <button type="button" id="selectAllSourcesBtn" class="btn btn-info">
-                                <i class="fas fa-check-double"></i>
-                                전체 선택
-                            </button>
-                            <button type="button" id="deselectAllSourcesBtn" class="btn btn-outline">
-                                <i class="fas fa-square"></i>
-                                전체 해제
-                            </button>
-                            <button type="button" id="confirmSourceSelectionBtn" class="btn btn-primary">
-                                <i class="fas fa-check"></i>
-                                확인
-                            </button>
-                            <button type="button" id="cancelSourceSelectionBtn" class="btn btn-secondary">
-                                <i class="fas fa-times"></i>
-                                취소
-                            </button>
+                        <!-- 1단계: 출처 타입 선택 -->
+                        <div class="selection-step" id="step1Content">
+                            <div class="step-header">
+                                <h4><i class="fas fa-sitemap"></i> 어떤 출처에서 뉴스를 가져올까요?</h4>
+                                <p>먼저 뉴스를 가져올 출처를 선택해주세요.</p>
+                            </div>
+                            
+                            <div class="source-type-list" id="sourceTypeList">
+                                <!-- 출처 타입 목록이 여기에 표시됩니다 -->
+                            </div>
+                            
+                            <div class="step-actions">
+                                <button type="button" id="nextToStep2Btn" class="btn btn-primary" disabled>
+                                    <i class="fas fa-arrow-right"></i>
+                                    다음 단계
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 2단계: 세부 카테고리 선택 -->
+                        <div class="selection-step" id="step2Content" style="display: none;">
+                            <div class="step-header">
+                                <h4><i class="fas fa-tags"></i> 세부 카테고리를 선택해주세요</h4>
+                                <p id="selectedSourceName">선택된 출처의 카테고리</p>
+                            </div>
+                            
+                            <div class="source-selection-controls">
+                                <button type="button" id="selectAllSourcesBtn" class="btn btn-info">
+                                    <i class="fas fa-check-double"></i>
+                                    전체 선택
+                                </button>
+                                <button type="button" id="deselectAllSourcesBtn" class="btn btn-outline">
+                                    <i class="fas fa-square"></i>
+                                    전체 해제
+                                </button>
+                            </div>
+                            
+                            <div class="subcategory-selection-list" id="subcategorySelectionList">
+                                <!-- 서브 카테고리 목록이 여기에 표시됩니다 -->
+                            </div>
+                            
+                            <div class="step-actions">
+                                <button type="button" id="backToStep1Btn" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i>
+                                    이전 단계
+                                </button>
+                                <button type="button" id="confirmSourceSelectionBtn" class="btn btn-primary">
+                                    <i class="fas fa-check"></i>
+                                    선택 완료
+                        </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 선택 요약 -->
+                        <div class="selection-summary" id="selectionSummary" style="display: none;">
+                            <h5><i class="fas fa-list-check"></i> 선택 요약</h5>
+                            <div class="selected-items" id="selectedItemsSummary">
+                                <!-- 선택된 항목들이 여기에 표시됩니다 -->
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -1,25 +1,47 @@
 {
   "sources": [
     {
-      "id": "yahoo_finance",
+      "id": "yahoo_finance_main",
       "name": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/topic/latest-news/",
-      "parser_type": "yahoo_finance",
+      "url": "https://finance.yahoo.com/",
+      "is_parent": true,
       "active": true,
-      "description": "글로벌 금융 뉴스 및 시장 정보",
+      "description": "Yahoo Finance 메인 사이트",
       "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": "source_004b8459",
-      "name": "Yahoo finance _ Crypto",
-      "url": "https://finance.yahoo.com/topic/crypto/",
-      "parser_type": "universal",
-      "active": true,
-      "description": "Yahoo Finance 암호화폐 카테고리 뉴스 (개선된 추출기 사용)",
-      "created_at": "2025-07-12T09:52:00.056141",
-      "updated_at": "2025-07-12T09:52:00.056174"
+      "updated_at": "2025-07-12T19:20:00.000000",
+      "subcategories": [
+        {
+          "id": "yahoo_finance_latest",
+          "name": "Latest News",
+          "url": "/topic/latest-news/",
+          "parser_type": "universal",
+          "active": true,
+          "description": "Yahoo Finance 최신 뉴스 카테고리",
+          "created_at": "2024-01-01T00:00:00Z",
+          "updated_at": "2025-07-12T19:20:00.000000"
+        },
+        {
+          "id": "yahoo_finance_crypto",
+          "name": "Crypto",
+          "url": "/topic/crypto/",
+          "parser_type": "universal",
+          "active": true,
+          "description": "Yahoo Finance 암호화폐 카테고리",
+          "created_at": "2025-07-12T09:52:00.056141",
+          "updated_at": "2025-07-12T09:52:00.056174"
+        },
+        {
+          "id": "yahoo_finance_tech",
+          "name": "Tech",
+          "url": "/topic/tech/",
+          "parser_type": "universal",
+          "active": true,
+          "description": "Yahoo Finance 기술 카테고리",
+          "created_at": "2025-07-12T12:46:30.048893",
+          "updated_at": "2025-07-12T12:46:30.048901"
+        }
+      ]
     }
   ],
-  "updated_at": "2025-07-12T09:52:00.056405"
+  "updated_at": "2025-07-12T12:46:30.048956"
 }

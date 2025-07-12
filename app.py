@@ -5,6 +5,7 @@ from flask_cors import CORS
 import os
 import traceback
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 import json
@@ -14,9 +15,8 @@ from dotenv import load_dotenv
 # Load environment variables from env.local file
 load_dotenv('env.local')
 
-# Import our existing modules
+from url_extractor import OptimizedNewsExtractor
 from nongbuxx_generator import NongbuxxGenerator
-from url_extractor import YahooFinanceNewsExtractor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -347,9 +347,9 @@ def generate_content():
             error_msg = result['error']
             if '차단' in error_msg or '403' in error_msg:
                 # 웹사이트에서 접근을 차단한 경우
-                return jsonify({
-                    'success': False,
-                    'job_id': job_id,
+            return jsonify({
+                'success': False,
+                'job_id': job_id,
                     'error': error_msg,
                     'code': 'ACCESS_BLOCKED'
                 }), 403
@@ -367,9 +367,9 @@ def generate_content():
                     'success': False,
                     'job_id': job_id,
                     'error': error_msg,
-                    'code': 'GENERATION_FAILED'
-                }), 500
-                
+                'code': 'GENERATION_FAILED'
+            }), 500
+            
     except Exception as e:
         logger.error(f"Content generation error: {str(e)}")
         return jsonify({
@@ -619,8 +619,8 @@ def extract_news_links():
                 'code': 'INVALID_COUNT'
             }), 400
         
-        # 사용할 출처 결정
-        available_sources = load_sources()
+        # 사용할 출처 결정 (계층적 구조 지원)
+        available_sources = get_all_extractable_sources()  # 서브카테고리 포함
         
         if requested_sources:
             # 요청된 출처만 사용
@@ -643,39 +643,45 @@ def extract_news_links():
         
         logger.info(f"Starting multi-source news extraction - keyword: '{keyword}', count: {count}, sources: {[s['id'] for s in selected_sources]}")
         
-        # 각 출처에서 뉴스 추출
-        all_news_items = []
+        # 병렬 처리로 뉴스 추출 (성능 최적화)
+        from url_extractor import extract_news_from_multiple_sources
+        
+        logger.info(f"병렬 뉴스 추출 시작: {len(selected_sources)}개 출처")
+        start_time = time.time()
+        
+        # 병렬 처리로 모든 출처에서 동시에 뉴스 추출
+        all_news_items = extract_news_from_multiple_sources(
+            sources=selected_sources,
+            keyword=keyword,
+            count=count,
+            max_workers=min(len(selected_sources), 3)  # 최대 3개 동시 처리
+        )
+        
+        end_time = time.time()
+        logger.info(f"병렬 추출 완료: {len(all_news_items)}개 뉴스, 소요시간: {end_time - start_time:.2f}초")
+        
+        # 출처별 결과 통계
         source_results = []
+        source_counts = {}
+        
+        for item in all_news_items:
+            source_id = item.get('source_id')
+            if source_id:
+                source_counts[source_id] = source_counts.get(source_id, 0) + 1
         
         for source in selected_sources:
-            try:
-                source_news = extract_news_from_source(source, keyword, count)
-                
-                # 출처 정보와 함께 뉴스 아이템 저장
-                for item in source_news:
-                    item['source_id'] = source['id']
-                    item['source_name'] = source['name']
-                
-                all_news_items.extend(source_news)
-                
-                source_results.append({
-                    'source_id': source['id'],
-                    'source_name': source['name'],
-                    'count': len(source_news),
-                    'success': True
-                })
-                
-                logger.info(f"Extracted {len(source_news)} news from {source['name']}")
-                
-            except Exception as e:
-                logger.error(f"Failed to extract news from {source['name']}: {str(e)}")
-                source_results.append({
-                    'source_id': source['id'],
-                    'source_name': source['name'],
-                    'count': 0,
-                    'success': False,
-                    'error': str(e)
-                })
+            count_extracted = source_counts.get(source['id'], 0)
+            source_results.append({
+                'source_id': source['id'],
+                'source_name': source['name'],
+                'count': count_extracted,
+                'success': count_extracted > 0
+            })
+            
+            if count_extracted > 0:
+                logger.info(f"✅ {source['name']}: {count_extracted}개 뉴스 추출")
+            else:
+                logger.warning(f"❌ {source['name']}: 뉴스 추출 실패")
         
         # 중복 제거 (URL 기준)
         unique_news = []
@@ -729,36 +735,24 @@ def extract_news_links():
         }), 500
 
 def extract_news_from_source(source, keyword, count):
-    """특정 출처에서 뉴스 추출"""
+    """특정 출처에서 뉴스 추출 (계층적 구조 지원)"""
     try:
-        if source['parser_type'] == 'yahoo_finance':
-            # Yahoo Finance 뉴스 추출
-            extractor = YahooFinanceNewsExtractor(
-                search_keywords=keyword if keyword else None,
-                max_news=count
-            )
-            return extractor.extract_latest_news()
+        # 모든 출처에 대해 최적화된 추출기 사용
+        from url_extractor import OptimizedNewsExtractor
         
-        elif source['parser_type'] == 'universal' or source['parser_type'] == 'generic':
-            # 범용 뉴스 추출기 사용
-            from url_extractor import UniversalNewsExtractor
-            extractor = UniversalNewsExtractor(
-                base_url=source['url'],
-                search_keywords=keyword if keyword else None,
-                max_news=count
-            )
-            return extractor.extract_news()
+        # 실제 추출 URL 결정 (계층적 구조 지원)
+        extraction_url = source.get('full_url', source['url'])
         
-        else:
-            # 알려지지 않은 파서 타입도 범용 파서로 처리
-            logger.warning(f"Unknown parser type: {source['parser_type']} for source: {source['name']}, using universal parser")
-            from url_extractor import UniversalNewsExtractor
-            extractor = UniversalNewsExtractor(
-                base_url=source['url'],
-                search_keywords=keyword if keyword else None,
-                max_news=count
-            )
-            return extractor.extract_news()
+        logger.info(f"Extracting news from {source['name']}")
+        logger.info(f"Extraction URL: {extraction_url}")
+        
+        extractor = OptimizedNewsExtractor(
+            base_url=extraction_url,
+            search_keywords=keyword if keyword else None,
+            max_news=count
+        )
+        
+        return extractor.extract_news()
             
     except Exception as e:
         logger.error(f"Error extracting news from {source['name']}: {str(e)}")
@@ -769,7 +763,7 @@ def extract_news_from_source(source, keyword, count):
 # ============================================================================
 
 def load_sources():
-    """출처 정보를 JSON 파일에서 로드"""
+    """출처 정보를 JSON 파일에서 로드 (계층적 구조 지원)"""
     sources_file = Path('data/sources.json')
     try:
         if sources_file.exists():
@@ -815,9 +809,49 @@ def save_sources(sources):
         return False
 
 def find_source_by_id(source_id):
-    """ID로 출처 찾기"""
+    """ID로 출처 찾기 (계층적 구조 지원)"""
     sources = load_sources()
-    return next((source for source in sources if source['id'] == source_id), None)
+    
+    # 부모 출처에서 찾기
+    for source in sources:
+        if source['id'] == source_id:
+            return source
+            
+        # 서브 카테고리에서 찾기
+        if 'subcategories' in source:
+            for subcategory in source['subcategories']:
+                if subcategory['id'] == source_id:
+                    # 부모 URL과 서브 카테고리 URL 결합
+                    subcategory_copy = subcategory.copy()
+                    subcategory_copy['full_url'] = source['url'].rstrip('/') + subcategory['url']
+                    subcategory_copy['parent_id'] = source['id']
+                    subcategory_copy['parent_name'] = source['name']
+                    return subcategory_copy
+    
+    return None
+
+def get_all_extractable_sources():
+    """추출 가능한 모든 출처 반환 (서브 카테고리 포함)"""
+    sources = load_sources()
+    extractable_sources = []
+    
+    for source in sources:
+        if source.get('is_parent', False):
+            # 부모 출처인 경우 서브 카테고리들 추가
+            if 'subcategories' in source:
+                for subcategory in source['subcategories']:
+                    if subcategory.get('active', True):
+                        subcategory_copy = subcategory.copy()
+                        subcategory_copy['full_url'] = source['url'].rstrip('/') + subcategory['url']
+                        subcategory_copy['parent_id'] = source['id']
+                        subcategory_copy['parent_name'] = source['name']
+                        extractable_sources.append(subcategory_copy)
+        else:
+            # 단독 출처인 경우
+            if source.get('active', True):
+                extractable_sources.append(source)
+    
+    return extractable_sources
 
 def validate_source_data(data):
     """출처 데이터 유효성 검증"""
@@ -832,6 +866,30 @@ def validate_source_data(data):
         return False, 'Invalid URL format'
     
     return True, None
+
+@app.route('/api/sources/extractable', methods=['GET'])
+def get_extractable_sources():
+    """추출 가능한 출처 목록 조회 (서브 카테고리 포함)"""
+    try:
+        extractable_sources = get_all_extractable_sources()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'sources': extractable_sources,
+                'total_count': len(extractable_sources)
+            }
+        })
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Failed to get extractable sources: {error_msg}")
+        
+        return jsonify({
+            'success': False,
+            'error': f'추출 가능한 출처 목록을 불러오는 중 오류가 발생했습니다: {error_msg}',
+            'code': 'EXTRACTABLE_SOURCES_ERROR'
+        }), 500
 
 @app.route('/api/sources', methods=['GET', 'OPTIONS'])
 def get_sources():
@@ -866,7 +924,7 @@ def get_sources():
 
 @app.route('/api/sources', methods=['POST'])
 def create_source():
-    """새 출처 등록"""
+    """새 출처 등록 (계층적 구조 지원)"""
     try:
         data = request.get_json()
         
@@ -905,12 +963,32 @@ def create_source():
             'id': source_id,
             'name': data['name'],
             'url': data['url'],
-            'parser_type': data.get('parser_type', 'generic'),
+            'is_parent': data.get('is_parent', False),
             'active': data.get('active', True),
             'description': data.get('description', ''),
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat()
         }
+        
+        # 단독 출처인 경우에만 parser_type 추가
+        if not new_source['is_parent']:
+            new_source['parser_type'] = data.get('parser_type', 'generic')
+        
+        # 서브 카테고리 추가 (부모 출처인 경우)
+        if new_source['is_parent'] and 'subcategories' in data:
+            new_source['subcategories'] = []
+            for subcategory in data['subcategories']:
+                subcategory_obj = {
+                    'id': subcategory.get('id') or f"sub_{uuid.uuid4().hex[:8]}",
+                    'name': subcategory['name'],
+                    'url': subcategory['url'],
+                    'parser_type': subcategory.get('parser_type', 'universal'),
+                    'active': subcategory.get('active', True),
+                    'description': subcategory.get('description', ''),
+                    'created_at': datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat()
+                }
+                new_source['subcategories'].append(subcategory_obj)
         
         # 출처 목록에 추가
         sources.append(new_source)
@@ -1055,31 +1133,48 @@ def update_source(source_id):
 
 @app.route('/api/sources/<source_id>', methods=['DELETE'])
 def delete_source(source_id):
-    """출처 삭제"""
+    """출처 삭제 (계층적 구조 지원)"""
     try:
         # 기존 출처 로드
         sources = load_sources()
         
-        # 출처 찾기
-        source_index = next((i for i, source in enumerate(sources) if source['id'] == source_id), None)
+        # 출처 찾기 (부모 출처 및 서브 카테고리 모두 검색)
+        source_index = None
+        parent_index = None
+        subcategory_index = None
         
-        if source_index is None:
+        for i, source in enumerate(sources):
+            if source['id'] == source_id:
+                source_index = i
+                break
+            
+            # 서브 카테고리에서 찾기
+            if 'subcategories' in source:
+                for j, subcategory in enumerate(source['subcategories']):
+                    if subcategory['id'] == source_id:
+                        parent_index = i
+                        subcategory_index = j
+                        break
+        
+        if source_index is not None:
+            # 부모 출처 삭제
+            if len(sources) <= 1:
+                return jsonify({
+                    'success': False,
+                    'error': '최소 하나의 출처는 유지되어야 합니다.',
+                    'code': 'MINIMUM_SOURCES_REQUIRED'
+                }), 400
+            
+            deleted_source = sources.pop(source_index)
+        elif parent_index is not None and subcategory_index is not None:
+            # 서브 카테고리 삭제
+            deleted_source = sources[parent_index]['subcategories'].pop(subcategory_index)
+        else:
             return jsonify({
                 'success': False,
                 'error': 'Source not found',
                 'code': 'SOURCE_NOT_FOUND'
             }), 404
-        
-        # 마지막 출처인지 확인 (최소 1개는 유지)
-        if len(sources) <= 1:
-            return jsonify({
-                'success': False,
-                'error': '최소 하나의 출처는 유지되어야 합니다.',
-                'code': 'MINIMUM_SOURCES_REQUIRED'
-            }), 400
-        
-        # 출처 삭제
-        deleted_source = sources.pop(source_index)
         
         # 저장
         if save_sources(sources):
@@ -1108,6 +1203,92 @@ def delete_source(source_id):
             'code': 'DELETE_SOURCE_ERROR'
         }), 500
 
+@app.route('/api/sources/<parent_id>/subcategories', methods=['POST'])
+def add_subcategory(parent_id):
+    """서브 카테고리 추가"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Request data is required',
+                'code': 'MISSING_DATA'
+            }), 400
+        
+        # 부모 출처 찾기
+        sources = load_sources()
+        parent_source = None
+        parent_index = None
+        
+        for i, source in enumerate(sources):
+            if source['id'] == parent_id:
+                parent_source = source
+                parent_index = i
+                break
+        
+        if not parent_source:
+            return jsonify({
+                'success': False,
+                'error': 'Parent source not found',
+                'code': 'PARENT_NOT_FOUND'
+            }), 404
+        
+        if not parent_source.get('is_parent', False):
+            return jsonify({
+                'success': False,
+                'error': 'Source is not a parent source',
+                'code': 'NOT_PARENT_SOURCE'
+            }), 400
+        
+        # 서브 카테고리 객체 생성
+        subcategory_id = data.get('id') or f"sub_{uuid.uuid4().hex[:8]}"
+        new_subcategory = {
+            'id': subcategory_id,
+            'name': data['name'],
+            'url': data['url'],
+            'parser_type': data.get('parser_type', 'universal'),
+            'active': data.get('active', True),
+            'description': data.get('description', ''),
+            'created_at': datetime.now().isoformat(),
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        # 서브 카테고리 목록이 없으면 생성
+        if 'subcategories' not in parent_source:
+            parent_source['subcategories'] = []
+        
+        # 서브 카테고리 추가
+        parent_source['subcategories'].append(new_subcategory)
+        parent_source['updated_at'] = datetime.now().isoformat()
+        
+        # 저장
+        if save_sources(sources):
+            logger.info(f"Subcategory added: {subcategory_id} - {new_subcategory['name']}")
+            
+            return jsonify({
+                'success': True,
+                'data': new_subcategory,
+                'message': '서브 카테고리가 성공적으로 추가되었습니다.'
+            }), 201
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to save sources',
+                'code': 'SAVE_ERROR'
+            }), 500
+            
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Failed to add subcategory: {error_msg}")
+        logger.error(traceback.format_exc())
+        
+        return jsonify({
+            'success': False,
+            'error': f'서브 카테고리 추가 중 오류가 발생했습니다: {error_msg}',
+            'code': 'ADD_SUBCATEGORY_ERROR'
+        }), 500
+
 # ============================================================================
 # 기존 에러 핸들러들
 # ============================================================================
@@ -1125,12 +1306,12 @@ def not_found(error):
     """404 에러 처리"""
     # API 요청인 경우 JSON 응답
     if request.path.startswith('/api/'):
-        return jsonify({
-            'success': False,
+    return jsonify({
+        'success': False,
             'error': 'API endpoint not found',
             'code': 'NOT_FOUND',
             'path': request.path
-        }), 404
+    }), 404
     
     # favicon 요청은 빈 응답
     if request.path.endswith('.ico'):
