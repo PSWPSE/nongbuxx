@@ -151,6 +151,15 @@ function initEventListeners() {
     if (elements.generateSelectedBtn) {
         elements.generateSelectedBtn.addEventListener('click', handleGenerateSelectedNews);
     }
+    // 블로그 콘텐츠 생성 버튼 이벤트 리스너
+    const generateBlogBtn = document.getElementById('generateBlogBtn');
+    if (generateBlogBtn) {
+        generateBlogBtn.addEventListener('click', handleBlogGeneration);
+    }
+    const generateSelectedBlogBtn = document.getElementById('generateSelectedBlogBtn');
+    if (generateSelectedBlogBtn) {
+        generateSelectedBlogBtn.addEventListener('click', handleGenerateSelectedBlogNews);
+    }
     
     // 생성된 콘텐츠 관련
     if (elements.downloadAllGeneratedBtn) {
@@ -331,10 +340,24 @@ function getAllUrls() {
         .filter(url => url);
 }
 
-// 폼 제출 처리
+// 폼 제출 처리 (표준 콘텐츠 생성)
 async function handleFormSubmit(e) {
     e.preventDefault();
     
+    // 클릭된 버튼의 콘텐츠 타입 확인
+    const submitter = e.submitter;
+    const contentType = submitter?.dataset?.contentType || 'standard';
+    
+    await generateContent(contentType);
+}
+
+// 블로그 콘텐츠 생성 처리
+async function handleBlogGeneration() {
+    await generateContent('blog');
+}
+
+// 공통 콘텐츠 생성 함수
+async function generateContent(contentType = 'standard') {
     const urls = getAllUrls();
     if (urls.length === 0) {
         showToast('최소 하나의 URL을 입력해주세요.', 'error');
@@ -359,8 +382,15 @@ async function handleFormSubmit(e) {
         hideAllSections();
         showProgressSection();
         
-        // 프로그레스 시뮬레이션 시작 (단일 URL: 30초 예상)
-        startProgressSimulation(30000);
+        // 콘텐츠 타입에 따른 진행률 표시
+        const progressTitle = document.getElementById('progressTitle');
+        if (progressTitle) {
+            progressTitle.textContent = contentType === 'blog' ? '블로그 콘텐츠 생성 중...' : '콘텐츠 생성 중...';
+        }
+        
+        // 프로그레스 시뮬레이션 시작 (블로그 콘텐츠는 더 오래 걸림)
+        const duration = contentType === 'blog' ? 45000 : 30000;
+        startProgressSimulation(duration);
         
         const response = await fetch(`${API_BASE_URL}/api/generate`, {
             method: 'POST',
@@ -370,7 +400,8 @@ async function handleFormSubmit(e) {
             body: JSON.stringify({ 
                 url: urls[0], // 단일 URL 전송
                 api_provider: apiSettings.provider,
-                api_key: apiSettings.key
+                api_key: apiSettings.key,
+                content_type: contentType
             })
         });
         
@@ -861,11 +892,23 @@ function updateSelectedCount() {
 }
 
 function updateGenerateButtonState() {
+    const hasSelected = selectedNewsUrls.length > 0;
+    const count = selectedNewsUrls.length;
+    
     if (elements.generateSelectedBtn) {
-        elements.generateSelectedBtn.disabled = selectedNewsUrls.length === 0;
-        elements.generateSelectedBtn.innerHTML = selectedNewsUrls.length > 0 ? 
-            `<i class="fas fa-magic"></i> 선택된 뉴스 일괄 생성 (${selectedNewsUrls.length}개)` : 
+        elements.generateSelectedBtn.disabled = !hasSelected;
+        elements.generateSelectedBtn.innerHTML = hasSelected ? 
+            `<i class="fas fa-magic"></i> 선택된 뉴스 일괄 생성 (${count}개)` : 
             '<i class="fas fa-magic"></i> 선택된 뉴스 일괄 생성';
+    }
+    
+    // 블로그 생성 버튼도 동일하게 활성화/비활성화
+    const generateSelectedBlogBtn = document.getElementById('generateSelectedBlogBtn');
+    if (generateSelectedBlogBtn) {
+        generateSelectedBlogBtn.disabled = !hasSelected;
+        generateSelectedBlogBtn.innerHTML = hasSelected ? 
+            `<i class="fas fa-blog"></i> 선택된 뉴스 블로그 생성 (${count}개)` : 
+            '<i class="fas fa-blog"></i> 선택된 뉴스 블로그 생성';
     }
 }
 
@@ -892,6 +935,14 @@ function deselectAllNews() {
 }
 
 async function handleGenerateSelectedNews() {
+    await generateSelectedNews('standard');
+}
+
+async function handleGenerateSelectedBlogNews() {
+    await generateSelectedNews('blog');
+}
+
+async function generateSelectedNews(contentType = 'standard') {
     if (selectedNewsUrls.length === 0) {
         showToast('선택된 뉴스가 없습니다.', 'warning');
         return;
@@ -908,8 +959,15 @@ async function handleGenerateSelectedNews() {
         hideAllSections();
         showProgressSection();
         
-        // 배치 프로그레스 시뮬레이션 시작 (선택된 뉴스 개수 * 10초)
-        const estimatedTime = selectedNewsUrls.length * 10000; // 뉴스 하나당 10초
+        // 콘텐츠 타입에 따른 진행률 표시
+        const progressTitle = document.getElementById('progressTitle');
+        if (progressTitle) {
+            progressTitle.textContent = contentType === 'blog' ? '블로그 콘텐츠 일괄 생성 중...' : '일괄 콘텐츠 생성 중...';
+        }
+        
+        // 배치 프로그레스 시뮬레이션 시작 (블로그 콘텐츠는 더 오래 걸림)
+        const timePerItem = contentType === 'blog' ? 15000 : 10000; // 블로그 콘텐츠는 15초, 표준은 10초
+        const estimatedTime = selectedNewsUrls.length * timePerItem;
         startProgressSimulation(estimatedTime);
         
         const response = await fetch(`${API_BASE_URL}/api/batch-generate`, {
@@ -920,7 +978,8 @@ async function handleGenerateSelectedNews() {
             body: JSON.stringify({ 
                 urls: selectedNewsUrls,
                 api_provider: apiSettings.provider,
-                api_key: apiSettings.key
+                api_key: apiSettings.key,
+                content_type: contentType
             })
         });
         
@@ -939,10 +998,11 @@ async function handleGenerateSelectedNews() {
             setTimeout(() => {
                 showGeneratedContentListSection();
                 
-                const successCount = result.data.summary ? result.data.summary.successful : 0;
-                const totalCount = result.data.summary ? result.data.summary.total : result.data.results.length;
+                const successCount = result.data.success_count || 0;
+                const totalCount = result.data.total_count || result.data.results.length;
+                const contentTypeName = contentType === 'blog' ? '블로그 ' : '';
                 
-                showToast(`일괄 콘텐츠 생성이 완료되었습니다! (성공: ${successCount}/${totalCount})`, 'success');
+                showToast(`일괄 ${contentTypeName}콘텐츠 생성이 완료되었습니다! (성공: ${successCount}/${totalCount})`, 'success');
             }, 500); // 프로그레스 완료 애니메이션 후 결과 표시
         } else {
             stopProgressSimulation();

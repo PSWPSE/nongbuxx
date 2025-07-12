@@ -197,7 +197,8 @@ def generate_content():
         "api_provider": "anthropic",  // required: anthropic or openai
         "api_key": "sk-...",         // required: user's API key
         "filename": "custom_name",    // optional
-        "save_intermediate": true     // optional
+        "save_intermediate": true,    // optional
+        "content_type": "standard"    // optional: 'standard' or 'blog'
     }
     """
     if request.method == 'OPTIONS':
@@ -233,6 +234,7 @@ def generate_content():
         api_key = data['api_key']
         custom_filename = data.get('filename')
         save_intermediate = data.get('save_intermediate', False)
+        content_type = data.get('content_type', 'standard')  # 기본값은 'standard'
         
         # URL 기본 검증
         if not url.startswith(('http://', 'https://')):
@@ -248,6 +250,14 @@ def generate_content():
                 'success': False,
                 'error': 'API provider must be anthropic or openai',
                 'code': 'INVALID_API_PROVIDER'
+            }), 400
+        
+        # 콘텐츠 타입 검증
+        if content_type not in ['standard', 'blog']:
+            return jsonify({
+                'success': False,
+                'error': 'Content type must be standard or blog',
+                'code': 'INVALID_CONTENT_TYPE'
             }), 400
         
         # API 키 기본 형식 검증
@@ -269,11 +279,12 @@ def generate_content():
         active_jobs[job_id] = {
             'status': 'processing',
             'url': url,
+            'content_type': content_type,
             'started_at': datetime.now().isoformat(),
             'progress': 0
         }
         
-        logger.info(f"Starting content generation for URL: {url} (Job ID: {job_id})")
+        logger.info(f"Starting content generation for URL: {url} (Job ID: {job_id}, Type: {content_type})")
         
         # NONGBUXX 생성기 초기화 (사용자 제공 API 키 사용)
         generator = NongbuxxGenerator(
@@ -286,8 +297,8 @@ def generate_content():
         active_jobs[job_id]['progress'] = 25
         active_jobs[job_id]['status'] = 'extracting'
         
-        # 콘텐츠 생성
-        result = generator.generate_content(url, custom_filename)
+        # 콘텐츠 생성 (콘텐츠 타입 전달)
+        result = generator.generate_content(url, custom_filename, content_type)
         
         # 정리
         generator.cleanup()
@@ -303,10 +314,11 @@ def generate_content():
                 'progress': 100,
                 'completed_at': datetime.now().isoformat(),
                 'output_file': str(result['output_file']),
-                'title': result['title']
+                'title': result['title'],
+                'content_type': result['content_type']
             })
             
-            logger.info(f"Content generation completed for job {job_id}")
+            logger.info(f"Content generation completed for job {job_id} (Type: {content_type})")
             
             return jsonify({
                 'success': True,
@@ -317,7 +329,8 @@ def generate_content():
                     'output_file': str(result['output_file']),
                     'timestamp': result['timestamp'],
                     'url': url,
-                    'api_provider': api_provider
+                    'api_provider': api_provider,
+                    'content_type': result['content_type']
                 }
             })
         else:
@@ -348,39 +361,20 @@ def generate_content():
                     'error': error_msg,
                     'code': 'PAGE_NOT_FOUND'
                 }), 404
-            elif '시간 초과' in error_msg or 'timeout' in error_msg.lower():
-                # 시간 초과 에러
-                return jsonify({
-                    'success': False,
-                    'job_id': job_id,
-                    'error': error_msg,
-                    'code': 'REQUEST_TIMEOUT'
-                }), 408
-            elif '네트워크' in error_msg or 'connection' in error_msg.lower():
-                # 네트워크 연결 오류
-                return jsonify({
-                    'success': False,
-                    'job_id': job_id,
-                    'error': error_msg,
-                    'code': 'NETWORK_ERROR'
-                }), 502
             else:
-                # 기타 서버 오류
+                # 기타 오류
                 return jsonify({
                     'success': False,
                     'job_id': job_id,
                     'error': error_msg,
                     'code': 'GENERATION_FAILED'
                 }), 500
-            
+                
     except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Unexpected error in generate_content: {error_msg}")
-        logger.error(traceback.format_exc())
-        
+        logger.error(f"Content generation error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Internal server error: {error_msg}',
+            'error': 'Internal server error',
             'code': 'INTERNAL_ERROR'
         }), 500
 
@@ -449,7 +443,8 @@ def batch_generate():
         "urls": ["https://example1.com", "https://example2.com"],
         "api_provider": "anthropic",  // required: anthropic or openai
         "api_key": "sk-...",         // required: user's API key
-        "save_intermediate": false
+        "save_intermediate": false,   // optional
+        "content_type": "standard"    // optional: 'standard' or 'blog'
     }
     """
     if request.method == 'OPTIONS':
@@ -481,6 +476,7 @@ def batch_generate():
         api_provider = data['api_provider']
         api_key = data['api_key']
         save_intermediate = data.get('save_intermediate', False)
+        content_type = data.get('content_type', 'standard')  # 기본값은 'standard'
         
         if not isinstance(urls, list) or len(urls) == 0:
             return jsonify({
@@ -496,18 +492,27 @@ def batch_generate():
                 'code': 'INVALID_API_PROVIDER'
             }), 400
         
+        # 콘텐츠 타입 검증
+        if content_type not in ['standard', 'blog']:
+            return jsonify({
+                'success': False,
+                'error': 'Content type must be standard or blog',
+                'code': 'INVALID_CONTENT_TYPE'
+            }), 400
+        
         # 배치 작업 ID 생성
         batch_job_id = str(uuid.uuid4())
         active_jobs[batch_job_id] = {
             'status': 'processing',
             'type': 'batch',
             'urls': urls,
+            'content_type': content_type,
             'started_at': datetime.now().isoformat(),
             'progress': 0,
             'results': []
         }
         
-        logger.info(f"Starting batch generation for {len(urls)} URLs (Job ID: {batch_job_id})")
+        logger.info(f"Starting batch generation for {len(urls)} URLs (Job ID: {batch_job_id}, Type: {content_type})")
         
         # NONGBUXX 생성기 초기화 (사용자 API 키 사용)
         generator = NongbuxxGenerator(
@@ -516,8 +521,8 @@ def batch_generate():
             save_intermediate=save_intermediate
         )
         
-        # 배치 처리
-        results = generator.batch_generate(urls)
+        # 배치 처리 (콘텐츠 타입 전달)
+        results = generator.batch_generate(urls, content_type=content_type)
         
         # 정리
         generator.cleanup()
@@ -535,7 +540,8 @@ def batch_generate():
                     'title': result['title'],
                     'content': content,
                     'output_file': str(result['output_file']),
-                    'timestamp': result['timestamp']
+                    'timestamp': result['timestamp'],
+                    'content_type': result['content_type']
                 })
             else:
                 processed_results.append({
@@ -544,39 +550,38 @@ def batch_generate():
                     'error': result['error']
                 })
         
-        # 배치 작업 완료 처리
+        # 성공 통계
+        success_count = sum(1 for r in processed_results if r['success'])
+        
+        # 작업 완료 처리
         active_jobs[batch_job_id].update({
             'status': 'completed',
             'progress': 100,
             'completed_at': datetime.now().isoformat(),
-            'results': processed_results
+            'results': processed_results,
+            'success_count': success_count,
+            'total_count': len(urls)
         })
         
-        success_count = sum(1 for r in processed_results if r['success'])
-        
-        logger.info(f"Batch generation completed for job {batch_job_id}: {success_count}/{len(urls)} successful")
+        logger.info(f"Batch generation completed for job {batch_job_id}: {success_count}/{len(urls)} successful (Type: {content_type})")
         
         return jsonify({
             'success': True,
             'job_id': batch_job_id,
             'data': {
                 'results': processed_results,
-                'summary': {
-                    'total': len(urls),
-                    'successful': success_count,
-                    'failed': len(urls) - success_count
-                }
+                'success_count': success_count,
+                'total_count': len(urls),
+                'api_provider': api_provider,
+                'content_type': content_type
             }
         })
         
     except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Unexpected error in batch_generate: {error_msg}")
-        logger.error(traceback.format_exc())
-        
+        logger.error(f"Batch generation error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Internal server error: {error_msg}',
+            'error': 'Internal server error',
             'code': 'INTERNAL_ERROR'
         }), 500
 

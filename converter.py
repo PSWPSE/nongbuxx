@@ -14,16 +14,35 @@ class NewsConverter:
         self.openai_client = None
         
         # 사용자 제공 API 키를 우선 사용, 없으면 환경변수에서 가져오기
+        # 주 API 클라이언트 초기화
         if self.api_provider == 'anthropic':
             key = api_key if api_key else os.getenv('ANTHROPIC_API_KEY')
             if key:
                 self.anthropic_client = anthropic.Anthropic(api_key=key)
                 
-        if self.api_provider == 'openai':
+        elif self.api_provider == 'openai':
             key = api_key if api_key else os.getenv('OPENAI_API_KEY')
             if key:
                 self.openai_client = OpenAI(api_key=key)
-                
+        
+        # 폴백을 위한 보조 API 클라이언트 초기화 (환경변수에서만)
+        if self.api_provider == 'anthropic':
+            # Anthropic을 사용할 때 OpenAI 폴백을 위해 환경변수에서 OpenAI 키 확인
+            openai_fallback_key = os.getenv('OPENAI_API_KEY')
+            if openai_fallback_key:
+                try:
+                    self.openai_client = OpenAI(api_key=openai_fallback_key)
+                except Exception as e:
+                    print(f"[WARN] Failed to initialize OpenAI fallback client: {e}")
+        elif self.api_provider == 'openai':
+            # OpenAI를 사용할 때 Anthropic 폴백을 위해 환경변수에서 Anthropic 키 확인
+            anthropic_fallback_key = os.getenv('ANTHROPIC_API_KEY')
+            if anthropic_fallback_key:
+                try:
+                    self.anthropic_client = anthropic.Anthropic(api_key=anthropic_fallback_key)
+                except Exception as e:
+                    print(f"[WARN] Failed to initialize Anthropic fallback client: {e}")
+                    
         self.output_dir = Path('converted_articles')
         self.output_dir.mkdir(exist_ok=True)
 
@@ -281,6 +300,50 @@ class NewsConverter:
         
         return response
 
+    def generate_blog_content(self, content):
+        """Generate blog-style content using selected API"""
+        prompt = f"""다음 뉴스 기사를 바탕으로 블로그용 콘텐츠를 작성해주세요.
+
+**작성 요구사항:**
+1. 4000자 내외의 블로그 콘텐츠
+2. 논리적인 문단 구성으로 친절하고 친근하게 설명
+3. 추출된 내용 외 추가 리서치를 통한 분석과 전망 제공
+4. SEO 최적화 고려
+5. 제목, 헤드라인, 인용문, 강조 등 다양한 스타일 활용
+6. 독자의 관심과 공감을 유발하는 내용 포함
+
+**구성:**
+- 매력적인 제목 (첫 줄)
+- 한줄 요약 (두 번째 줄)
+- 서론 (독자 관심 유발)
+- 본문 (논리적 문단 구성)
+- 추가 분석 및 전망
+- 결론 및 마무리
+
+**스타일 가이드:**
+- 제목: 매력적이고 클릭을 유도하는 제목
+- 헤드라인: ## 또는 ### 사용하여 명확한 구조 제공
+- 인용문: > 기호로 중요한 내용 강조
+- 강조: **굵은 글씨**로 핵심 포인트 하이라이트
+- 리스트: - 또는 1. 사용하여 정보 정리
+- 주식 심볼: 종목명 뒤에 $심볼 표기 (예: 테슬라 $TSLA)
+
+**톤앤매너:**
+- 친근하고 접근하기 쉬운 문체
+- 전문적이지만 이해하기 쉬운 설명
+- 독자의 입장에서 궁금해할 점들을 미리 해결
+- 억지스럽지 않은 자연스러운 스토리텔링
+
+**입력 데이터:**
+제목: {content['title']}
+설명: {content['description']}
+본문: {content['content']}
+
+위 내용을 바탕으로 독자가 끝까지 흥미롭게 읽을 수 있는 블로그 콘텐츠를 작성해주세요."""
+        
+        response = self.call_api(prompt, max_tokens=3000)
+        return self.clean_response(response)
+
     def convert_from_data(self, extracted_data):
         """
         추출된 데이터를 직접 마크다운으로 변환 (최적화된 메서드)
@@ -313,6 +376,41 @@ class NewsConverter:
         
         # 최종 콘텐츠 (마크다운 + 키워드)
         final_content = f"{markdown_content}\n\n{keywords}"
+        
+        return final_content
+
+    def convert_from_data_blog(self, extracted_data):
+        """
+        추출된 데이터를 블로그 스타일 마크다운으로 변환
+        
+        Args:
+            extracted_data: WebExtractor에서 추출된 데이터 구조
+            
+        Returns:
+            str: 변환된 블로그 마크다운 콘텐츠
+        """
+        # 추출된 데이터를 변환기가 이해할 수 있는 형태로 변환
+        content_text = extracted_data['content']['text']
+        
+        # 제목과 설명 추출
+        title = extracted_data['title']
+        description = extracted_data.get('description', '')
+        
+        # 변환용 데이터 구조 생성
+        data = {
+            'title': title,
+            'description': description,
+            'content': content_text
+        }
+        
+        # 블로그 마크다운 생성
+        blog_content = self.generate_blog_content(data)
+        
+        # 키워드 추출
+        keywords = self.extract_keywords(f"{title}\n{description}\n{content_text}")
+        
+        # 최종 콘텐츠 (블로그 마크다운 + 키워드)
+        final_content = f"{blog_content}\n\n---\n\n**키워드:** {keywords}"
         
         return final_content
 

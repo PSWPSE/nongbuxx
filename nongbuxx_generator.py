@@ -58,19 +58,21 @@ class NongbuxxGenerator:
         except:
             return 'article'
     
-    def generate_content(self, url, custom_filename=None):
+    def generate_content(self, url, custom_filename=None, content_type='standard'):
         """
         URL에서 콘텐츠를 추출하고 마크다운으로 변환 (최적화된 버전)
         
         Args:
             url: 추출할 뉴스 기사 URL
             custom_filename: 사용자 지정 파일명 (선택사항)
+            content_type: 콘텐츠 타입 ('standard' 또는 'blog')
             
         Returns:
             dict: 결과 정보 (성공 여부, 파일 경로 등)
         """
         
         print(f"\n🔗 URL 분석 중: {url}")
+        print(f"📝 콘텐츠 타입: {content_type}")
         
         # URL 유효성 검사
         if not self.validate_url(url):
@@ -110,20 +112,45 @@ class NongbuxxGenerator:
                 'url': url
             }
         
-        # Step 2: 직접 마크다운으로 변환 (임시파일 없이!)
-        print(f"🔄 마크다운 변환 중 (API: {self.api_provider})...")
+        # Step 2: 콘텐츠 타입에 따라 다른 변환 방식 사용
+        if content_type == 'blog':
+            print(f"🔄 블로그 콘텐츠 변환 중 (API: {self.api_provider})...")
+            try:
+                # 블로그 콘텐츠 변환 메서드 사용
+                markdown_content = self.converter.convert_from_data_blog(extracted_data)
+                conversion_type = "blog"
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f"블로그 변환 중 오류 발생: {str(e)}",
+                    'url': url
+                }
+        else:
+            print(f"🔄 표준 마크다운 변환 중 (API: {self.api_provider})...")
+            try:
+                # 기존 표준 변환 메서드 사용
+                markdown_content = self.converter.convert_from_data(extracted_data)
+                conversion_type = "standard"
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f"표준 변환 중 오류 발생: {str(e)}",
+                    'url': url
+                }
+        
+        # Step 3: 파일 저장
         try:
-            # 새로운 최적화된 메서드 사용
-            markdown_content = self.converter.convert_from_data(extracted_data)
-            
             # 파일명 생성
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             domain = self.extract_domain_name(url)
             
+            # 콘텐츠 타입에 따라 파일명 구분
+            type_prefix = "blog_" if content_type == 'blog' else ""
+            
             if custom_filename:
-                output_filename = f"{custom_filename}_{timestamp}.md"
+                output_filename = f"{type_prefix}{custom_filename}_{timestamp}.md"
             else:
-                output_filename = f"{domain}_{timestamp}.md"
+                output_filename = f"{type_prefix}{domain}_{timestamp}.md"
             
             output_path = self.generated_dir / output_filename
             
@@ -131,12 +158,12 @@ class NongbuxxGenerator:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(markdown_content)
             
-            print(f"✅ 마크다운 생성 완료: {output_path}")
+            print(f"✅ {conversion_type} 마크다운 생성 완료: {output_path}")
             
             # 중간 파일 저장 옵션이 있는 경우에만 원본 데이터 저장
             extracted_file_path = None
             if self.save_intermediate:
-                temp_filename = f"{domain}_{timestamp}.txt"
+                temp_filename = f"{type_prefix}{domain}_{timestamp}.txt"
                 temp_txt_path = self.extracted_dir / temp_filename
                 
                 with open(temp_txt_path, 'w', encoding='utf-8') as f:
@@ -161,36 +188,38 @@ class NongbuxxGenerator:
                 'output_file': output_path,
                 'extracted_file': extracted_file_path,
                 'title': extracted_data['title'],
-                'timestamp': timestamp
+                'timestamp': timestamp,
+                'content_type': content_type
             }
             
         except Exception as e:
             return {
                 'success': False,
-                'error': f"Conversion error: {str(e)}",
+                'error': f"파일 저장 중 오류 발생: {str(e)}",
                 'url': url
             }
     
-    def batch_generate(self, urls, custom_filenames=None):
+    def batch_generate(self, urls, custom_filenames=None, content_type='standard'):
         """
         여러 URL을 일괄 처리
         
         Args:
             urls: URL 리스트
             custom_filenames: 사용자 지정 파일명 리스트 (선택사항)
+            content_type: 콘텐츠 타입 ('standard' 또는 'blog')
             
         Returns:
             list: 각 URL의 처리 결과 리스트
         """
         results = []
         
-        print(f"\n📋 일괄 처리 시작 ({len(urls)}개 URL)")
+        print(f"\n📋 일괄 처리 시작 ({len(urls)}개 URL, 타입: {content_type})")
         
         for i, url in enumerate(urls):
             filename = custom_filenames[i] if custom_filenames and i < len(custom_filenames) else None
             
             print(f"\n--- {i+1}/{len(urls)} ---")
-            result = self.generate_content(url, filename)
+            result = self.generate_content(url, filename, content_type)
             results.append(result)
             
             if result['success']:
