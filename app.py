@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
-from flask import Flask, request, jsonify, send_from_directory, abort
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 import traceback
 import logging
 import time
-from datetime import datetime
+import threading
+import re
+from datetime import datetime, timedelta
 from pathlib import Path
 import json
 import uuid
@@ -31,10 +33,7 @@ CORS(app, origins=[
     "http://localhost:5000",  # Local development 
     "http://localhost:8080",  # Local development
     "https://nongbuxxfrontend.vercel.app",  # Main production frontend domain
-    "https://nongbuxxfrontend-dsvsdvsdvsds-projects.vercel.app",  # Project-specific domain
-    "https://nongbuxxfrontend-fgvw3eory-dsvsdvsdvsds-projects.vercel.app",  # New deployment URL
     "https://nongbuxx.vercel.app",  # Alternative domain
-    "https://nongbuxx-frontend.vercel.app",  # Alternative domain
 ], allow_headers=["Content-Type", "Authorization", "Accept"], methods=["GET", "POST", "OPTIONS"], supports_credentials=False)
 
 # Configuration
@@ -47,6 +46,73 @@ os.makedirs('generated_content', exist_ok=True)
 
 # Store active jobs in memory (for production, use Redis or database)
 active_jobs = {}
+
+# 자동 삭제 기능 설정
+AUTO_DELETE_ENABLED = True  # 자동 삭제 활성화/비활성화
+AUTO_DELETE_INTERVAL = 900  # 15분 (초 단위)
+AUTO_DELETE_AGE = 900  # 15분 이상 된 파일 삭제 (초 단위)
+
+def cleanup_old_files():
+    """1시간 이상 된 생성된 콘텐츠 파일들을 삭제"""
+    try:
+        generated_content_path = Path('generated_content')
+        if not generated_content_path.exists():
+            return
+        
+        current_time = datetime.now()
+        deleted_count = 0
+        
+        # 파일명 패턴 매칭 (예: finance_yahoo_com_20250713_235810.md)
+        pattern = re.compile(r'.*_(\d{8})_(\d{6})\.md$')
+        
+        for file_path in generated_content_path.glob('*.md'):
+            try:
+                match = pattern.match(file_path.name)
+                if match:
+                    # 파일명에서 타임스탬프 추출
+                    date_str = match.group(1)  # 20250713
+                    time_str = match.group(2)  # 235810
+                    
+                    # 타임스탬프 파싱
+                    file_datetime = datetime.strptime(f"{date_str}_{time_str}", "%Y%m%d_%H%M%S")
+                    
+                    # 1시간 이상 된 파일인지 확인
+                    age_seconds = (current_time - file_datetime).total_seconds()
+                    if age_seconds > AUTO_DELETE_AGE:
+                        file_path.unlink()
+                        deleted_count += 1
+                        logger.info(f"🗑️ 자동 삭제: {file_path.name} (생성 후 {age_seconds/3600:.1f}시간 경과)")
+                        
+            except Exception as e:
+                logger.error(f"❌ 파일 삭제 중 오류 {file_path.name}: {e}")
+                continue
+        
+        if deleted_count > 0:
+            logger.info(f"✅ 자동 정리 완료: {deleted_count}개 파일 삭제")
+        else:
+            logger.info("🔍 자동 정리: 삭제할 파일 없음")
+            
+    except Exception as e:
+        logger.error(f"❌ 자동 삭제 중 오류: {e}")
+
+def start_auto_cleanup():
+    """자동 삭제 스케줄러 시작"""
+    if AUTO_DELETE_ENABLED:
+        cleanup_old_files()  # 시작 시 한 번 실행
+        # 1시간 후 다시 실행하도록 스케줄링
+        timer = threading.Timer(AUTO_DELETE_INTERVAL, start_auto_cleanup)
+        timer.daemon = True  # 메인 프로세스가 종료되면 함께 종료
+        timer.start()
+        logger.info(f"🔄 자동 삭제 스케줄러 시작: {AUTO_DELETE_INTERVAL}초마다 실행")
+
+# 앱 시작 시 자동 삭제 스케줄러 활성화
+def init_auto_cleanup():
+    """앱 초기화 시 자동 삭제 기능 시작"""
+    if AUTO_DELETE_ENABLED:
+        logger.info("🚀 자동 삭제 기능 초기화 중...")
+        start_auto_cleanup()
+
+# 기본 라우트들
 
 @app.route('/')
 def index():
@@ -527,21 +593,26 @@ def batch_generate():
         # 정리
         generator.cleanup()
         
-        # 결과 처리
+        # 결과 처리 - 메모리 캐시에 저장
         processed_results = []
         for result in results:
             if result['success']:
+                # 파일에서 콘텐츠 읽기
                 with open(result['output_file'], 'r', encoding='utf-8') as f:
                     content = f.read()
+                
+                # 파일 영구 보관 (기존 방식 복원)
+                logger.info(f"파일 저장 완료: {result['output_file']}")
                 
                 processed_results.append({
                     'success': True,
                     'url': result['url'],
                     'title': result['title'],
                     'content': content,
-                    'output_file': str(result['output_file']),
+                    'filename': result['output_file'].name,
                     'timestamp': result['timestamp'],
-                    'content_type': result['content_type']
+                    'content_type': result['content_type'],
+                    'output_file': str(result['output_file'])
                 })
             else:
                 processed_results.append({
@@ -683,14 +754,31 @@ def extract_news_links():
             else:
                 logger.warning(f"❌ {source['name']}: 뉴스 추출 실패")
         
-        # 중복 제거 (URL 기준)
+        # 중복 제거 (URL 기준) - 같은 URL의 뉴스가 여러 소스에서 나올 때 소스 정보 병합
         unique_news = []
-        seen_urls = set()
+        seen_urls = {}
         
         for item in all_news_items:
-            if item['url'] not in seen_urls:
+            url = item['url']
+            if url not in seen_urls:
+                # 새로운 URL - 그대로 추가
                 unique_news.append(item)
-                seen_urls.add(item['url'])
+                seen_urls[url] = len(unique_news) - 1  # 인덱스 저장
+            else:
+                # 중복 URL - 기존 아이템에 소스 정보 병합
+                existing_index = seen_urls[url]
+                existing_item = unique_news[existing_index]
+                
+                # 소스 정보 병합 (여러 소스에서 같은 뉴스가 나올 때)
+                if existing_item['source_name'] != item['source_name']:
+                    existing_item['source_name'] = f"{existing_item['source_name']}, {item['source_name']}"
+                    
+                # 키워드 병합 (중복 제거)
+                if item.get('keywords'):
+                    existing_keywords = set(existing_item.get('keywords', []))
+                    new_keywords = set(item['keywords'])
+                    merged_keywords = list(existing_keywords.union(new_keywords))
+                    existing_item['keywords'] = merged_keywords
         
         # 결과가 없는 경우
         if not unique_news:
@@ -757,6 +845,283 @@ def extract_news_from_source(source, keyword, count):
     except Exception as e:
         logger.error(f"Error extracting news from {source['name']}: {str(e)}")
         raise e
+
+# ============================================================================
+# 생성된 콘텐츠 관리 API
+# ============================================================================
+
+@app.route('/api/generated-content', methods=['GET'])
+def get_generated_content():
+    """생성된 콘텐츠 파일 목록 조회"""
+    try:
+        generated_dir = Path('generated_content')
+        if not generated_dir.exists():
+            return jsonify({
+                'success': True,
+                'data': {
+                    'files': [],
+                    'total_count': 0
+                }
+            })
+        
+        # 모든 .md 파일 찾기
+        md_files = list(generated_dir.glob('*.md'))
+        
+        # 파일 정보 수집
+        file_info = []
+        for file_path in md_files:
+            try:
+                # 파일 메타데이터 읽기
+                stat_info = file_path.stat()
+                created_time = datetime.fromtimestamp(stat_info.st_ctime)
+                modified_time = datetime.fromtimestamp(stat_info.st_mtime)
+                
+                # 파일 내용에서 제목 추출
+                title = "제목 없음"
+                content_type = "standard"
+                
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    
+                    # 제목 추출 (마크다운 첫 번째 # 헤더)
+                    lines = content.split('\n')
+                    for line in lines:
+                        if line.startswith('# '):
+                            title = line[2:].strip()
+                            break
+                    
+                    # 콘텐츠 타입 판별
+                    if 'blog_' in file_path.name:
+                        content_type = "blog"
+                
+                file_info.append({
+                    'filename': file_path.name,
+                    'title': title,
+                    'content_type': content_type,
+                    'size': stat_info.st_size,
+                    'created_at': created_time.isoformat(),
+                    'modified_at': modified_time.isoformat(),
+                    'url': f"/api/generated-content/{file_path.name}"
+                })
+                
+            except Exception as e:
+                logger.warning(f"파일 정보 읽기 실패: {file_path.name} - {e}")
+                continue
+        
+        # 수정 시간 순으로 정렬 (최신 순)
+        file_info.sort(key=lambda x: x['modified_at'], reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'files': file_info,
+                'total_count': len(file_info)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"생성된 콘텐츠 목록 조회 실패: {e}")
+        return jsonify({
+            'success': False,
+            'error': '생성된 콘텐츠 목록을 불러오는 중 오류가 발생했습니다.',
+            'code': 'GENERATED_CONTENT_LIST_ERROR'
+        }), 500
+
+@app.route('/api/generated-content/<filename>', methods=['GET'])
+def get_generated_content_file(filename):
+    """특정 생성된 콘텐츠 파일 조회"""
+    try:
+        # 파일명 검증 (보안)
+        if not filename.endswith('.md') or '..' in filename or '/' in filename:
+            return jsonify({
+                'success': False,
+                'error': '유효하지 않은 파일명입니다.',
+                'code': 'INVALID_FILENAME'
+            }), 400
+        
+        file_path = Path('generated_content') / filename
+        if not file_path.exists():
+            return jsonify({
+                'success': False,
+                'error': '파일을 찾을 수 없습니다.',
+                'code': 'FILE_NOT_FOUND'
+            }), 404
+        
+        # 파일 내용 읽기
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 파일 정보
+        stat_info = file_path.stat()
+        
+        # 제목 추출
+        title = "제목 없음"
+        lines = content.split('\n')
+        for line in lines:
+            if line.startswith('# '):
+                title = line[2:].strip()
+                break
+        
+        # 콘텐츠 타입 판별
+        content_type = "blog" if 'blog_' in filename else "standard"
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'filename': filename,
+                'title': title,
+                'content': content,
+                'content_type': content_type,
+                'size': stat_info.st_size,
+                'created_at': datetime.fromtimestamp(stat_info.st_ctime).isoformat(),
+                'modified_at': datetime.fromtimestamp(stat_info.st_mtime).isoformat()
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"생성된 콘텐츠 파일 조회 실패: {filename} - {e}")
+        return jsonify({
+            'success': False,
+            'error': '파일을 읽는 중 오류가 발생했습니다.',
+            'code': 'FILE_READ_ERROR'
+        }), 500
+
+@app.route('/api/generated-content/<filename>', methods=['DELETE'])
+def delete_generated_content_file(filename):
+    """특정 생성된 콘텐츠 파일 삭제"""
+    try:
+        # 파일명 검증 (보안)
+        if not filename.endswith('.md') or '..' in filename or '/' in filename:
+            return jsonify({
+                'success': False,
+                'error': '유효하지 않은 파일명입니다.',
+                'code': 'INVALID_FILENAME'
+            }), 400
+        
+        file_path = Path('generated_content') / filename
+        if not file_path.exists():
+            return jsonify({
+                'success': False,
+                'error': '파일을 찾을 수 없습니다.',
+                'code': 'FILE_NOT_FOUND'
+            }), 404
+        
+        # 파일 삭제
+        file_path.unlink()
+        
+        logger.info(f"생성된 콘텐츠 파일 삭제 완료: {filename}")
+        
+        return jsonify({
+            'success': True,
+            'message': '파일이 성공적으로 삭제되었습니다.',
+            'filename': filename
+        })
+        
+    except Exception as e:
+        logger.error(f"생성된 콘텐츠 파일 삭제 실패: {filename} - {e}")
+        return jsonify({
+            'success': False,
+            'error': '파일을 삭제하는 중 오류가 발생했습니다.',
+            'code': 'FILE_DELETE_ERROR'
+        }), 500
+
+# ============================================================================
+# 자동 삭제 관리 API
+# ============================================================================
+
+@app.route('/api/generated-content/cleanup', methods=['POST', 'OPTIONS'])
+def trigger_cleanup():
+    """수동으로 자동 삭제 기능 트리거"""
+    try:
+        if request.method == 'OPTIONS':
+            return jsonify({'success': True})
+        
+        # 현재 파일 개수 확인
+        generated_content_path = Path('generated_content')
+        total_files_before = len(list(generated_content_path.glob('*.md'))) if generated_content_path.exists() else 0
+        
+        # 자동 삭제 실행
+        cleanup_old_files()
+        
+        # 삭제 후 파일 개수 확인
+        total_files_after = len(list(generated_content_path.glob('*.md'))) if generated_content_path.exists() else 0
+        deleted_count = total_files_before - total_files_after
+        
+        return jsonify({
+            'success': True,
+            'message': f'정리 완료: {deleted_count}개 파일 삭제',
+            'details': {
+                'files_before': total_files_before,
+                'files_after': total_files_after,
+                'deleted_count': deleted_count,
+                'cleanup_age_hours': AUTO_DELETE_AGE / 3600
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Manual cleanup failed: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'정리 중 오류가 발생했습니다: {str(e)}',
+            'code': 'CLEANUP_ERROR'
+        }), 500
+
+@app.route('/api/generated-content/cleanup/status', methods=['GET'])
+def get_cleanup_status():
+    """자동 삭제 기능 상태 확인"""
+    try:
+        generated_content_path = Path('generated_content')
+        
+        if not generated_content_path.exists():
+            return jsonify({
+                'success': True,
+                'data': {
+                    'auto_delete_enabled': AUTO_DELETE_ENABLED,
+                    'cleanup_interval_hours': AUTO_DELETE_INTERVAL / 3600,
+                    'file_age_limit_hours': AUTO_DELETE_AGE / 3600,
+                    'total_files': 0,
+                    'old_files': 0
+                }
+            })
+        
+        # 파일 상태 분석
+        current_time = datetime.now()
+        total_files = 0
+        old_files = 0
+        pattern = re.compile(r'.*_(\d{8})_(\d{6})\.md$')
+        
+        for file_path in generated_content_path.glob('*.md'):
+            total_files += 1
+            match = pattern.match(file_path.name)
+            if match:
+                try:
+                    date_str = match.group(1)
+                    time_str = match.group(2)
+                    file_datetime = datetime.strptime(f"{date_str}_{time_str}", "%Y%m%d_%H%M%S")
+                    age_seconds = (current_time - file_datetime).total_seconds()
+                    if age_seconds > AUTO_DELETE_AGE:
+                        old_files += 1
+                except:
+                    pass
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'auto_delete_enabled': AUTO_DELETE_ENABLED,
+                'cleanup_interval_hours': AUTO_DELETE_INTERVAL / 3600,
+                'file_age_limit_hours': AUTO_DELETE_AGE / 3600,
+                'total_files': total_files,
+                'old_files': old_files
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get cleanup status: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'상태 확인 중 오류가 발생했습니다: {str(e)}',
+            'code': 'STATUS_ERROR'
+        }), 500
 
 # ============================================================================
 # 출처 관리 API
@@ -845,6 +1210,7 @@ def get_all_extractable_sources():
                         subcategory_copy['full_url'] = source['url'].rstrip('/') + subcategory['url']
                         subcategory_copy['parent_id'] = source['id']
                         subcategory_copy['parent_name'] = source['name']
+                        subcategory_copy['parent_url'] = source['url']
                         extractable_sources.append(subcategory_copy)
         else:
             # 단독 출처인 경우
@@ -852,6 +1218,38 @@ def get_all_extractable_sources():
                 extractable_sources.append(source)
     
     return extractable_sources
+
+def get_all_sources_with_structure():
+    """계층적 구조를 포함한 모든 출처 반환"""
+    sources = load_sources()
+    result = {
+        'parent_sources': [],
+        'standalone_sources': [],
+        'extractable_sources': []
+    }
+    
+    for source in sources:
+        if source.get('is_parent', False):
+            # 부모 출처 추가
+            result['parent_sources'].append(source)
+            
+            # 서브 카테고리들을 extractable_sources에 추가
+            if 'subcategories' in source:
+                for subcategory in source['subcategories']:
+                    if subcategory.get('active', True):
+                        subcategory_copy = subcategory.copy()
+                        subcategory_copy['full_url'] = source['url'].rstrip('/') + subcategory['url']
+                        subcategory_copy['parent_id'] = source['id']
+                        subcategory_copy['parent_name'] = source['name']
+                        subcategory_copy['parent_url'] = source['url']
+                        result['extractable_sources'].append(subcategory_copy)
+        else:
+            # 단독 출처인 경우
+            if source.get('active', True):
+                result['standalone_sources'].append(source)
+                result['extractable_sources'].append(source)
+    
+    return result
 
 def validate_source_data(data):
     """출처 데이터 유효성 검증"""
@@ -889,6 +1287,27 @@ def get_extractable_sources():
             'success': False,
             'error': f'추출 가능한 출처 목록을 불러오는 중 오류가 발생했습니다: {error_msg}',
             'code': 'EXTRACTABLE_SOURCES_ERROR'
+        }), 500
+
+@app.route('/api/sources/structured', methods=['GET'])
+def get_structured_sources():
+    """계층적 구조를 포함한 출처 목록 조회"""
+    try:
+        structured_sources = get_all_sources_with_structure()
+        
+        return jsonify({
+            'success': True,
+            'data': structured_sources
+        })
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Failed to get structured sources: {error_msg}")
+        
+        return jsonify({
+            'success': False,
+            'error': f'계층적 출처 목록을 불러오는 중 오류가 발생했습니다: {error_msg}',
+            'code': 'STRUCTURED_SOURCES_ERROR'
         }), 500
 
 @app.route('/api/sources', methods=['GET', 'OPTIONS'])
@@ -1337,6 +1756,9 @@ if __name__ == '__main__':
     logger.info(f"🔧 Debug mode: {debug}")
     logger.info(f"🌍 Environment: {os.getenv('FLASK_ENV', 'development')}")
     logger.info(f"🔑 API Keys - OpenAI: {'SET' if os.getenv('OPENAI_API_KEY') else 'NOT_SET'}, Anthropic: {'SET' if os.getenv('ANTHROPIC_API_KEY') else 'NOT_SET'}")
+    
+    # 자동 삭제 기능 초기화
+    init_auto_cleanup()
     
     try:
         app.run(host='0.0.0.0', port=port, debug=debug)

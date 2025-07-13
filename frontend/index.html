@@ -8,6 +8,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
+    <!-- 캐시 방지 메타 태그 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>NONGBUXX - 한국어 뉴스 콘텐츠 생성기</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -31,261 +35,339 @@
             <p class="subtitle">뉴스를 SNS 콘텐츠로 변환해 드려요.</p>
         </header>
 
+        <!-- 탭 네비게이션 -->
+        <nav class="tab-navigation">
+            <button class="tab-button active" data-tab="news-extraction">
+                <i class="fas fa-newspaper"></i>
+                <span>뉴스 추출</span>
+            </button>
+            <button class="tab-button" data-tab="content-generation">
+                <i class="fas fa-edit"></i>
+                <span>콘텐츠 생성</span>
+            </button>
+            <button class="tab-button" data-tab="generated-content">
+                <i class="fas fa-file-alt"></i>
+                <span>생성된 콘텐츠</span>
+                <span class="tab-badge" id="generated-content-badge">0</span>
+            </button>
+
+        </nav>
+
         <!-- Main Content -->
         <main class="main-content">
-            <!-- News Extractor Section (Main Flow) -->
-            <section class="news-extractor-section" id="newsExtractorSection">
-                <div class="input-card">
-                    <div class="card-header">
-                        <h2><i class="fas fa-newspaper"></i> 뉴스 링크 추출</h2>
-                        <div class="header-controls">
-                            <button type="button" id="directUrlBtn" class="btn btn-header">
-                                <i class="fas fa-link"></i>
-                                URL 직접 입력
-                            </button>
-                            <button type="button" id="sourceManagementBtn" class="btn btn-header">
-                                <i class="fas fa-globe"></i>
-                                출처 설정
-                            </button>
-                            <button type="button" id="apiSettingsBtn" class="btn btn-header">
-                                <i class="fas fa-key"></i>
-                                API 키 설정
-                            </button>
-                            <div class="api-status-simple" id="apiStatus">
-                                <span class="status-dot"></span>
-                                <span class="status-text">AI비활성</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="newsKeyword">검색 키워드 (선택사항)</label>
-                        <input 
-                            type="text" 
-                            id="newsKeyword" 
-                            placeholder="예: Tesla AI, Bitcoin, 주식 시장"
-                        >
-                        <small class="input-hint">키워드를 입력하지 않으면 최신 뉴스를 추출합니다</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="newsCount">추출할 뉴스 개수</label>
-                        <input 
-                            type="number" 
-                            id="newsCount" 
-                            min="1" 
-                            max="50" 
-                            value="10"
-                        >
-                        <small class="input-hint">1~50개 사이로 설정해주세요</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="newsSourcesSelect">출처 선택</label>
-                        <div class="source-selection-container">
-                            <div class="selected-sources" id="selectedSources">
-                                <span class="loading">출처 로딩 중...</span>
-                            </div>
-                            <button type="button" id="selectSourcesBtn" class="btn btn-outline">
-                                <i class="fas fa-check-square"></i>
-                                출처 선택
-                            </button>
-                        </div>
-                        <small class="input-hint">선택한 출처에서 뉴스를 추출합니다 (복수 선택 가능)</small>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" id="extractNewsBtn" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
-                            뉴스 추출
-                        </button>
-                        <button type="button" id="resetAllBtn" class="btn btn-secondary">
-                            <i class="fas fa-refresh"></i>
-                            초기화
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- URL Input Section (Sub Flow - Collapsible) -->
-            <section class="input-section" id="urlInputSection" style="display: none;">
-                <div class="input-card">
-                    <div class="card-header">
-                        <h2><i class="fas fa-link"></i> URL 직접 입력</h2>
-                        <div class="header-controls">
-                            <button type="button" id="backToNewsExtractorBtn" class="btn btn-header">
-                                <i class="fas fa-arrow-left"></i>
-                                뉴스 추출로 돌아가기
-                            </button>
-                        </div>
-                    </div>
-                    <form id="urlForm">
-                        <div class="url-inputs-container" id="urlInputsContainer">
-                            <div class="url-input-row" data-index="0">
-                                <div class="form-group">
-                                    <div class="input-with-buttons">
-                                        <input 
-                                            type="url" 
-                                            id="urlInput-0" 
-                                            name="urlInput[]"
-                                            placeholder="https://news.example.com/article"
-                                            required
-                                            data-clicked="false"
-                                        >
-                                        <button type="button" class="btn btn-icon add-url-btn" onclick="addUrlInput(0)">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
+            <!-- 탭 1: 뉴스 추출 -->
+            <div class="tab-content" id="news-extraction-tab">
+                <!-- News Extractor Section (Main Flow) -->
+                <section class="news-extractor-section" id="newsExtractorSection">
+                    <div class="input-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-newspaper"></i> 뉴스 링크 추출</h2>
+                            <div class="header-controls">
+                                <button type="button" id="directUrlBtn" class="btn btn-header">
+                                    <i class="fas fa-link"></i>
+                                    URL 직접 입력
+                                </button>
+                                <button type="button" id="sourceManagementBtn" class="btn btn-header">
+                                    <i class="fas fa-globe"></i>
+                                    출처 설정
+                                </button>
+                                <button type="button" id="apiSettingsBtn" class="btn btn-header">
+                                    <i class="fas fa-key"></i>
+                                    API 키 설정
+                                </button>
+                                <div class="api-status-simple" id="apiStatus">
+                                    <span class="status-dot"></span>
+                                    <span class="status-text">AI비활성</span>
                                 </div>
                             </div>
                         </div>
-                        
+                        <div class="form-group">
+                            <label for="newsKeyword">검색 키워드 (선택사항)</label>
+                            <input 
+                                type="text" 
+                                id="newsKeyword" 
+                                placeholder="예: Tesla AI, Bitcoin, 주식 시장"
+                            >
+                            <small class="input-hint">키워드를 입력하지 않으면 최신 뉴스를 추출합니다</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="newsCount">추출할 뉴스 개수</label>
+                            <input 
+                                type="number" 
+                                id="newsCount" 
+                                min="1" 
+                                max="50" 
+                                value="10"
+                            >
+                            <small class="input-hint">1~50개 사이로 설정해주세요</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="newsSourcesSelect">출처 선택</label>
+                            <div class="source-selection-container">
+                                <div class="selected-sources" id="selectedSources">
+                                    <span class="loading">출처 로딩 중...</span>
+                                </div>
+                                <button type="button" id="selectSourcesBtn" class="btn btn-outline">
+                                    <i class="fas fa-check-square"></i>
+                                    출처 선택
+                                </button>
+                            </div>
+                            <small class="input-hint">선택한 출처에서 뉴스를 추출합니다 (복수 선택 가능)</small>
+                        </div>
                         <div class="form-actions">
-                            <button type="submit" class="btn btn-primary" data-content-type="standard">
-                                <i class="fas fa-magic"></i>
-                                콘텐츠 생성
+                            <button type="button" id="extractNewsBtn" class="btn btn-primary">
+                                <i class="fas fa-search"></i>
+                                뉴스 추출
                             </button>
-                            <button type="button" id="generateBlogBtn" class="btn btn-success">
-                                <i class="fas fa-blog"></i>
-                                블로그 콘텐츠 생성
-                            </button>
-                            <button type="button" id="resetUrlInputBtn" class="btn btn-secondary">
+                            <button type="button" id="resetAllBtn" class="btn btn-secondary">
                                 <i class="fas fa-refresh"></i>
                                 초기화
                             </button>
                         </div>
-                    </form>
-                </div>
-            </section>
+                    </div>
+                </section>
 
-            <!-- News Selection Section (Hidden by default) -->
-            <section class="news-selection-section" id="newsSelectionSection" style="display: none;">
-                <div class="result-card">
-                    <div class="result-header">
-                        <h2><i class="fas fa-list-check"></i> 뉴스 선택</h2>
-                        <div class="result-actions">
-                            <button id="selectAllNewsBtn" class="btn btn-info">
-                                <i class="fas fa-check-square"></i>
-                                전체 선택
-                            </button>
-                            <button id="deselectAllNewsBtn" class="btn btn-outline">
-                                <i class="fas fa-square"></i>
-                                전체 해제
-                            </button>
-                            <button id="generateSelectedBtn" class="btn btn-success" disabled data-content-type="standard">
-                                <i class="fas fa-magic"></i>
-                                선택된 뉴스 일괄 생성
-                            </button>
-                            <button id="generateSelectedBlogBtn" class="btn btn-info" disabled>
-                                <i class="fas fa-blog"></i>
-                                선택된 뉴스 블로그 생성
-                            </button>
+                <!-- URL Input Section (Sub Flow - Collapsible) -->
+                <section class="input-section" id="urlInputSection" style="display: none;">
+                    <div class="input-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-link"></i> URL 직접 입력</h2>
+                            <div class="header-controls">
+                                <button type="button" id="backToNewsExtractorBtn" class="btn btn-header">
+                                    <i class="fas fa-arrow-left"></i>
+                                    뉴스 추출로 돌아가기
+                                </button>
+                            </div>
+                        </div>
+                        <form id="urlForm">
+                            <div class="url-inputs-container" id="urlInputsContainer">
+                                <div class="url-input-row" data-index="0">
+                                    <div class="form-group">
+                                        <div class="input-with-buttons">
+                                            <input 
+                                                type="url" 
+                                                id="urlInput-0" 
+                                                name="urlInput[]"
+                                                placeholder="https://news.example.com/article"
+                                                required
+                                                data-clicked="false"
+                                            >
+                                            <button type="button" class="btn btn-icon add-url-btn" onclick="addUrlInput(0)">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" data-content-type="standard">
+                                    <i class="fas fa-magic"></i>
+                                    콘텐츠 생성
+                                </button>
+                                <button type="button" id="generateBlogBtn" class="btn btn-success">
+                                    <i class="fas fa-blog"></i>
+                                    블로그 콘텐츠 생성
+                                </button>
+                                <button type="button" id="resetUrlInputBtn" class="btn btn-secondary">
+                                    <i class="fas fa-refresh"></i>
+                                    초기화
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- News Selection Section (Hidden by default) -->
+                <section class="news-selection-section" id="newsSelectionSection" style="display: none;">
+                    <div class="result-card">
+                        <div class="result-header">
+                            <h2><i class="fas fa-list-check"></i> 뉴스 선택</h2>
+                            <div class="result-actions">
+                                <button id="selectAllNewsBtn" class="btn btn-info">
+                                    <i class="fas fa-check-square"></i>
+                                    전체 선택
+                                </button>
+                                <button id="deselectAllNewsBtn" class="btn btn-outline">
+                                    <i class="fas fa-square"></i>
+                                    전체 해제
+                                </button>
+                                <button id="confirmSelectedNewsBtn" class="btn btn-success" disabled>
+                                    <i class="fas fa-check"></i>
+                                    선택한 뉴스 확정
+                                </button>
+                                <button id="backToExtractorBtn" class="btn btn-outline">
+                                    <i class="fas fa-arrow-left"></i>
+                                    뉴스 추출로 돌아가기
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="news-extraction-info" id="newsExtractionInfo">
+                            <!-- 추출 정보가 여기에 표시됩니다 -->
+                        </div>
+                        
+                        <div class="news-controls">
+                            <div class="news-sort-controls">
+                                <label for="newsSortSelect">정렬:</label>
+                                <select id="newsSortSelect">
+                                    <option value="newest">최신순</option>
+                                    <option value="oldest">오래된순</option>
+                                    <option value="title">제목순</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="news-list" id="newsList">
+                            <!-- 뉴스 리스트가 여기에 표시됩니다 -->
                         </div>
                     </div>
-                    
-                    <div class="news-extraction-info" id="newsExtractionInfo">
-                        <!-- 추출 정보가 여기에 표시됩니다 -->
-                    </div>
-                    
-                    <div class="news-controls">
-                        <div class="news-sort-controls">
-                            <label for="newsSortSelect">정렬:</label>
-                            <select id="newsSortSelect">
-                                <option value="newest">최신순</option>
-                                <option value="oldest">오래된순</option>
-                                <option value="title">제목순</option>
-                            </select>
+                </section>
+            </div>
+
+            <!-- 탭 2: 콘텐츠 생성 -->
+            <div class="tab-content" id="content-generation-tab">
+                <!-- Content Generation Options -->
+                <section class="content-generation-section" id="contentGenerationSection">
+                    <div class="input-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-edit"></i> 콘텐츠 생성</h2>
+                            <div class="header-controls">
+                                <!-- 뉴스 추출로 돌아가기 버튼 삭제됨 -->
+                            </div>
+                        </div>
+                        <div class="selected-news-summary" id="selectedNewsSummary">
+                            <h3>선택된 뉴스</h3>
+                            <p>뉴스 추출 탭에서 뉴스를 선택해주세요.</p>
+                        </div>
+                        <div class="generation-options">
+                            <div class="form-actions">
+                                <button type="button" id="generateSelectedBtn2" class="btn btn-success" disabled>
+                                    <i class="fas fa-magic"></i>
+                                    선택된 뉴스 일괄 생성
+                                </button>
+                                <button type="button" id="generateSelectedBlogBtn2" class="btn btn-info" disabled>
+                                    <i class="fas fa-blog"></i>
+                                    선택된 뉴스 블로그 생성
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="news-list" id="newsList">
-                        <!-- 뉴스 리스트가 여기에 표시됩니다 -->
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- Generated Content List Section (Hidden by default) -->
-            <section class="generated-content-list-section" id="generatedContentListSection" style="display: none;">
-                <div class="result-card">
-                    <div class="result-header">
-                        <h2><i class="fas fa-file-alt"></i> 생성된 콘텐츠</h2>
-                        <div class="result-actions">
-                            <button id="downloadAllGeneratedBtn" class="btn btn-success">
-                                <i class="fas fa-download"></i>
-                                전체 다운로드
-                            </button>
-                            <button id="copyAllGeneratedBtn" class="btn btn-info">
-                                <i class="fas fa-copy"></i>
-                                전체 복사
-                            </button>
+                <!-- Progress Section -->
+                <section class="progress-section" id="progressSection" style="display: none;">
+                    <div class="progress-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-clock"></i> 콘텐츠 생성 중</h2>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-info">
+                            <p>AI가 선택하신 뉴스를 분석하고 콘텐츠를 생성하고 있습니다...</p>
+                            <p>잠시만 기다려주세요. 평균 30초 내외 소요됩니다.</p>
                         </div>
                     </div>
-                    
-                    <div class="generated-content-list" id="generatedContentList">
-                        <!-- 생성된 콘텐츠 리스트가 여기에 표시됩니다 -->
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- API Key Settings Modal Section (Changed to Modal) -->
+            </div>
+
+            <!-- 탭 3: 생성된 콘텐츠 -->
+            <div class="tab-content" id="generated-content-tab" style="display: none;">
+                <!-- Generated Content List Section -->
+                <section class="generated-content-list-section" id="generatedContentListSection">
+                    <div class="result-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-file-alt"></i> 생성된 콘텐츠</h2>
+                            <div class="header-controls">
+                                <button type="button" id="downloadAllGeneratedBtn" class="btn btn-success">
+                                    <i class="fas fa-download"></i>
+                                    전체 다운로드
+                                </button>
+
+                                <button type="button" id="resetAllBtn" class="btn btn-outline">
+                                    <i class="fas fa-refresh"></i>
+                                    초기화
+                                </button>
+                            </div>
+                        </div>
+                        <div class="generated-content-list" id="generatedContentList">
+                            <!-- 생성된 콘텐츠 목록이 여기에 표시됩니다 -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+
+
+        </main>
+
+        <!-- 모달 섹션들 (탭과 별도로 관리) -->
+        <div class="modals-container">
+            <!-- API Settings Modal Section -->
             <section class="api-settings-modal-section" id="apiSettingsModalSection" style="display: none;">
-                <div class="modal-overlay" id="apiSettingsModalOverlay">
+                <div class="modal-overlay">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h3><i class="fas fa-key"></i> API 키 설정</h3>
-                            <button type="button" id="closeApiSettingsModalBtn" class="btn btn-icon">
+                            <button type="button" class="btn-icon" onclick="hideApiSettingsModal()">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        
-                    <div class="form-group">
-                        <label for="apiProviderSelect">API 제공자</label>
-                        <select id="apiProviderSelect">
-                            <option value="anthropic">Anthropic Claude</option>
-                            <option value="openai">OpenAI GPT-4</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="apiKeyInput">API 키</label>
-                        <div class="input-with-button">
-                            <input 
-                                type="password" 
-                                id="apiKeyInput" 
-                                placeholder="sk-..."
-                                autocomplete="off"
-                            >
-                            <button type="button" id="toggleApiKeyBtn" class="btn btn-icon">
-                                <i class="fas fa-eye"></i>
+                        <div class="form-group">
+                            <label for="apiProviderSelect">AI 제공업체 선택</label>
+                            <select id="apiProviderSelect">
+                                <option value="anthropic">Anthropic (Claude)</option>
+                                <option value="openai">OpenAI (GPT)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="apiKeyInput">API 키</label>
+                            <div class="input-with-button">
+                                <input 
+                                    type="password" 
+                                    id="apiKeyInput" 
+                                    placeholder="API 키를 입력하세요"
+                                >
+                                <button type="button" class="btn-icon" onclick="toggleApiKeyVisibility()">
+                                    <i class="fas fa-eye" id="apiKeyToggleIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" id="validateApiKeyBtn" class="btn btn-info">
+                                <i class="fas fa-check"></i>
+                                키 검증
+                            </button>
+                            <button type="button" onclick="saveApiKey()" class="btn btn-success">
+                                <i class="fas fa-save"></i>
+                                저장
+                            </button>
+                            <button type="button" onclick="deleteApiKey()" class="btn btn-danger">
+                                <i class="fas fa-trash"></i>
+                                삭제
+                            </button>
+                            <button type="button" onclick="hideApiSettingsModal()" class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                                취소
                             </button>
                         </div>
-                    </div>
-                        
-                        <div class="modal-actions">
-                        <button type="button" id="validateApiKeyBtn" class="btn btn-info">
-                            <i class="fas fa-check"></i>
-                            유효성 확인
-                        </button>
-                        <button type="button" id="saveApiKeyBtn" class="btn btn-success" disabled>
-                            <i class="fas fa-save"></i>
-                            저장
-                        </button>
-                        <button type="button" id="deleteApiKeyBtn" class="btn btn-danger">
-                            <i class="fas fa-trash"></i>
-                            삭제
-                        </button>
-                        </div>
-                        
                         <div class="api-validation-result" id="apiValidationResult"></div>
                     </div>
                 </div>
             </section>
 
-            <!-- Source Management Section (Already Modal-like) -->
+            <!-- Parent Source Management Section -->
             <section class="source-management-section" id="sourceManagementSection" style="display: none;">
                 <div class="modal-overlay">
                     <div class="modal-content large-modal">
                         <div class="modal-header">
-                            <h3><i class="fas fa-globe"></i> 출처 관리</h3>
+                            <h3><i class="fas fa-sitemap"></i> 출처 관리 - 부모 출처</h3>
                             <div class="header-controls">
-                                <button type="button" id="addSourceBtn" class="btn btn-success">
+                                <button type="button" id="addParentSourceBtn" class="btn btn-success">
                                     <i class="fas fa-plus"></i>
-                                    새 출처 추가
+                                    새 부모 출처 추가
                                 </button>
                                 <button type="button" id="closeSourceManagementBtn" class="btn btn-icon">
                                     <i class="fas fa-times"></i>
@@ -293,97 +375,170 @@
                             </div>
                         </div>
                         
-                        <div class="sources-list" id="sourcesList">
-                            <!-- 출처 목록이 여기에 표시됩니다 -->
+                        <div class="parent-sources-list" id="parentSourcesList">
+                            <!-- 부모 출처 목록이 여기에 표시됩니다 -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Add/Edit Source Modal Section -->
-            <section class="source-modal-section" id="sourceModalSection" style="display: none;">
-                <div class="modal-overlay" id="sourceModalOverlay">
+            <!-- Subcategory Management Section -->
+            <section class="subcategory-management-section" id="subcategoryManagementSection" style="display: none;">
+                <div class="modal-overlay">
+                    <div class="modal-content large-modal">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-tags"></i> 서브카테고리 관리</h3>
+                            <div class="header-controls">
+                                <button type="button" id="addSubcategoryBtn" class="btn btn-success">
+                                    <i class="fas fa-plus"></i>
+                                    새 서브카테고리 추가
+                                </button>
+                                <button type="button" id="backToParentSourcesBtn" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i>
+                                    부모 출처로 돌아가기
+                                </button>
+                                <button type="button" id="closeSubcategoryManagementBtn" class="btn btn-icon">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="subcategory-management-header">
+                            <div class="parent-source-info" id="currentParentSourceInfo">
+                                <!-- 현재 선택된 부모 출처 정보 -->
+                            </div>
+                        </div>
+                        
+                        <div class="subcategories-list" id="subcategoriesList">
+                            <!-- 서브카테고리 목록이 여기에 표시됩니다 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Parent Source Modal Section -->
+            <section class="parent-source-modal-section" id="parentSourceModalSection" style="display: none;">
+                <div class="modal-overlay" id="parentSourceModalOverlay">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h3 id="sourceModalTitle"><i class="fas fa-plus"></i> 새 출처 추가</h3>
-                            <button type="button" id="closeSourceModalBtn" class="btn btn-icon">
+                            <h3 id="parentSourceModalTitle"><i class="fas fa-plus"></i> 새 부모 출처 추가</h3>
+                            <button type="button" id="closeParentSourceModalBtn" class="btn btn-icon">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                         
-                        <form id="sourceForm">
+                        <form id="parentSourceForm">
                             <div class="form-group">
-                                <label for="sourceNameInput">출처명 *</label>
+                                <label for="parentSourceNameInput">출처명 *</label>
                                 <input 
                                     type="text" 
-                                    id="sourceNameInput" 
-                                    placeholder="예: Yahoo Finance, Reuters"
+                                    id="parentSourceNameInput" 
+                                    placeholder="예: Yahoo Finance, Reuters, CNN"
                                     required
                                 >
                             </div>
                             
                             <div class="form-group">
-                                <label for="sourceUrlInput">URL *</label>
+                                <label for="parentSourceUrlInput">메인 URL *</label>
                                 <input 
                                     type="url" 
-                                    id="sourceUrlInput" 
+                                    id="parentSourceUrlInput" 
                                     placeholder="https://finance.yahoo.com/"
                                     required
                                 >
+                                <small class="input-hint">서브카테고리들의 기본 URL이 됩니다</small>
                             </div>
                             
                             <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="sourceIsParentCheckbox">
-                                    <span class="checkmark"></span>
-                                    상위 출처 (서브 카테고리 포함)
-                                </label>
-                            </div>
-                            
-                            <div class="form-group" id="parserTypeGroup">
-                                <label for="sourceParserTypeSelect">파서 타입</label>
-                                <select id="sourceParserTypeSelect">
-                                    <option value="universal">Universal</option>
-                                    <option value="yahoo_finance">Yahoo Finance</option>
-                                    <option value="generic">일반 (향후 지원)</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="sourceDescriptionInput">설명</label>
+                                <label for="parentSourceDescriptionInput">설명</label>
                                 <textarea 
-                                    id="sourceDescriptionInput" 
+                                    id="parentSourceDescriptionInput" 
                                     rows="3"
-                                    placeholder="출처에 대한 간단한 설명"
+                                    placeholder="이 출처에 대한 간단한 설명"
                                 ></textarea>
                             </div>
                             
                             <div class="form-group">
                                 <label class="checkbox-label">
-                                    <input type="checkbox" id="sourceActiveCheckbox" checked>
+                                    <input type="checkbox" id="parentSourceActiveCheckbox" checked>
                                     <span class="checkmark"></span>
                                     활성화
                                 </label>
                             </div>
+                        </form>
+                        
+                        <div class="modal-actions">
+                            <button type="button" id="saveParentSourceBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                저장
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Subcategory Modal Section -->
+            <section class="subcategory-modal-section" id="subcategoryModalSection" style="display: none;">
+                <div class="modal-overlay" id="subcategoryModalOverlay">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="subcategoryModalTitle"><i class="fas fa-plus"></i> 새 서브카테고리 추가</h3>
+                            <button type="button" id="closeSubcategoryModalBtn" class="btn btn-icon">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <form id="subcategoryForm">
+                            <div class="form-group">
+                                <label for="subcategoryNameInput">카테고리명 *</label>
+                                <input 
+                                    type="text" 
+                                    id="subcategoryNameInput" 
+                                    placeholder="예: Latest News, Tech, Crypto"
+                                    required
+                                >
+                            </div>
                             
-                            <!-- 서브 카테고리 섹션 -->
-                            <div class="subcategories-section" id="subcategoriesSection" style="display: none;">
-                                <div class="subcategories-header">
-                                    <h4><i class="fas fa-list"></i> 서브 카테고리</h4>
-                                    <button type="button" id="addSubcategoryBtn" class="btn btn-success btn-sm">
-                                        <i class="fas fa-plus"></i>
-                                        서브 카테고리 추가
-                                    </button>
-                                </div>
-                                
-                                <div class="subcategories-list" id="subcategoriesList">
-                                    <!-- 서브 카테고리 목록이 여기에 표시됩니다 -->
-                                </div>
+                            <div class="form-group">
+                                <label for="subcategoryUrlInput">URL 경로 *</label>
+                                <input 
+                                    type="text" 
+                                    id="subcategoryUrlInput" 
+                                    placeholder="예: /topic/latest-news/, /business/"
+                                    required
+                                >
+                                <small class="input-hint">부모 출처 URL 뒤에 붙을 경로입니다</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="subcategoryParserTypeSelect">파서 타입</label>
+                                <select id="subcategoryParserTypeSelect">
+                                    <option value="universal">Universal</option>
+                                    <option value="yahoo_finance">Yahoo Finance</option>
+                                    <option value="generic">일반</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="subcategoryDescriptionInput">설명</label>
+                                <textarea 
+                                    id="subcategoryDescriptionInput" 
+                                    rows="2"
+                                    placeholder="이 카테고리에 대한 간단한 설명"
+                                ></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="subcategoryActiveCheckbox" checked>
+                                    <span class="checkmark"></span>
+                                    활성화
+                                </label>
                             </div>
                         </form>
                         
                         <div class="modal-actions">
-                            <button type="button" id="saveSourceBtn" class="btn btn-primary">
+                            <button type="button" id="saveSubcategoryBtn" class="btn btn-primary">
                                 <i class="fas fa-save"></i>
                                 저장
                             </button>
@@ -507,68 +662,57 @@
                 </div>
             </section>
 
-            <!-- Progress Section -->
-            <section class="progress-section" id="progressSection" style="display: none;">
-                <div class="progress-card">
-                    <h3 id="progressTitle">처리 중...</h3>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-                    <p class="progress-text" id="progressText">0%</p>
-                    <div class="spinner"></div>
-                </div>
-            </section>
-
-            <!-- Result Section -->
-            <section class="result-section" id="resultSection" style="display: none;">
-                <div class="result-card">
-                    <div class="result-header">
-                        <h2><i class="fas fa-check-circle"></i> 생성 완료!</h2>
-                        <div class="result-actions">
-                            <button id="downloadBtn" class="btn btn-success">
-                                <i class="fas fa-download"></i>
-                                다운로드
+            <!-- Content Preview Modal Section -->
+            <section class="content-preview-modal-section" id="contentPreviewModalSection" style="display: none;">
+                <div class="modal-overlay" id="contentPreviewModalOverlay">
+                    <div class="modal-content large-modal">
+                        <div class="modal-header">
+                            <h3 id="contentPreviewModalTitle">
+                                <i class="fas fa-eye"></i> 콘텐츠 미리보기
+                            </h3>
+                            <button type="button" id="closeContentPreviewModalBtn" class="btn btn-icon">
+                                <i class="fas fa-times"></i>
                             </button>
-                            <button id="copyBtn" class="btn btn-info">
+                        </div>
+                        
+                        <div class="modal-body">
+                            <div class="content-preview-info" id="contentPreviewInfo">
+                                <div class="preview-meta">
+                                    <span class="preview-filename" id="previewFilename"></span>
+                                    <span class="preview-size" id="previewSize"></span>
+                                    <span class="preview-date" id="previewDate"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="content-preview-container" id="contentPreviewContainer">
+                                <div class="loading-content" id="previewLoading">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    콘텐츠를 불러오는 중...
+                                </div>
+                                <div class="preview-content-body" id="previewContentBody" style="display: none;">
+                                    <!-- 콘텐츠가 여기에 표시됩니다 -->
+                                </div>
+                                <div class="preview-error" id="previewError" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    콘텐츠를 불러올 수 없습니다.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" id="copyPreviewContentBtn" class="btn btn-success">
                                 <i class="fas fa-copy"></i>
                                 복사
                             </button>
-                            <button id="resetBtn" class="btn btn-secondary">
-                                <i class="fas fa-refresh"></i>
-                                새로 시작
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="result-content">
-                            <div class="markdown-preview" id="markdownPreview"></div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Batch Result Section -->
-            <section class="batch-result-section" id="batchResultSection" style="display: none;">
-                <div class="result-card">
-                    <div class="result-header">
-                        <h2><i class="fas fa-list-check"></i> 배치 처리 완료!</h2>
-                        <div class="result-actions">
-                            <button id="downloadAllBtn" class="btn btn-success">
+                            <button type="button" id="downloadPreviewContentBtn" class="btn btn-info">
                                 <i class="fas fa-download"></i>
-                                모두 다운로드
+                                다운로드
                             </button>
-                            <button id="resetBatchBtn" class="btn btn-secondary">
-                                <i class="fas fa-refresh"></i>
-                                새로 시작
+                            <button type="button" id="closePreviewModalBtn" class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                                닫기
                             </button>
                         </div>
-                    </div>
-                    
-                    <div class="batch-summary" id="batchSummary">
-                        <!-- Batch summary will be populated here -->
-                    </div>
-                    
-                    <div class="batch-results" id="batchResults">
-                        <!-- Batch results will be populated here -->
                     </div>
                 </div>
             </section>
@@ -584,19 +728,13 @@
                     </button>
                 </div>
             </section>
-        </main>
+        </div>
 
-        <!-- Footer -->
-        <footer class="footer">
-            <p>&copy; 2024 NONGBUXX. AI 기반 뉴스 콘텐츠 생성기</p>
-        </footer>
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
     </div>
 
-    <!-- Toast Notifications -->
-    <div class="toast-container" id="toastContainer"></div>
-
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="./config.js"></script>
     <script src="./script.js"></script>
 </body>

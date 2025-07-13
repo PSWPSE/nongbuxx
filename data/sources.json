@@ -8,7 +8,7 @@
       "active": true,
       "description": "Yahoo Finance 메인 사이트",
       "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2025-07-12T19:20:00.000000",
+      "updated_at": "2025-07-13T21:00:00.000000",
       "subcategories": [
         {
           "id": "yahoo_finance_latest",
@@ -18,7 +18,7 @@
           "active": true,
           "description": "Yahoo Finance 최신 뉴스 카테고리",
           "created_at": "2024-01-01T00:00:00Z",
-          "updated_at": "2025-07-12T19:20:00.000000"
+          "updated_at": "2025-07-13T21:00:00.000000"
         },
         {
           "id": "yahoo_finance_crypto",
@@ -28,7 +28,7 @@
           "active": true,
           "description": "Yahoo Finance 암호화폐 카테고리",
           "created_at": "2025-07-12T09:52:00.056141",
-          "updated_at": "2025-07-12T09:52:00.056174"
+          "updated_at": "2025-07-13T21:00:00.000000"
         },
         {
           "id": "yahoo_finance_tech",
@@ -38,10 +38,20 @@
           "active": true,
           "description": "Yahoo Finance 기술 카테고리",
           "created_at": "2025-07-12T12:46:30.048893",
-          "updated_at": "2025-07-12T12:46:30.048901"
+          "updated_at": "2025-07-13T21:00:00.000000"
+        },
+        {
+          "id": "yahoo_finance_economic",
+          "name": "Economic News",
+          "url": "/topic/economic-news/",
+          "parser_type": "universal",
+          "active": true,
+          "description": "Yahoo Finance 경제 뉴스 카테고리",
+          "created_at": "2025-07-13T01:10:00.000000",
+          "updated_at": "2025-07-13T21:00:00.000000"
         }
       ]
     }
   ],
-  "updated_at": "2025-07-12T12:46:30.048956"
+  "updated_at": "2025-07-13T21:38:48.832844"
 }
