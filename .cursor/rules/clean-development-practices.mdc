@@ -1,0 +1,187 @@
+---
+alwaysApply: true
+---
+
+# 🧹 깔끔한 개발 실천 가이드라인
+
+## 🚫 **절대 금지 사항**
+
+### ❌ **백업 파일 과다 생성 방지**
+- 테스트 중 생성된 파일들을 방치하지 말 것
+- `backup_*`, `test_*`, `temp_*` 파일들은 즉시 정리
+- 87개의 백업 파일 생성 같은 상황 재발 방지
+
+### ❌ **중복 코드 및 주석 방지**
+```javascript
+// 나쁜 예: 중복된 전역 변수 선언
+let currentJobId = null; // 30번 줄
+let currentJobId = null; // 341번 줄 (중복!)
+
+// 좋은 예: 한 곳에서만 선언
+let currentJobId = null; // 단일 선언
+```
+
+### ❌ **죽은 코드 방지**
+- 사용하지 않는 함수 즉시 제거
+- 주석 처리된 코드 블록 방치 금지
+- `// 중복 제거됨` 같은 의미없는 주석 금지
+
+## ✅ **필수 개발 실천 사항**
+
+### 1️⃣ **실시간 정리 원칙**
+```bash
+# 매 작업 후 즉시 실행
+find . -name "*.backup" -delete
+find . -name "temp_*" -delete  
+find . -name "test_*" -delete
+```
+
+### 2️⃣ **코드 추가 시 체크리스트**
+- [ ] 기존 코드와 중복되지 않는가?
+- [ ] 사용하지 않는 import 없는가?
+- [ ] 전역 변수 중복 선언 없는가?
+- [ ] 함수명이 명확하고 단일 책임인가?
+
+### 3️⃣ **파일 관리 원칙**
+```
+✅ 허용되는 파일들:
+- [app.py](mdc:app.py) - 핵심 백엔드
+- [frontend/script.js](mdc:frontend/script.js) - 핵심 프론트엔드
+- [data/sources.json](mdc:data/sources.json) - 설정 파일
+- [generated_content/](mdc:generated_content/) - 실제 결과물
+
+❌ 금지되는 파일들:
+- backup_generated_content/ (87개 파일 생성 금지)
+- extracted_articles/ (테스트 파일 방치 금지)
+- *.backup, *.temp, *.test (임시 파일 방치 금지)
+```
+
+### 4️⃣ **성능 최적화 원칙**
+- 메모리 캐시 사용 시 만료 시간 설정
+- 불필요한 Timer, Thread 즉시 정리
+- CORS 설정 최소화 (10개 도메인 → 필요한 것만)
+
+### 5️⃣ **API 개발 안전 원칙**
+- 기존 [API 개발 안전 가이드라인](mdc:.cursor/rules/api-development-safety.mdc) 준수
+- 새 기능 추가 시 기존 기능 영향도 체크
+- 서버 재시작 시 포트 충돌 방지
+
+## 🔧 **개발 프로세스**
+
+### 📋 **시작 전 체크**
+```bash
+# 1. 현재 상태 확인
+git status
+ls -la | grep -E "(backup|temp|test)"
+
+# 2. 불필요한 파일 정리
+find . -name "*.backup" -delete
+find . -name "__pycache__" -exec rm -rf {} +
+```
+
+### 🎯 **개발 중 체크**
+```bash
+# 3. 코드 품질 확인
+grep -r "TODO\|FIXME\|XXX" . --include="*.py" --include="*.js"
+grep -r "중복\|duplicate" . --include="*.py" --include="*.js"
+
+# 4. 사용하지 않는 함수 확인
+grep -r "function.*{" frontend/script.js | wc -l
+grep -r "def " app.py | wc -l
+```
+
+### 🏁 **완료 후 체크**
+```bash
+# 5. 최종 정리
+rm -rf logs/*.log 2>/dev/null || true
+rm -rf uploads/temp_* 2>/dev/null || true
+find . -name "*.pyc" -delete
+
+# 6. 커밋 전 검증
+git add -A && git status
+```
+
+## 💡 **메모리 관리 원칙**
+
+### 🔄 **캐시 관리**
+```python
+# 좋은 예: 자동 정리 캐시
+generated_content_cache = {}  # 30분 만료
+active_jobs = {}  # 1시간 만료
+
+# 나쁜 예: 무한 증가 캐시
+generated_content_cache = {}  # 영원히 저장
+```
+
+### 📊 **메모리 모니터링**
+```bash
+# 주기적 메모리 체크
+ps aux | grep python3 | grep -v grep
+lsof -i :8080
+lsof -i :3000
+```
+
+## 🎨 **코드 스타일 가이드**
+
+### 🏷️ **명명 규칙**
+```javascript
+// 좋은 예
+const extractedNewsArticles = [];
+const newsExtractionProgress = 0;
+
+// 나쁜 예  
+const extractedNews = []; // 너무 짧음
+const currentNewsExtractionProgressValue = 0; // 너무 김
+```
+
+### 📝 **주석 규칙**
+```javascript
+// 좋은 예: 의미 있는 주석
+// 뉴스 추출 API 호출 전 사용자 인증 확인
+if (!userToken) return;
+
+// 나쁜 예: 의미 없는 주석
+// 중복 제거됨
+// 이미 선언됨
+```
+
+## 🚨 **에러 방지 패턴**
+
+### 🔍 **포트 충돌 방지**
+```bash
+# 서버 시작 전 항상 실행
+lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+```
+
+### 🗂️ **파일 정리 자동화**
+```bash
+# 개발 세션 종료 시 자동 실행
+cleanup_dev_session() {
+    find . -name "*.backup" -delete
+    find . -name "__pycache__" -exec rm -rf {} +
+    find . -name "*.log" -size +10M -delete
+    echo "✅ 개발 환경 정리 완료"
+}
+```
+
+## 📈 **품질 지표**
+
+### 🎯 **목표 지표**
+- 백업 파일: 0개 (현재: 87개였음)
+- 중복 코드: 0% (현재: 다수 발견)
+- 죽은 코드: 0개 (현재: 다수 발견)
+- 메모리 누수: 0개
+
+### 📊 **주간 리뷰 체크리스트**
+- [ ] 불필요한 파일 0개 유지
+- [ ] 코드 중복 0% 유지
+- [ ] 메모리 사용량 안정적
+- [ ] 로그 파일 크기 관리
+- [ ] API 응답 시간 최적화
+
+---
+
+**⚠️ 이 가이드라인을 무시하면 또 다시 87개의 백업 파일과 지저분한 코드베이스가 생성됩니다!**
+
+**💡 깔끔한 코드 = 빠른 개발 = 안정적인 서비스**

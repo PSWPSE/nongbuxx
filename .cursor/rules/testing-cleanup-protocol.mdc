@@ -1,0 +1,213 @@
+---
+description: "테스트와 디버깅 시 자동 정리 프로토콜"
+globs: "*.py,*.js,*.html,*.css"
+---
+
+# 🧪 테스트 & 디버깅 정리 프로토콜
+
+## 🚨 **테스트 시작 전 필수 체크**
+
+### 📋 **환경 정리 스크립트**
+```bash
+# 테스트 시작 전 반드시 실행
+cleanup_before_test() {
+    echo "🧹 테스트 환경 정리 시작..."
+    
+    # 1. 이전 테스트 파일 정리
+    find . -name "test_*" -delete
+    find . -name "*_test.py" -delete
+    find . -name "*.backup" -delete
+    find . -name "*.temp" -delete
+    
+    # 2. 로그 파일 정리
+    find . -name "*.log" -size +1M -delete
+    find . -name "app.log" -delete
+    
+    # 3. 캐시 정리
+    find . -name "__pycache__" -exec rm -rf {} +
+    find . -name "*.pyc" -delete
+    
+    # 4. 포트 해제
+    lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    
+    echo "✅ 테스트 환경 정리 완료"
+}
+```
+
+## 🔄 **개발 중 실시간 정리**
+
+### ⚡ **자동 정리 패턴**
+```python
+# app.py에서 테스트 관련 코드 작성 시
+def test_function():
+    # 테스트 완료 후 자동 정리
+    import atexit
+    atexit.register(cleanup_test_files)
+    
+    # 실제 테스트 코드
+    pass
+
+def cleanup_test_files():
+    """테스트 파일 자동 정리"""
+    import os, glob
+    
+    # 테스트 생성 파일들 정리
+    test_files = glob.glob('test_*.md') + glob.glob('temp_*.json')
+    for file in test_files:
+        os.remove(file)
+```
+
+### 📊 **메모리 누수 방지**
+```javascript
+// frontend/script.js에서 테스트 시
+function testNewsExtraction() {
+    const testData = [];
+    
+    // 테스트 완료 후 메모리 정리
+    window.addEventListener('beforeunload', () => {
+        testData.length = 0;
+        if (currentTestJobId) {
+            clearTimeout(currentTestJobId);
+        }
+    });
+}
+```
+
+## 📁 **파일 생성 규칙**
+
+### ✅ **허용되는 테스트 파일**
+```
+임시 허용 (즉시 삭제 조건부):
+- debug_output.json (디버깅 후 즉시 삭제)
+- test_result.md (테스트 완료 후 즉시 삭제)
+- temp_config.json (세션 종료 후 자동 삭제)
+```
+
+### ❌ **절대 생성 금지**
+```
+금지 패턴:
+- backup_generated_content/ (87개 파일 생성 사례)
+- extracted_articles/ (테스트 결과물 방치)
+- *.backup (백업 파일 무한 증식)
+- test_app.py (테스트 파일 방치)
+- app.log (로그 파일 방치)
+```
+
+## 🛠️ **디버깅 시 규칙**
+
+### 🔍 **디버깅 콘솔 정리**
+```javascript
+// 디버깅용 콘솔 로그는 테스트 완료 후 제거
+console.log('DEBUG: 뉴스 추출 시작'); // ❌ 배포 시 제거 필요
+
+// 좋은 예: 조건부 디버깅
+if (window.DEBUG_MODE) {
+    console.log('DEBUG: 뉴스 추출 시작');
+}
+```
+
+### 📝 **디버깅 주석 규칙**
+```python
+# 좋은 예: 의미 있는 디버깅 주석
+def extract_news():
+    # TODO: 2025-07-13 - 병렬 처리 성능 개선 필요
+    pass
+
+# 나쁜 예: 의미 없는 디버깅 주석  
+def extract_news():
+    # 테스트 중
+    # 확인 필요
+    # 나중에 정리
+    pass
+```
+
+## 🧹 **자동 정리 트리거**
+
+### 🎯 **세션 종료 시 자동 실행**
+```bash
+# ~/.bashrc 또는 ~/.zshrc에 추가
+cleanup_dev_session() {
+    cd /Users/alphabridge/nongbuxx
+    
+    # 1. 테스트 파일 정리
+    find . -name "test_*" -delete
+    find . -name "*_test.*" -delete
+    find . -name "*.backup" -delete
+    
+    # 2. 로그 및 캐시 정리  
+    find . -name "*.log" -delete
+    find . -name "__pycache__" -exec rm -rf {} +
+    
+    # 3. 포트 해제
+    lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    
+    echo "✅ 개발 세션 정리 완료"
+}
+
+# 터미널 종료 시 자동 실행
+trap cleanup_dev_session EXIT
+```
+
+### 📅 **주기적 정리 (cron 설정)**
+```bash
+# 매일 자정 자동 정리
+0 0 * * * /Users/alphabridge/nongbuxx/cleanup_dev_session.sh
+
+# cleanup_dev_session.sh 내용
+#!/bin/bash
+cd /Users/alphabridge/nongbuxx
+find . -name "backup_*" -exec rm -rf {} +
+find . -name "extracted_articles" -exec rm -rf {} +
+find . -name "converted_articles" -exec rm -rf {} +
+find . -name "*.log" -size +10M -delete
+echo "$(date): 자동 정리 완료" >> cleanup.log
+```
+
+## 📊 **모니터링 지표**
+
+### 🎯 **실시간 모니터링**
+```bash
+# 파일 개수 모니터링
+watch -n 5 'echo "백업 파일: $(find . -name "*.backup" | wc -l)"; echo "테스트 파일: $(find . -name "test_*" | wc -l)"; echo "로그 파일: $(find . -name "*.log" | wc -l)"'
+```
+
+### 📈 **품질 지표**
+- 백업 파일: 항상 0개
+- 테스트 파일: 테스트 중에만 존재
+- 로그 파일: 10MB 이하 유지
+- 메모리 사용량: 안정적
+
+## 🚨 **긴급 정리 명령어**
+
+### 🔥 **즉시 정리 (위험 상황)**
+```bash
+# 87개 백업 파일 같은 상황 발생 시
+emergency_cleanup() {
+    echo "🚨 긴급 정리 시작..."
+    
+    # 모든 백업 파일 즉시 삭제
+    find . -name "backup_*" -exec rm -rf {} +
+    find . -name "*.backup" -delete
+    
+    # 테스트 파일 전체 삭제
+    find . -name "test_*" -delete
+    find . -name "*_test.*" -delete
+    
+    # 대용량 로그 파일 삭제
+    find . -name "*.log" -size +1M -delete
+    
+    # 프로세스 강제 종료
+    pkill -f "python3 app.py"
+    pkill -f "python -m http.server 3000"
+    
+    echo "✅ 긴급 정리 완료"
+}
+```
+
+---
+
+**⚠️ 이 프로토콜을 따르지 않으면 다시 87개의 백업 파일 지옥이 재현됩니다!**
+
+**💡 테스트는 깔끔하게, 디버깅은 체계적으로, 정리는 자동으로!**

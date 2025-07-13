@@ -1,0 +1,224 @@
+---
+alwaysApply: true
+description: "서버 포트 충돌 방지 및 관리 프로토콜"
+---
+
+# 🚨 포트 충돌 방지 및 서버 관리 프로토콜
+
+## 📋 **필수 체크리스트 (서버 시작 전 매번 확인)**
+
+### 🔧 **서버 시작 전 포트 정리**
+```bash
+# 1. 포트 3000 사용 중인 프로세스 강제 종료
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+
+# 2. 포트 8080 사용 중인 프로세스 강제 종료  
+lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+
+# 3. 모든 Python HTTP 서버 프로세스 정리
+pkill -f "python.*http.server" 2>/dev/null || true
+pkill -f "python3.*app.py" 2>/dev/null || true
+```
+
+### ⚡ **원클릭 서버 시작 스크립트**
+```bash
+# Frontend 서버 안전 시작
+clean_start_frontend() {
+    echo "🧹 Frontend 포트 정리 중..."
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    sleep 1
+    echo "🚀 Frontend 서버 시작..."
+    cd frontend && python -m http.server 3000
+}
+
+# Backend 서버 안전 시작  
+clean_start_backend() {
+    echo "🧹 Backend 포트 정리 중..."
+    lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+    pkill -f "python3 app.py" 2>/dev/null || true
+    sleep 1
+    echo "🚀 Backend 서버 시작..."
+    PYTHONDONTWRITEBYTECODE=1 python3 app.py
+}
+
+# 전체 시스템 안전 시작
+clean_start_all() {
+    echo "🧹 모든 포트 정리 중..."
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+    pkill -f "python.*http.server" 2>/dev/null || true
+    pkill -f "python3.*app.py" 2>/dev/null || true
+    sleep 2
+    
+    echo "🚀 Backend 서버 시작..."
+    PYTHONDONTWRITEBYTECODE=1 python3 app.py &
+    
+    echo "🚀 Frontend 서버 시작..."
+    cd frontend && python -m http.server 3000
+}
+```
+
+## 🚫 **절대 금지 사항**
+
+### ❌ **하지 말아야 할 것들**
+- 포트 정리 없이 바로 서버 시작
+- 여러 개의 동일한 서버 프로세스 실행
+- 에러 발생 시 무시하고 계속 시도
+- 백그라운드 프로세스 방치
+
+### ❌ **위험한 패턴들**
+```bash
+# 나쁜 예: 포트 정리 없이 바로 시작
+cd frontend && python -m http.server 3000
+
+# 나쁜 예: 에러 무시
+python3 app.py || python3 app.py || python3 app.py
+
+# 좋은 예: 안전한 시작
+lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+sleep 1
+python3 app.py
+```
+
+## 🔍 **에러 발생 시 디버깅 순서**
+
+### 1️⃣ **포트 사용 확인**
+```bash
+# 포트 3000 사용 중인 프로세스 확인
+lsof -i:3000
+
+# 포트 8080 사용 중인 프로세스 확인  
+lsof -i:8080
+
+# 모든 Python 프로세스 확인
+ps aux | grep python
+```
+
+### 2️⃣ **프로세스 강제 종료**
+```bash
+# 특정 포트 프로세스 종료
+lsof -ti:3000 | xargs kill -9
+lsof -ti:8080 | xargs kill -9
+
+# Python 서버 프로세스 모두 종료
+pkill -f "python.*http.server"
+pkill -f "python3.*app.py"
+```
+
+### 3️⃣ **시스템 상태 확인**
+```bash
+# 포트가 완전히 해제되었는지 확인
+netstat -an | grep -E "3000|8080"
+
+# 좀비 프로세스 확인
+ps aux | grep -E "python.*<defunct>"
+```
+
+## 💡 **예방 및 모니터링**
+
+### 🔄 **개발 세션 시작 시**
+```bash
+# 개발 환경 초기화 스크립트
+init_dev_environment() {
+    echo "🧹 개발 환경 초기화 중..."
+    
+    # 모든 개발 서버 프로세스 정리
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+    pkill -f "python.*http.server" 2>/dev/null || true
+    pkill -f "python3.*app.py" 2>/dev/null || true
+    
+    # 캐시 정리
+    find . -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    find . -name "*.pyc" -delete 2>/dev/null || true
+    
+    echo "✅ 개발 환경 초기화 완료"
+    echo "🚀 이제 서버를 안전하게 시작할 수 있습니다."
+}
+```
+
+### 📊 **포트 모니터링**
+```bash
+# 포트 사용 현황 실시간 모니터링
+monitor_ports() {
+    echo "🔍 포트 사용 현황 모니터링..."
+    while true; do
+        echo "$(date): 포트 3000: $(lsof -ti:3000 | wc -l)개 프로세스"
+        echo "$(date): 포트 8080: $(lsof -ti:8080 | wc -l)개 프로세스"
+        sleep 5
+    done
+}
+```
+
+## 🎯 **표준 개발 워크플로우**
+
+### 1️⃣ **개발 시작**
+```bash
+# 1. 환경 초기화
+init_dev_environment
+
+# 2. Backend 시작 (터미널 1)
+clean_start_backend
+
+# 3. Frontend 시작 (터미널 2)  
+clean_start_frontend
+```
+
+### 2️⃣ **개발 중단**
+```bash
+# 1. 서버 정상 종료 (Ctrl+C)
+# 2. 확실한 정리
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+```
+
+### 3️⃣ **문제 발생 시**
+```bash
+# 긴급 전체 정리
+emergency_cleanup() {
+    echo "🚨 긴급 시스템 정리 중..."
+    
+    # 모든 개발 관련 프로세스 강제 종료
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+    pkill -f "python.*http.server" 2>/dev/null || true
+    pkill -f "python3.*app.py" 2>/dev/null || true
+    
+    # 좀비 프로세스 정리
+    pkill -9 -f python 2>/dev/null || true
+    
+    echo "✅ 긴급 정리 완료"
+}
+```
+
+## 🔧 **자동화 스크립트 설정**
+
+### 📝 **~/.zshrc 또는 ~/.bashrc에 추가**
+```bash
+# NONGBUXX 개발 환경 함수들
+export NONGBUXX_PATH="/Users/alphabridge/nongbuxx"
+
+alias nongbuxx-clean="cd $NONGBUXX_PATH && lsof -ti:3000 | xargs kill -9 2>/dev/null || true && lsof -ti:8080 | xargs kill -9 2>/dev/null || true"
+alias nongbuxx-frontend="cd $NONGBUXX_PATH && nongbuxx-clean && cd frontend && python -m http.server 3000"
+alias nongbuxx-backend="cd $NONGBUXX_PATH && nongbuxx-clean && python3 app.py"
+alias nongbuxx-status="lsof -i:3000 && echo '---' && lsof -i:8080"
+```
+
+## 📈 **성공 지표**
+
+### 🎯 **목표**
+- 포트 충돌 에러: 0회
+- 서버 시작 실패: 0회  
+- 개발 중단 없는 연속 작업 시간: 최대화
+
+### 📊 **체크포인트**
+- [ ] 개발 시작 시 포트 정리 자동화
+- [ ] 서버 종료 시 프로세스 완전 정리
+- [ ] 에러 발생 시 즉시 복구 가능
+- [ ] 포트 사용 현황 실시간 확인 가능
+
+---
+
+**⚠️ 이 프로토콜을 따르면 포트 충돌로 인한 개발 중단을 100% 방지할 수 있습니다!**
+
+**💡 한 번 설정으로 평생 편리한 개발 환경을 만들어보세요!**
