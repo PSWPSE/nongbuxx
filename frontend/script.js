@@ -1428,11 +1428,16 @@ async function generateSelectedNews(contentType = 'standard') {
         
         // 더 정확한 시간 예상 (병렬 처리 고려)
         let estimatedTimePerBatch = 30; // 기본값
+        let timeoutDuration = 120000; // 2분 기본 타임아웃
+        
         if (contentType === 'blog') {
             estimatedTimePerBatch = 45;
+            timeoutDuration = 180000; // 3분 타임아웃
         } else if (contentType === 'enhanced_blog') {
             estimatedTimePerBatch = 60; // 완성형 블로그는 더 오래 걸림
+            timeoutDuration = 300000; // 5분 타임아웃
         }
+        
         const totalItems = selectedNewsUrls.length;
         const batchSize = Math.min(3, totalItems); // 최대 3개 병렬 처리
         const estimatedBatches = Math.ceil(totalItems / batchSize);
@@ -1443,76 +1448,144 @@ async function generateSelectedNews(contentType = 'standard') {
         // 진행률 업데이트를 위한 시작 시간 기록
         const startTime = Date.now();
         
-        const response = await fetch(`${API_BASE_URL}/api/batch-generate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                urls: selectedNewsUrls,
-                api_provider: apiSettings.provider,
-                api_key: apiSettings.key,
-                content_type: contentType
-            })
-        });
+        // 🚀 개선된 fetch 요청 (타임아웃 포함)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success && result.data && result.data.results) {
-            // 실제 처리 시간 계산
-            const processingTime = (Date.now() - startTime) / 1000;
-            
-            // 진행률 완료
-            completeProgress();
-            currentBatchData = result.data;
-            
-            // 성공한 결과만 세션 콘텐츠에 추가
-            const successfulResults = result.data.results.filter(item => item.success);
-            successfulResults.forEach(item => {
-                sessionContent.push({
-                    id: `content_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    content: item.content,
-                    title: item.title || 'Generated Content',
-                    created_at: new Date().toISOString(),
-                    source_url: item.url || 'Unknown',
-                    content_type: contentType,
-                    processing_time: processingTime
-                });
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/batch-generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    urls: selectedNewsUrls,
+                    api_provider: apiSettings.provider,
+                    api_key: apiSettings.key,
+                    content_type: contentType
+                }),
+                signal: controller.signal
             });
             
-            // 배지 업데이트
-            updateGeneratedContentBadge();
+            clearTimeout(timeoutId);
             
-            // 성능 통계 표시
-            const successCount = successfulResults.length;
-            const totalCount = result.data.total_count || result.data.results.length;
-            const avgTimePerItem = (processingTime / totalCount).toFixed(1);
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage = `서버 오류 (${response.status})`;
+                
+                try {
+                    const errorData = JSON.parse(errorText);
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    errorMessage = errorText || errorMessage;
+                }
+                
+                throw new Error(errorMessage);
+            }
             
-            setTimeout(() => {
-                // 생성된 콘텐츠 탭으로 자동 전환
-                switchTab('generated-content');
+            const result = await response.json();
+            
+            if (result.success && result.data && result.data.results) {
+                // 실제 처리 시간 계산
+                const processingTime = (Date.now() - startTime) / 1000;
                 
-                const contentTypeName = contentType === 'blog' ? '블로그 ' : '';
-                const performanceInfo = `(평균 ${avgTimePerItem}초/개, 총 ${processingTime.toFixed(1)}초)`;
+                // 진행률 완료
+                completeProgress();
+                currentBatchData = result.data;
                 
-                showToast(
-                    `🚀 병렬 일괄 ${contentTypeName}콘텐츠 생성 완료! 성공: ${successCount}/${totalCount} ${performanceInfo}`, 
-                    'success'
-                );
-            }, 500);
-        } else {
-            stopProgressSimulation();
-            throw new Error(result.error || '일괄 생성에 실패했습니다.');
+                // 성공한 결과만 세션 콘텐츠에 추가
+                const successfulResults = result.data.results.filter(item => item.success);
+                successfulResults.forEach(item => {
+                    sessionContent.push({
+                        id: `content_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        content: item.content,
+                        title: item.title || 'Generated Content',
+                        created_at: new Date().toISOString(),
+                        source_url: item.url || 'Unknown',
+                        content_type: contentType,
+                        processing_time: processingTime
+                    });
+                });
+                
+                // 배지 업데이트
+                updateGeneratedContentBadge();
+                
+                // 성능 통계 표시
+                const successCount = successfulResults.length;
+                const totalCount = result.data.total_count || result.data.results.length;
+                const avgTimePerItem = (processingTime / totalCount).toFixed(1);
+                
+                setTimeout(() => {
+                    // 생성된 콘텐츠 탭으로 자동 전환
+                    switchTab('generated-content');
+                    
+                    const contentTypeName = contentType === 'enhanced_blog' ? '완성형 블로그 ' : 
+                                          contentType === 'blog' ? '블로그 ' : '';
+                    const performanceInfo = `(평균 ${avgTimePerItem}초/개, 총 ${processingTime.toFixed(1)}초)`;
+                    
+                    showToast(
+                        `🚀 병렬 일괄 ${contentTypeName}콘텐츠 생성 완료! 성공: ${successCount}/${totalCount} ${performanceInfo}`, 
+                        'success'
+                    );
+                }, 500);
+            } else {
+                throw new Error(result.error || '서버에서 올바른 응답을 받지 못했습니다.');
+            }
+            
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            
+            if (fetchError.name === 'AbortError') {
+                const timeoutMinutes = Math.floor(timeoutDuration / 60000);
+                throw new Error(`요청 시간이 초과되었습니다 (${timeoutMinutes}분). 선택한 뉴스 개수를 줄이거나 다시 시도해주세요.`);
+            } else if (fetchError.message.includes('Failed to fetch')) {
+                throw new Error('네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인하고 다시 시도해주세요.');
+            } else {
+                throw fetchError;
+            }
         }
         
     } catch (error) {
         console.error('일괄 생성 오류:', error);
         stopProgressSimulation();
-        showErrorSection(error.message);
+        
+        // 🚀 개선된 에러 메시지
+        let userFriendlyMessage = error.message;
+        
+        if (error.message.includes('timeout') || error.message.includes('초과')) {
+            userFriendlyMessage = `⏱️ 처리 시간 초과: 선택한 뉴스가 너무 많거나 서버가 바쁩니다. 뉴스 개수를 줄이고 다시 시도해주세요.`;
+        } else if (error.message.includes('network') || error.message.includes('연결')) {
+            userFriendlyMessage = `🌐 네트워크 오류: 인터넷 연결을 확인하고 다시 시도해주세요.`;
+        } else if (error.message.includes('API')) {
+            userFriendlyMessage = `🔑 API 오류: API 키를 확인하고 다시 시도해주세요.`;
+        } else if (error.message.includes('500')) {
+            userFriendlyMessage = `🔧 서버 오류: 서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.`;
+        }
+        
+        showErrorSectionWithRetry(userFriendlyMessage, () => generateSelectedNews(contentType));
+    }
+}
+
+// 🚀 재시도 기능이 있는 에러 섹션 표시
+function showErrorSectionWithRetry(message, retryCallback) {
+    // 콘텐츠 생성 탭으로 전환
+    switchTab('content-generation');
+    
+    hideAllSections();
+    if (elements.errorSection) {
+        elements.errorSection.style.display = 'block';
+    }
+    if (elements.errorMessage) {
+        elements.errorMessage.textContent = message;
+    }
+    
+    // 재시도 버튼 이벤트 설정
+    const retryBtn = document.getElementById('retryBtn');
+    if (retryBtn && retryCallback) {
+        retryBtn.onclick = () => {
+            console.log('🔄 재시도 버튼 클릭됨');
+            retryCallback();
+        };
     }
 }
 

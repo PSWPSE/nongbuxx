@@ -551,6 +551,14 @@ def batch_generate():
                 'code': 'INVALID_URLS'
             }), 400
         
+        # 🚀 URL 개수 제한으로 타임아웃 방지
+        if len(urls) > 10:
+            return jsonify({
+                'success': False,
+                'error': 'Maximum 10 URLs allowed per batch to prevent timeout',
+                'code': 'TOO_MANY_URLS'
+            }), 400
+        
         if api_provider not in ['anthropic', 'openai']:
             return jsonify({
                 'success': False,
@@ -587,66 +595,125 @@ def batch_generate():
             save_intermediate=save_intermediate
         )
         
-        # 배치 처리 (콘텐츠 타입 전달)
-        results = generator.batch_generate(urls, content_type=content_type)
-        
-        # 정리
-        generator.cleanup()
-        
-        # 결과 처리 - 메모리 캐시에 저장
-        processed_results = []
-        for result in results:
-            if result['success']:
-                # 파일에서 콘텐츠 읽기
-                with open(result['output_file'], 'r', encoding='utf-8') as f:
-                    content = f.read()
-                
-                # 파일 영구 보관 (기존 방식 복원)
-                logger.info(f"파일 저장 완료: {result['output_file']}")
-                
-                processed_results.append({
-                    'success': True,
-                    'url': result['url'],
-                    'title': result['title'],
-                    'content': content,
-                    'filename': result['output_file'].name,
-                    'timestamp': result['timestamp'],
-                    'content_type': result['content_type'],
-                    'output_file': str(result['output_file'])
-                })
-            else:
-                processed_results.append({
-                    'success': False,
-                    'url': result['url'],
-                    'error': result['error']
-                })
-        
-        # 성공 통계
-        success_count = sum(1 for r in processed_results if r['success'])
-        
-        # 작업 완료 처리
-        active_jobs[batch_job_id].update({
-            'status': 'completed',
-            'progress': 100,
-            'completed_at': datetime.now().isoformat(),
-            'results': processed_results,
-            'success_count': success_count,
-            'total_count': len(urls)
-        })
-        
-        logger.info(f"Batch generation completed for job {batch_job_id}: {success_count}/{len(urls)} successful (Type: {content_type})")
-        
-        return jsonify({
-            'success': True,
-            'job_id': batch_job_id,
-            'data': {
+        # 🚀 향상된 배치 처리 (콘텐츠 타입 전달)
+        try:
+            # 작업 시작 시간 기록
+            start_time = time.time()
+            
+            # 예상 처리 시간 계산 (사용자 알림용)
+            estimated_time_per_url = 30  # 기본값
+            if content_type == 'blog':
+                estimated_time_per_url = 45
+            elif content_type == 'enhanced_blog':
+                estimated_time_per_url = 60
+            
+            total_estimated_time = len(urls) * estimated_time_per_url
+            
+            # 작업 정보 업데이트
+            active_jobs[batch_job_id].update({
+                'estimated_time_seconds': total_estimated_time,
+                'progress': 10
+            })
+            
+            logger.info(f"Starting batch generation: {len(urls)} URLs, estimated time: {total_estimated_time}s")
+            
+            # 배치 처리 실행
+            results = generator.batch_generate(urls, content_type=content_type)
+            
+            # 정리
+            generator.cleanup()
+            
+            # 실제 처리 시간 계산
+            actual_time = time.time() - start_time
+            
+            # 결과 처리 - 메모리 캐시에 저장
+            processed_results = []
+            for result in results:
+                if result['success']:
+                    # 파일에서 콘텐츠 읽기
+                    with open(result['output_file'], 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # 파일 영구 보관 (기존 방식 복원)
+                    logger.info(f"파일 저장 완료: {result['output_file']}")
+                    
+                    processed_results.append({
+                        'success': True,
+                        'url': result['url'],
+                        'title': result['title'],
+                        'content': content,
+                        'filename': result['output_file'].name,
+                        'timestamp': result['timestamp'],
+                        'content_type': result['content_type'],
+                        'output_file': str(result['output_file'])
+                    })
+                else:
+                    processed_results.append({
+                        'success': False,
+                        'url': result['url'],
+                        'error': result['error']
+                    })
+            
+            # 성공 통계
+            success_count = sum(1 for r in processed_results if r['success'])
+            
+            # 작업 완료 처리
+            active_jobs[batch_job_id].update({
+                'status': 'completed',
+                'progress': 100,
+                'completed_at': datetime.now().isoformat(),
                 'results': processed_results,
                 'success_count': success_count,
                 'total_count': len(urls),
-                'api_provider': api_provider,
-                'content_type': content_type
-            }
-        })
+                'actual_time_seconds': actual_time,
+                'estimated_time_seconds': total_estimated_time
+            })
+            
+            logger.info(f"Batch generation completed for job {batch_job_id}: {success_count}/{len(urls)} successful (Type: {content_type})")
+            logger.info(f"Processing time: {actual_time:.2f}s (estimated: {total_estimated_time}s)")
+            
+            return jsonify({
+                'success': True,
+                'job_id': batch_job_id,
+                'data': {
+                    'results': processed_results,
+                    'success_count': success_count,
+                    'total_count': len(urls),
+                    'api_provider': api_provider,
+                    'content_type': content_type,
+                    'processing_time_seconds': actual_time
+                }
+            })
+            
+        except Exception as processing_error:
+            # 처리 중 오류 발생
+            error_msg = str(processing_error)
+            logger.error(f"Batch processing error: {error_msg}")
+            
+            # 사용자 친화적 에러 메시지 생성
+            if 'timeout' in error_msg.lower():
+                user_error = "처리 시간이 초과되었습니다. 선택한 뉴스 개수를 줄여주세요."
+            elif 'memory' in error_msg.lower():
+                user_error = "서버 메모리가 부족합니다. 선택한 뉴스 개수를 줄여주세요."
+            elif 'api' in error_msg.lower() and 'key' in error_msg.lower():
+                user_error = "API 키에 문제가 있습니다. 키를 확인해주세요."
+            elif 'rate' in error_msg.lower() and 'limit' in error_msg.lower():
+                user_error = "API 사용량 한도가 초과되었습니다. 잠시 후 다시 시도해주세요."
+            else:
+                user_error = f"처리 중 오류가 발생했습니다: {error_msg}"
+            
+            # 작업 실패 처리
+            active_jobs[batch_job_id].update({
+                'status': 'failed',
+                'error': user_error,
+                'completed_at': datetime.now().isoformat()
+            })
+            
+            return jsonify({
+                'success': False,
+                'error': user_error,
+                'code': 'PROCESSING_ERROR'
+            }), 500
         
     except Exception as e:
         logger.error(f"Batch generation error: {str(e)}")
