@@ -1426,16 +1426,16 @@ async function generateSelectedNews(contentType = 'standard') {
             progressSubtitle.textContent = `${selectedNewsUrls.length}개 뉴스 처리 중 (병렬 처리로 최적화)`;
         }
         
-        // 더 정확한 시간 예상 (병렬 처리 고려)
+        // 더 정확한 시간 예상 (병렬 처리 고려) - 타임아웃 2배 증가
         let estimatedTimePerBatch = 30; // 기본값
-        let timeoutDuration = 120000; // 2분 기본 타임아웃
+        let timeoutDuration = 240000; // 4분 기본 타임아웃 (2배 증가)
         
         if (contentType === 'blog') {
             estimatedTimePerBatch = 45;
-            timeoutDuration = 180000; // 3분 타임아웃
+            timeoutDuration = 360000; // 6분 타임아웃 (2배 증가)
         } else if (contentType === 'enhanced_blog') {
             estimatedTimePerBatch = 60; // 완성형 블로그는 더 오래 걸림
-            timeoutDuration = 300000; // 5분 타임아웃
+            timeoutDuration = 600000; // 10분 타임아웃 (2배 증가)
         }
         
         const totalItems = selectedNewsUrls.length;
