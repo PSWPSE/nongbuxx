@@ -1822,7 +1822,7 @@ def internal_error(error):
 
 if __name__ == '__main__':
     # 환경 변수 확인
-    port = int(os.getenv('PORT', 5000))
+    port = int(os.getenv('PORT', 8080))  # Railway 기본 포트 8080
     debug = os.getenv('DEBUG', 'False').lower() == 'true'
     
     logger.info(f"🚀 Starting NONGBUXX API server on port {port}")
@@ -1834,7 +1834,24 @@ if __name__ == '__main__':
     init_auto_cleanup()
     
     try:
-        app.run(host='0.0.0.0', port=port, debug=debug)
+        # Railway 환경에서는 gunicorn 사용
+        if os.getenv('RAILWAY_ENVIRONMENT_NAME'):
+            import subprocess
+            cmd = [
+                'gunicorn',
+                '--bind', f'0.0.0.0:{port}',
+                '--workers', '2',
+                '--timeout', '300',
+                '--keep-alive', '10',
+                '--max-requests', '1000',
+                '--max-requests-jitter', '50',
+                'app:app'
+            ]
+            logger.info(f"🚂 Railway environment detected, using gunicorn: {' '.join(cmd)}")
+            subprocess.run(cmd)
+        else:
+            # 로컬 환경에서는 Flask 개발 서버 사용
+            app.run(host='0.0.0.0', port=port, debug=debug)
     except Exception as e:
         logger.error(f"❌ Failed to start server: {e}")
         import traceback
