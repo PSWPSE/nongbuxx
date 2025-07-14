@@ -5,10 +5,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 # Import our existing modules
 from web_extractor import WebExtractor
 from converter import NewsConverter
+from blog_content_generator import BlogContentGenerator
 
 class NongbuxxGenerator:
     def __init__(self, api_provider='anthropic', api_key=None, save_intermediate=True):
@@ -36,6 +39,7 @@ class NongbuxxGenerator:
         # 모듈 초기화
         self.extractor = WebExtractor(use_selenium=False, save_to_file=save_intermediate)
         self.converter = NewsConverter(api_provider=api_provider, api_key=api_key)
+        self.blog_generator = BlogContentGenerator(api_provider=api_provider, api_key=api_key)
         
         key_status = "사용자 제공" if api_key else "환경변수"
         print(f"NONGBUXX Generator 초기화 완료 (API: {api_provider}, 키: {key_status})")
@@ -84,159 +88,158 @@ class NongbuxxGenerator:
         
         # Step 1: 웹에서 콘텐츠 추출
         print("📄 웹 콘텐츠 추출 중...")
-        try:
-            extracted_data = self.extractor.extract_data(url)
-            
-            if not extracted_data.get('success'):
-                error_msg = extracted_data.get('error', '알 수 없는 오류')
-                # 이미 사용자 친화적인 메시지인 경우 그대로 반환
-                if any(keyword in error_msg for keyword in ['차단', '찾을 수 없습니다', '시간 초과', '네트워크', '서버']):
-                    return {
-                        'success': False,
-                        'error': error_msg,
-                        'url': url
-                    }
-                else:
-                    return {
-                        'success': False,
-                        'error': f"콘텐츠 추출 실패: {error_msg}",
-                        'url': url
-                    }
-            
-            print("✅ 웹 콘텐츠 추출 완료")
-            
-        except Exception as e:
+        start_time = time.time()
+        
+        # 웹 추출
+        extracted_content = self.extractor.extract_data(url)
+        
+        if not extracted_content.get('success', False):
             return {
                 'success': False,
-                'error': f"추출 중 오류 발생: {str(e)}",
+                'error': f'Content extraction failed: {extracted_content.get("error", "Unknown error")}',
                 'url': url
             }
         
-        # Step 2: 콘텐츠 타입에 따라 다른 변환 방식 사용
-        if content_type == 'blog':
-            print(f"🔄 블로그 콘텐츠 변환 중 (API: {self.api_provider})...")
-            try:
-                # 블로그 콘텐츠 변환 메서드 사용
-                markdown_content = self.converter.convert_from_data_blog(extracted_data)
-                conversion_type = "blog"
-            except Exception as e:
-                return {
-                    'success': False,
-                    'error': f"블로그 변환 중 오류 발생: {str(e)}",
-                    'url': url
-                }
-        else:
-            print(f"🔄 표준 마크다운 변환 중 (API: {self.api_provider})...")
-            try:
-                # 기존 표준 변환 메서드 사용
-                markdown_content = self.converter.convert_from_data(extracted_data)
-                conversion_type = "standard"
-            except Exception as e:
-                return {
-                    'success': False,
-                    'error': f"표준 변환 중 오류 발생: {str(e)}",
-                    'url': url
-                }
+        extraction_time = time.time() - start_time
+        print(f"✅ 웹 추출 완료 ({extraction_time:.2f}초)")
         
-        # Step 3: 파일 저장
-        try:
-            # 파일명 생성
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # Step 2: AI 변환
+        print("🤖 AI 변환 중...")
+        conversion_start = time.time()
+        
+        # 콘텐츠 타입에 따른 변환
+        if content_type == 'enhanced_blog':
+            # 새로운 완성형 블로그 콘텐츠 생성
+            rich_content = self.blog_generator.generate_rich_text_blog_content(extracted_content)
+            converted_content = rich_content['markdown']  # 기본적으로 마크다운 반환
+            
+            # 추가 형식들도 파일로 저장
             domain = self.extract_domain_name(url)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename_prefix = f"{domain}_{timestamp}_enhanced_blog"
             
-            # 콘텐츠 타입에 따라 파일명 구분
-            type_prefix = "blog_" if content_type == 'blog' else ""
+            self.blog_generator.save_blog_content(rich_content, filename_prefix)
+            print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (HTML, 플랫폼별 최적화 포함)")
             
-            if custom_filename:
-                output_filename = f"{type_prefix}{custom_filename}_{timestamp}.md"
-            else:
-                output_filename = f"{type_prefix}{domain}_{timestamp}.md"
+        elif content_type == 'blog':
+            converted_content = self.converter.convert_from_data_blog(extracted_content)
+        else:
+            converted_content = self.converter.convert_from_data(extracted_content)
+        
+        if not converted_content or not isinstance(converted_content, str):
+            return {
+                'success': False,
+                'error': f'AI conversion failed: Invalid response format',
+                'url': url
+            }
+        
+        conversion_time = time.time() - conversion_start
+        print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
+        
+        # Step 3: 파일명 생성 및 저장
+        if custom_filename:
+            filename = f"{custom_filename}_{content_type}.md"
+        else:
+            domain = self.extract_domain_name(url)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{domain}_{timestamp}_{content_type}.md"
+        
+        output_file = self.generated_dir / filename
+        
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(converted_content)
             
-            output_path = self.generated_dir / output_filename
+            total_time = time.time() - start_time
+            print(f"💾 파일 저장 완료: {output_file} (총 {total_time:.2f}초)")
             
-            # 최종 마크다운 파일 저장
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(markdown_content)
-            
-            print(f"✅ {conversion_type} 마크다운 생성 완료: {output_path}")
-            
-            # 중간 파일 저장 옵션이 있는 경우에만 원본 데이터 저장
-            extracted_file_path = None
-            if self.save_intermediate:
-                temp_filename = f"{type_prefix}{domain}_{timestamp}.txt"
-                temp_txt_path = self.extracted_dir / temp_filename
-                
-                with open(temp_txt_path, 'w', encoding='utf-8') as f:
-                    f.write(f"제목: {extracted_data['title']}\n")
-                    f.write("="*80 + "\n\n")
-                    
-                    if extracted_data['metadata']:
-                        f.write("메타 정보:\n")
-                        for key, value in extracted_data['metadata'].items():
-                            f.write(f"{key}: {value}\n")
-                        f.write("-"*80 + "\n\n")
-                    
-                    f.write("본문:\n")
-                    f.write(extracted_data['content']['text'])
-                
-                extracted_file_path = temp_txt_path
-                print(f"📝 원본 데이터 저장: {temp_txt_path}")
+            # 제목 추출 (마크다운 첫 번째 줄에서)
+            title = extracted_content.get('title', '제목 없음')
             
             return {
                 'success': True,
+                'output_file': output_file,
+                'title': title,
+                'content_type': content_type,
                 'url': url,
-                'output_file': output_path,
-                'extracted_file': extracted_file_path,
-                'title': extracted_data['title'],
-                'timestamp': timestamp,
-                'content_type': content_type
+                'timestamp': datetime.now().isoformat(),
+                'processing_time': total_time
             }
             
         except Exception as e:
             return {
                 'success': False,
-                'error': f"파일 저장 중 오류 발생: {str(e)}",
+                'error': f'File save failed: {str(e)}',
                 'url': url
             }
     
-    def batch_generate(self, urls, custom_filenames=None, content_type='standard'):
+    def batch_generate(self, urls, content_type='standard', max_workers=3):
         """
-        여러 URL을 일괄 처리
+        다중 URL에서 콘텐츠를 병렬로 생성 (성능 최적화)
         
         Args:
-            urls: URL 리스트
-            custom_filenames: 사용자 지정 파일명 리스트 (선택사항)
+            urls: URL 목록
             content_type: 콘텐츠 타입 ('standard' 또는 'blog')
+            max_workers: 최대 병렬 처리 수 (기본값: 3)
             
         Returns:
-            list: 각 URL의 처리 결과 리스트
+            list: 각 URL의 결과 목록
         """
+        if not urls:
+            return []
+        
+        print(f"\n🚀 병렬 배치 생성 시작: {len(urls)}개 URL (타입: {content_type})")
+        print(f"⚡ 최대 병렬 처리 수: {max_workers}")
+        
+        start_time = time.time()
         results = []
         
-        print(f"\n📋 일괄 처리 시작 ({len(urls)}개 URL, 타입: {content_type})")
-        
-        for i, url in enumerate(urls):
-            filename = custom_filenames[i] if custom_filenames and i < len(custom_filenames) else None
+        # 병렬 처리
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # 각 URL에 대한 future 생성
+            future_to_url = {
+                executor.submit(self.generate_content, url, None, content_type): url 
+                for url in urls
+            }
             
-            print(f"\n--- {i+1}/{len(urls)} ---")
-            result = self.generate_content(url, filename, content_type)
-            results.append(result)
-            
-            if result['success']:
-                print(f"✅ 성공: {result['output_file']}")
-            else:
-                print(f"❌ 실패: {result['error']}")
+            # 결과 수집
+            for future in as_completed(future_to_url):
+                url = future_to_url[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+                    
+                    if result['success']:
+                        print(f"✅ 성공: {url}")
+                    else:
+                        print(f"❌ 실패: {url} - {result.get('error', 'Unknown error')}")
+                        
+                except Exception as e:
+                    print(f"❌ 예외 발생: {url} - {str(e)}")
+                    results.append({
+                        'success': False,
+                        'error': str(e),
+                        'url': url
+                    })
         
-        # 결과 요약
+        # 결과 통계
         success_count = sum(1 for r in results if r['success'])
-        print(f"\n📊 일괄 처리 완료: {success_count}/{len(urls)} 성공")
+        total_time = time.time() - start_time
+        
+        print(f"\n📊 배치 생성 완료:")
+        print(f"   • 성공: {success_count}/{len(urls)}")
+        print(f"   • 총 소요 시간: {total_time:.2f}초")
+        print(f"   • 평균 시간: {total_time/len(urls):.2f}초/URL")
         
         return results
     
     def cleanup(self):
         """리소스 정리"""
-        if hasattr(self.extractor, 'close'):
-            self.extractor.close()
+        if hasattr(self.extractor, 'cleanup'):
+            self.extractor.cleanup()
+        if hasattr(self.converter, 'cleanup'):
+            self.converter.cleanup()
+        print("🧹 리소스 정리 완료")
 
 def print_usage():
     """사용법 출력"""

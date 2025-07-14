@@ -133,10 +133,7 @@
                         <div class="card-header">
                             <h2><i class="fas fa-link"></i> URL 직접 입력</h2>
                             <div class="header-controls">
-                                <button type="button" id="backToNewsExtractorBtn" class="btn btn-header">
-                                    <i class="fas fa-arrow-left"></i>
-                                    뉴스 추출로 돌아가기
-                                </button>
+                                <!-- 헤더 컨트롤 공간 -->
                             </div>
                         </div>
                         <form id="urlForm">
@@ -169,6 +166,10 @@
                                     <i class="fas fa-blog"></i>
                                     블로그 콘텐츠 생성
                                 </button>
+                                <button type="button" id="generateEnhancedBlogBtn" class="btn btn-info">
+                                    <i class="fas fa-star"></i>
+                                    완성형 블로그 콘텐츠 생성
+                                </button>
                                 <button type="button" id="resetUrlInputBtn" class="btn btn-secondary">
                                     <i class="fas fa-refresh"></i>
                                     초기화
@@ -196,10 +197,7 @@
                                     <i class="fas fa-check"></i>
                                     선택한 뉴스 확정
                                 </button>
-                                <button id="backToExtractorBtn" class="btn btn-outline">
-                                    <i class="fas fa-arrow-left"></i>
-                                    뉴스 추출로 돌아가기
-                                </button>
+                                <!-- 뉴스 추출로 돌아가기 버튼 제거됨 -->
                             </div>
                         </div>
                         
@@ -250,6 +248,10 @@
                                     <i class="fas fa-blog"></i>
                                     선택된 뉴스 블로그 생성
                                 </button>
+                                <button type="button" id="generateSelectedEnhancedBlogBtn2" class="btn btn-warning" disabled>
+                                    <i class="fas fa-star"></i>
+                                    선택된 뉴스 완성형 블로그 생성
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -259,7 +261,8 @@
                 <section class="progress-section" id="progressSection" style="display: none;">
                     <div class="progress-card">
                         <div class="card-header">
-                            <h2><i class="fas fa-clock"></i> 콘텐츠 생성 중</h2>
+                            <h2 id="progressTitle"><i class="fas fa-clock"></i> 콘텐츠 생성 중</h2>
+                            <p id="progressSubtitle" class="progress-subtitle">처리 중...</p>
                         </div>
                         <div class="progress-bar">
                             <div class="progress-fill" id="progressFill"></div>

@@ -319,10 +319,10 @@ def generate_content():
             }), 400
         
         # 콘텐츠 타입 검증
-        if content_type not in ['standard', 'blog']:
+        if content_type not in ['standard', 'blog', 'enhanced_blog']:
             return jsonify({
                 'success': False,
-                'error': 'Content type must be standard or blog',
+                'error': 'Content type must be standard, blog, or enhanced_blog',
                 'code': 'INVALID_CONTENT_TYPE'
             }), 400
         
@@ -559,10 +559,10 @@ def batch_generate():
             }), 400
         
         # 콘텐츠 타입 검증
-        if content_type not in ['standard', 'blog']:
+        if content_type not in ['standard', 'blog', 'enhanced_blog']:
             return jsonify({
                 'success': False,
-                'error': 'Content type must be standard or blog',
+                'error': 'Content type must be standard, blog, or enhanced_blog',
                 'code': 'INVALID_CONTENT_TYPE'
             }), 400
         
@@ -883,11 +883,17 @@ def get_generated_content():
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
                     
-                    # 제목 추출 (마크다운 첫 번째 # 헤더)
-                    lines = content.split('\n')
-                    for line in lines:
-                        if line.startswith('# '):
-                            title = line[2:].strip()
+                                    # 제목 추출 (마크다운 첫 번째 # 헤더 또는 이모지 제목)
+                lines = content.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line.startswith('# '):
+                        title = line[2:].strip()
+                        break
+                    elif line and not line.startswith('##') and len(line) > 10:
+                        # 첫 번째 줄이 제목 형태인 경우 (이모지 포함)
+                        if any(ord(char) > 127 for char in line[:5]):  # 이모지 또는 특수문자 포함
+                            title = line[:60] + ('...' if len(line) > 60 else '')
                             break
                     
                     # 콘텐츠 타입 판별

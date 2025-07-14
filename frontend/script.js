@@ -6,8 +6,7 @@ let currentBatchJobId = null;
 let currentBatchData = null;
 let extractedNews = [];
 let selectedNewsUrls = [];
-let generatedContentData = []; // 과거 데이터 제거, 현재 세션만 관리
-let currentSessionContent = []; // 현재 세션에서 생성한 콘텐츠만 관리
+let sessionContent = []; // 현재 세션에서 생성한 콘텐츠만 관리
 let currentTheme = 'auto';
 let urlInputCount = 1;
 const maxUrlInputs = 10;
@@ -142,20 +141,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // 출처 관리 초기화
     loadAvailableSources();
     
-    // 🧪 테스트: 생성된 콘텐츠 탭 기능 테스트
-    console.log('🧪 생성된 콘텐츠 탭 기능 테스트');
-    console.log('Elements test:', {
-        generatedContentListSection: !!document.getElementById('generatedContentListSection'),
-        generatedContentList: !!document.getElementById('generatedContentList'),
-        generatedContentTab: !!document.getElementById('generated-content-tab'),
-        generatedContentButton: !!document.querySelector('[data-tab="generated-content"]')
-    });
+    // 생성된 콘텐츠 탭 기능 초기화
     
-    // 🔧 강제 테스트: 3초 후 생성된 콘텐츠 탭 자동 로드
+    // 세션 콘텐츠 배지 초기화
     setTimeout(() => {
-        console.log('🚀 강제 테스트: 생성된 콘텐츠 로드');
-        loadGeneratedContentList();
-    }, 3000);
+        console.log('🚀 세션 콘텐츠 배지 초기화');
+        updateGeneratedContentBadge();
+    }, 1000);
     
     // 마크다운 라이브러리 확인
     if (typeof marked === 'undefined') {
@@ -180,13 +172,12 @@ function initTabs() {
     // 초기 탭 설정
     switchTab('news-extraction');
     
-    // 생성된 콘텐츠 개수 초기 로드
-    loadInitialGeneratedContentBadge();
+    // 생성된 콘텐츠 배지 초기화
+    updateGeneratedContentBadge();
 }
 
 async function loadInitialGeneratedContentBadge() {
-    // 🎯 세션 기반으로 변경 - 초기값은 항상 0
-    updateTabBadge('generated-content', 0);
+    updateTabBadge('generated-content', sessionContent.length);
     console.log('📋 생성된 콘텐츠 배지 초기화: 0 (세션 시작)');
 }
 
@@ -236,8 +227,8 @@ function switchTab(tabName) {
     if (tabName === 'content-generation') {
         updateSelectedNewsSummary();
     } else if (tabName === 'generated-content') {
-        console.log('📋 생성된 콘텐츠 탭 - 현재 세션 데이터 표시');
-        showCurrentSessionContent();
+        console.log('📋 생성된 콘텐츠 탭 표시');
+        showSessionContent();
     }
     
     console.log(`✅ 탭 전환 완료: ${tabName}`);
@@ -264,6 +255,17 @@ function updateTabBadge(tabName, count) {
     }
     
     tabState.badges[tabName] = count;
+}
+
+function updateGeneratedContentBadge() {
+    const badge = document.getElementById('generated-content-badge');
+    if (badge && sessionContent.length > 0) {
+        badge.textContent = sessionContent.length;
+        badge.style.display = 'inline-block';
+    } else if (badge) {
+        badge.style.display = 'none';
+    }
+    updateTabBadge('generated-content', sessionContent.length);
 }
 
 function updateSelectedNewsSummary() {
@@ -354,10 +356,7 @@ function initEventListeners() {
     if (directUrlBtn) {
         directUrlBtn.addEventListener('click', showUrlInputSection);
     }
-    const backToNewsExtractorBtn = document.getElementById('backToNewsExtractorBtn');
-    if (backToNewsExtractorBtn) {
-        backToNewsExtractorBtn.addEventListener('click', hideUrlInputSection);
-    }
+    // 삭제된 버튼: backToNewsExtractorBtn
     const resetUrlInputBtn = document.getElementById('resetUrlInputBtn');
     if (resetUrlInputBtn) {
         resetUrlInputBtn.addEventListener('click', resetUrlInputForm);
@@ -375,6 +374,7 @@ function initEventListeners() {
     // 콘텐츠 생성 탭의 버튼들
     const generateSelectedBtn2 = document.getElementById('generateSelectedBtn2');
     const generateSelectedBlogBtn2 = document.getElementById('generateSelectedBlogBtn2');
+    const generateSelectedEnhancedBlogBtn2 = document.getElementById('generateSelectedEnhancedBlogBtn2');
     
     if (generateSelectedBtn2) {
         generateSelectedBtn2.addEventListener('click', handleGenerateSelectedNews);
@@ -382,11 +382,19 @@ function initEventListeners() {
     if (generateSelectedBlogBtn2) {
         generateSelectedBlogBtn2.addEventListener('click', handleGenerateSelectedBlogNews);
     }
+    if (generateSelectedEnhancedBlogBtn2) {
+        generateSelectedEnhancedBlogBtn2.addEventListener('click', handleGenerateSelectedEnhancedBlogNews);
+    }
     
     // 블로그 콘텐츠 생성 버튼 이벤트 리스너
     const generateBlogBtn = document.getElementById('generateBlogBtn');
+    const generateEnhancedBlogBtn = document.getElementById('generateEnhancedBlogBtn');
+    
     if (generateBlogBtn) {
         generateBlogBtn.addEventListener('click', handleBlogGeneration);
+    }
+    if (generateEnhancedBlogBtn) {
+        generateEnhancedBlogBtn.addEventListener('click', handleEnhancedBlogGeneration);
     }
     
     // 생성된 콘텐츠 관련
@@ -554,10 +562,7 @@ function initEventListeners() {
         backToNewsExtractionBtn.addEventListener('click', () => switchTab('news-extraction'));
     }
     
-    const backToExtractorBtn = document.getElementById('backToExtractorBtn');
-    if (backToExtractorBtn) {
-        backToExtractorBtn.addEventListener('click', showNewsExtractorSection);
-    }
+    // 삭제된 버튼: backToExtractorBtn
     
     const confirmSelectedNewsBtn = document.getElementById('confirmSelectedNewsBtn');
     if (confirmSelectedNewsBtn) {
@@ -649,6 +654,11 @@ async function handleBlogGeneration() {
     await generateContent('blog');
 }
 
+// 완성형 블로그 콘텐츠 생성 처리
+async function handleEnhancedBlogGeneration() {
+    await generateContent('enhanced_blog');
+}
+
 // 공통 콘텐츠 생성 함수
 async function generateContent(contentType = 'standard') {
     const urls = getAllUrls();
@@ -678,11 +688,22 @@ async function generateContent(contentType = 'standard') {
         // 콘텐츠 타입에 따른 진행률 표시
         const progressTitle = document.getElementById('progressTitle');
         if (progressTitle) {
-            progressTitle.textContent = contentType === 'blog' ? '블로그 콘텐츠 생성 중...' : '콘텐츠 생성 중...';
+            if (contentType === 'blog') {
+                progressTitle.textContent = '블로그 콘텐츠 생성 중...';
+            } else if (contentType === 'enhanced_blog') {
+                progressTitle.textContent = '완성형 블로그 콘텐츠 생성 중...';
+            } else {
+                progressTitle.textContent = '콘텐츠 생성 중...';
+            }
         }
         
-        // 프로그레스 시뮬레이션 시작 (블로그 콘텐츠는 더 오래 걸림)
-        const duration = contentType === 'blog' ? 45000 : 30000;
+        // 프로그레스 시뮬레이션 시작 (완성형 블로그 콘텐츠는 가장 오래 걸림)
+        let duration = 30000; // 기본값
+        if (contentType === 'blog') {
+            duration = 45000;
+        } else if (contentType === 'enhanced_blog') {
+            duration = 60000; // 완성형 블로그는 더 오래 걸림
+        }
         startProgressSimulation(duration);
             
             const response = await fetch(`${API_BASE_URL}/api/generate`, {
@@ -1138,6 +1159,14 @@ function displayNewsList() {
                         ).join('') : ''}
                     </div>
                 </div>
+                <div class="news-item-actions">
+                    <button class="btn-action btn-preview" onclick="previewNewsContent('${article.url}', '${article.title.replace(/'/g, '\\\'')}')" title="뉴스 미리보기" data-action="preview">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-action btn-external" onclick="window.open('${article.url}', '_blank')" title="원본 보기" data-action="external">
+                        <i class="fas fa-external-link-alt"></i>
+                    </button>
+                </div>
             </div>
         </div>
     `).join('');
@@ -1147,9 +1176,22 @@ function displayNewsList() {
     
     // 클릭 이벤트 추가
     elements.newsList.querySelectorAll('.news-item').forEach(item => {
-        item.addEventListener('click', function() {
+        item.addEventListener('click', function(e) {
+            // 액션 버튼 클릭 시 선택 토글 방지
+            if (e.target.closest('.news-item-actions')) {
+                e.stopPropagation();
+                return;
+            }
+            
             const url = this.dataset.url;
             toggleNewsSelectionByUrl(url);
+        });
+        
+        // 액션 버튼들의 클릭 이벤트 방지
+        item.querySelectorAll('.btn-action').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
         });
     });
 }
@@ -1293,7 +1335,14 @@ function updateGenerateButtonState() {
             '<i class="fas fa-blog"></i> 선택된 뉴스 블로그 생성';
     }
     
-    // 중복 제거됨 - 이미 위에서 처리함
+    // 완성형 블로그 생성 버튼 상태 업데이트
+    const generateSelectedEnhancedBlogBtn2 = document.getElementById('generateSelectedEnhancedBlogBtn2');
+    if (generateSelectedEnhancedBlogBtn2) {
+        generateSelectedEnhancedBlogBtn2.disabled = !hasSelected;
+        generateSelectedEnhancedBlogBtn2.innerHTML = hasSelected ? 
+            `<i class="fas fa-star"></i> 선택된 뉴스 완성형 블로그 생성 (${count}개)` : 
+            '<i class="fas fa-star"></i> 선택된 뉴스 완성형 블로그 생성';
+    }
 }
 
 function selectAllNews() {
@@ -1324,6 +1373,10 @@ async function handleGenerateSelectedNews() {
 
 async function handleGenerateSelectedBlogNews() {
     await generateSelectedNews('blog');
+}
+
+async function handleGenerateSelectedEnhancedBlogNews() {
+    await generateSelectedNews('enhanced_blog');
 }
 
 // 선택한 뉴스 확정 및 콘텐츠 생성 탭으로 이동
@@ -1357,14 +1410,38 @@ async function generateSelectedNews(contentType = 'standard') {
         
         // 콘텐츠 타입에 따른 진행률 표시
         const progressTitle = document.getElementById('progressTitle');
+        const progressSubtitle = document.getElementById('progressSubtitle');
+        
         if (progressTitle) {
-            progressTitle.textContent = contentType === 'blog' ? '블로그 콘텐츠 일괄 생성 중...' : '일괄 콘텐츠 생성 중...';
+            if (contentType === 'blog') {
+                progressTitle.textContent = '블로그 콘텐츠 일괄 생성 중...';
+            } else if (contentType === 'enhanced_blog') {
+                progressTitle.textContent = '완성형 블로그 콘텐츠 일괄 생성 중...';
+            } else {
+                progressTitle.textContent = '일괄 콘텐츠 생성 중...';
+            }
         }
         
-        // 배치 프로그레스 시뮬레이션 시작 (블로그 콘텐츠는 더 오래 걸림)
-        const timePerItem = contentType === 'blog' ? 15000 : 10000; // 블로그 콘텐츠는 15초, 표준은 10초
-        const estimatedTime = selectedNewsUrls.length * timePerItem;
+        if (progressSubtitle) {
+            progressSubtitle.textContent = `${selectedNewsUrls.length}개 뉴스 처리 중 (병렬 처리로 최적화)`;
+        }
+        
+        // 더 정확한 시간 예상 (병렬 처리 고려)
+        let estimatedTimePerBatch = 30; // 기본값
+        if (contentType === 'blog') {
+            estimatedTimePerBatch = 45;
+        } else if (contentType === 'enhanced_blog') {
+            estimatedTimePerBatch = 60; // 완성형 블로그는 더 오래 걸림
+        }
+        const totalItems = selectedNewsUrls.length;
+        const batchSize = Math.min(3, totalItems); // 최대 3개 병렬 처리
+        const estimatedBatches = Math.ceil(totalItems / batchSize);
+        const estimatedTime = estimatedBatches * estimatedTimePerBatch * 1000; // ms로 변환
+        
         startProgressSimulation(estimatedTime);
+        
+        // 진행률 업데이트를 위한 시작 시간 기록
+        const startTime = Date.now();
         
         const response = await fetch(`${API_BASE_URL}/api/batch-generate`, {
             method: 'POST',
@@ -1386,36 +1463,47 @@ async function generateSelectedNews(contentType = 'standard') {
         const result = await response.json();
         
         if (result.success && result.data && result.data.results) {
-            // 🎯 현재 세션에 생성된 콘텐츠 추가
+            // 실제 처리 시간 계산
+            const processingTime = (Date.now() - startTime) / 1000;
+            
+            // 진행률 완료
             completeProgress();
             currentBatchData = result.data;
             
-            // 현재 세션 콘텐츠에 성공한 결과만 추가
+            // 성공한 결과만 세션 콘텐츠에 추가
             const successfulResults = result.data.results.filter(item => item.success);
             successfulResults.forEach(item => {
-                currentSessionContent.push({
-                    filename: item.filename,
+                sessionContent.push({
+                    id: `content_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     content: item.content,
+                    title: item.title || 'Generated Content',
                     created_at: new Date().toISOString(),
-                    size: item.content ? item.content.length : 0,
                     source_url: item.url || 'Unknown',
-                    contentType: contentType
+                    content_type: contentType,
+                    processing_time: processingTime
                 });
             });
             
             // 배지 업데이트
-            updateTabBadge('generated-content', currentSessionContent.length);
+            updateGeneratedContentBadge();
+            
+            // 성능 통계 표시
+            const successCount = successfulResults.length;
+            const totalCount = result.data.total_count || result.data.results.length;
+            const avgTimePerItem = (processingTime / totalCount).toFixed(1);
             
             setTimeout(() => {
                 // 생성된 콘텐츠 탭으로 자동 전환
                 switchTab('generated-content');
                 
-                const successCount = successfulResults.length;
-                const totalCount = result.data.total_count || result.data.results.length;
                 const contentTypeName = contentType === 'blog' ? '블로그 ' : '';
+                const performanceInfo = `(평균 ${avgTimePerItem}초/개, 총 ${processingTime.toFixed(1)}초)`;
                 
-                showToast(`일괄 ${contentTypeName}콘텐츠 생성이 완료되었습니다! (성공: ${successCount}/${totalCount})`, 'success');
-            }, 500); // 프로그레스 완료 애니메이션 후 결과 표시
+                showToast(
+                    `🚀 병렬 일괄 ${contentTypeName}콘텐츠 생성 완료! 성공: ${successCount}/${totalCount} ${performanceInfo}`, 
+                    'success'
+                );
+            }, 500);
         } else {
             stopProgressSimulation();
             throw new Error(result.error || '일괄 생성에 실패했습니다.');
@@ -1473,130 +1561,90 @@ async function pollBatchJobStatus(jobId) {
     }
 }
 
-async function loadGeneratedContentList() {
-    console.log('🔄 생성된 콘텐츠 목록 로드 중...');
-    console.log('🌐 API_BASE_URL:', API_BASE_URL);
-    
-    try {
-        const url = `${API_BASE_URL}/api/generated-content`;
-        console.log('📡 API 호출:', url);
-        
-        const response = await fetch(url);
-        console.log('📨 API 응답 상태:', response.status, response.statusText);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        console.log('📋 API 응답 데이터:', result);
-        
-        if (result.success && result.data && result.data.files) {
-            generatedContentData = result.data.files;
-            console.log(`✅ 생성된 콘텐츠 ${result.data.files.length}개 로드 완료`);
-            showGeneratedContentListSection();
-            updateTabBadge('generated-content', result.data.total_count);
-        } else {
-            console.error('❌ 생성된 콘텐츠 목록 로드 실패:', result.message);
-            generatedContentData = [];
-            showGeneratedContentListSection();
-        }
-    } catch (error) {
-        console.error('🚨 생성된 콘텐츠 목록 로드 에러:', error);
-        generatedContentData = [];
-        showGeneratedContentListSection();
-    }
-}
+// 복잡한 서버 로드 기능 제거됨 - 현재 세션만 관리
 
-function showGeneratedContentListSection() {
-    console.log('📺 생성된 콘텐츠 목록 섹션 표시');
-    console.log('🔍 요소 확인:', {
-        generatedContentListSection: !!elements.generatedContentListSection,
-        generatedContentList: !!elements.generatedContentList
-    });
-    
+function showSessionContent() {
+    console.log('📋 세션 콘텐츠 표시');
     hideAllSections();
-    if (elements.generatedContentListSection) {
-        elements.generatedContentListSection.style.display = 'block';
-        console.log('✅ generatedContentListSection 표시됨');
-    } else {
-        console.error('❌ generatedContentListSection 요소를 찾을 수 없음');
+    const contentSection = document.getElementById('generatedContentListSection');
+    if (contentSection) {
+        contentSection.style.display = 'block';
     }
-    displayGeneratedContentList();
+    displaySessionContent();
 }
 
-function displayGeneratedContentList() {
-    console.log('🎨 생성된 콘텐츠 목록 표시 함수 호출');
-    console.log('📊 데이터:', {
-        generatedContentData: generatedContentData.length,
-        element: !!elements.generatedContentList
-    });
-    
-    if (!elements.generatedContentList) {
-        console.error('❌ generatedContentList 요소를 찾을 수 없음');
+function displaySessionContent() {
+    const contentListElement = document.getElementById('generatedContentList');
+    if (!contentListElement) {
+        console.error('❌ generatedContentList 요소 없음');
         return;
     }
     
-    if (generatedContentData.length === 0) {
-        console.log('📝 생성된 콘텐츠가 없음 - 안내 메시지 표시');
-        elements.generatedContentList.innerHTML = '<p>생성된 콘텐츠가 없습니다.</p>';
+    if (sessionContent.length === 0) {
+        contentListElement.innerHTML = `
+            <div class="empty-content-message">
+                <i class="fas fa-file-alt"></i>
+                <h3>아직 생성된 콘텐츠가 없습니다</h3>
+                <p>뉴스를 추출하고 콘텐츠를 생성해보세요.</p>
+            </div>
+        `;
         return;
     }
     
-    console.log(`📋 ${generatedContentData.length}개 콘텐츠 렌더링 중...`);
+    // 최신 순으로 정렬
+    const sortedContent = [...sessionContent].sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+    );
     
-    elements.generatedContentList.innerHTML = generatedContentData.map((item, index) => {
-        const createdDate = new Date(item.created_at).toLocaleString('ko-KR');
-        const fileSize = (item.size / 1024).toFixed(1);
+    contentListElement.innerHTML = sortedContent.map((item, index) => {
+        // 콘텐츠 미리보기 (첫 280자, 더 나은 처리)
+        const contentPreview = item.content ? 
+            item.content.substring(0, 280)
+                .replace(/[#*`]/g, '')
+                .replace(/\n+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim() + '...' : 
+            '콘텐츠 로딩 중...';
         
-        // 파일명에서 서브카테고리 정보 추출 (예: finance_yahoo_com_20250713_215722.md)
-        let subcategoryTag = '';
-        if (item.filename && item.filename.includes('finance_yahoo_com')) {
-            subcategoryTag = '<span class="subcategory-tag">Yahoo Finance</span>';
-        }
-        
-        // 파일명에서 간단한 제목 추출
-        let displayTitle = item.filename.replace(/\.md$/, '').replace(/_/g, ' ');
-        if (displayTitle.length > 60) {
-            displayTitle = displayTitle.substring(0, 60) + '...';
-        }
+        // 키워드 추출 (마크다운에서 해시태그 찾기) - 최대 6개
+        const keywords = item.content ? 
+            [...new Set(item.content.match(/#[가-힣a-zA-Z0-9_]+/g) || [])].slice(0, 6) : [];
         
         return `
-            <div class="generated-content-item">
-                <div class="generated-content-header">
-                    <div class="generated-content-info">
-                        <div class="generated-content-title">${displayTitle}</div>
-                        <div class="generated-content-meta">
-                            ${subcategoryTag}
-                            <span class="file-size">${fileSize}KB</span>
-                            <span class="created-date">${createdDate}</span>
+            <div class="content-item" data-index="${index}" data-id="${item.id}">
+                <div class="content-item-header">
+                    <div class="content-item-main">
+                        <div class="content-item-title">${item.title}</div>
+                        <div class="content-preview-text">
+                            ${contentPreview}
                         </div>
+                        ${keywords.length > 0 ? `
+                            <div class="content-item-keywords">
+                                ${keywords.map(keyword => 
+                                    `<span class="keyword-tag">${keyword}</span>`
+                                ).join('')}
+                            </div>
+                        ` : ''}
                     </div>
-                    <div class="generated-content-actions">
-                        <button class="btn btn-mini btn-preview" onclick="showContentPreviewModal(generatedContentData[${index}], ${index})">
-                            <i class="fas fa-eye"></i> 미리보기
+                    <div class="content-item-actions">
+                        <button class="content-action-btn preview-btn" onclick="showSimplePreview(${index})" title="미리보기">
+                            <i class="fas fa-eye"></i>
+                            <span>미리보기</span>
                         </button>
-                        <button class="btn btn-mini btn-copy" onclick="copyGeneratedContent(${index})">
-                            <i class="fas fa-copy"></i> 복사
+                        <button class="content-action-btn copy-btn" onclick="copyContent('${item.id}')" title="복사">
+                            <i class="fas fa-copy"></i>
+                            <span>복사</span>
                         </button>
-                        <button class="btn btn-mini btn-download" onclick="downloadGeneratedContent(${index})">
-                            <i class="fas fa-download"></i> 다운로드
+                        <button class="content-action-btn download-btn" onclick="downloadContent('${item.id}')" title="다운로드">
+                            <i class="fas fa-download"></i>
+                            <span>다운로드</span>
                         </button>
                     </div>
                 </div>
             </div>
         `;
     }).join('');
-    
-    console.log('✅ 생성된 콘텐츠 목록 렌더링 완료');
-    
-    // 복잡한 뉴스 제목 로딩 로직을 제거하고 파일명 기반으로 단순화
 }
-
-// 복잡한 뉴스 제목 로딩 로직을 제거하고 파일명 기반으로 단순화함
-// 필요시 추후 개선 가능
-
-// 이 함수는 삭제됨 - 직접 showContentPreviewModal 호출
 
 // 콘텐츠 미리보기 모달 함수들
 async function showContentPreviewModal(item, index) {
@@ -1906,27 +1954,7 @@ function parseSimpleMarkdown(content) {
     return html;
 }
 
-// 기존 함수는 호환성을 위해 유지 (사용하지 않음)
-// 이 함수는 삭제됨 - 모달 버전으로 대체됨
-
-// 브라우저 콘솔에서 테스트할 수 있도록 전역 함수 노출
-window.testModal = function() {
-    console.log('🧪 모달 테스트 시작...');
-    const testItem = {
-        filename: 'test_file.md',
-        size: 1024,
-        created_at: new Date().toISOString(),
-        url: '/api/generated-content/test',
-        content: '# 테스트 콘텐츠\n\n이것은 **테스트** 콘텐츠입니다.\n\n- 항목 1\n- 항목 2\n- 항목 3'
-    };
-    showContentPreviewModal(testItem, 0);
-};
-
-window.hideModal = function() {
-    hideContentPreviewModal();
-};
-
-console.log('🔧 전역 테스트 함수 등록 완료: window.testModal(), window.hideModal()');
+// 주석 처리된 코드와 테스트 함수들 정리 완료
 
 async function copyGeneratedContent(index) {
     const item = generatedContentData[index];
@@ -2031,8 +2059,7 @@ function resetAllFeatures() {
     currentBatchData = null;
     extractedNews = [];
     selectedNewsUrls = [];
-    generatedContentData = [];
-    currentSessionContent = []; // 현재 세션 콘텐츠 초기화
+    sessionContent = []; // 세션 콘텐츠 초기화
     
     // 모든 섹션 숨기기 (이미 메인 뉴스 추출 섹션 표시됨)
     hideAllSections();
@@ -4096,67 +4123,49 @@ function displayCurrentSessionContent() {
     );
     
     contentListElement.innerHTML = sortedContent.map((item, index) => {
-        const createdDate = new Date(item.created_at);
-        const timeAgo = getTimeAgo(createdDate);
-        const fileSize = (item.size / 1024).toFixed(1);
-        
-        // 콘텐츠 타입별 배지
-        const contentTypeBadge = item.contentType === 'blog' 
-            ? '<span class="content-type-badge blog">Blog</span>'
-            : '<span class="content-type-badge standard">Standard</span>';
-        
-        // 제목 생성 (URL 기반)
-        let displayTitle = '뉴스 콘텐츠';
-        if (item.source_url && item.source_url !== 'Unknown') {
-            try {
-                const url = new URL(item.source_url);
-                displayTitle = `${url.hostname} 뉴스`;
-            } catch {
-                displayTitle = '뉴스 콘텐츠';
-            }
+        // 콘텐츠 미리보기 텍스트 생성 (더 긴 텍스트로 개선)
+        let contentPreview = '';
+        if (item.content) {
+            // 마크다운 기호 제거 및 텍스트 정리
+            contentPreview = item.content
+                .replace(/[#*`]/g, '')
+                .replace(/\n+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .substring(0, 280) + '...';
+        } else {
+            contentPreview = '콘텐츠 미리보기를 불러오는 중...';
         }
         
+        // 해시태그 추출 (마크다운에서 #태그 찾기)
+        const keywords = item.content ? 
+            [...new Set(item.content.match(/#[가-힣a-zA-Z0-9_]+/g) || [])].slice(0, 5) : [];
+        
         return `
-            <div class="content-card">
-                <div class="content-card-header">
-                    <div class="content-card-badges">
-                        <span class="source-badge">📰 뉴스</span>
-                        ${contentTypeBadge}
-                    </div>
-                    <div class="content-card-actions">
-                        <button class="btn-action btn-preview" onclick="showContentPreviewModal(currentSessionContent[${index}], ${index})">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn-action btn-copy" onclick="copySessionContent(${index})">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                        <button class="btn-action btn-download" onclick="downloadSessionContent(${index})">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    </div>
+            <div class="content-item">
+                <div class="content-item-preview">
+                    <p class="content-preview-text">${contentPreview}</p>
+                    
+                    ${keywords.length > 0 ? `
+                        <div class="content-item-keywords">
+                            ${keywords.map(keyword => `<span class="keyword-tag">${keyword}</span>`).join('')}
+                        </div>
+                    ` : ''}
                 </div>
-                <div class="content-card-body">
-                    <h3 class="content-card-title">${displayTitle}</h3>
-                    <div class="content-card-meta">
-                        <div class="meta-item">
-                            <i class="fas fa-calendar"></i>
-                            <span>${timeAgo}</span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-file"></i>
-                            <span>${fileSize}KB</span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-clock"></i>
-                            <span>${createdDate.toLocaleString('ko-KR')}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="content-preview" id="session-preview-${index}" style="display: none;">
-                    <div class="preview-loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <span>콘텐츠 로딩 중...</span>
-                    </div>
+                
+                <div class="content-item-actions">
+                    <button class="content-action-btn preview-btn" onclick="showSimplePreview(${index})">
+                        <i class="fas fa-eye"></i>
+                        <span>미리보기</span>
+                    </button>
+                    <button class="content-action-btn copy-btn" onclick="copySessionContent(${index})">
+                        <i class="fas fa-copy"></i>
+                        <span>복사</span>
+                    </button>
+                    <button class="content-action-btn download-btn" onclick="downloadSessionContent(${index})">
+                        <i class="fas fa-download"></i>
+                        <span>다운로드</span>
+                    </button>
                 </div>
             </div>
         `;
@@ -4214,7 +4223,7 @@ async function loadGeneratedContentListForced() {
     
     try {
         // 직접 API 호출
-        const response = await fetch('http://localhost:8080/api/generated-content');
+        const response = await fetch(`${API_BASE_URL}/api/generated-content`);
         const result = await response.json();
         
         console.log('📊 강제 로드 결과:', result);
@@ -4239,49 +4248,51 @@ async function loadGeneratedContentListForced() {
                     files.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                     
                     contentListElement.innerHTML = files.map((item, index) => {
-                        const createdDate = new Date(item.created_at);
-                        const timeAgo = getTimeAgo(createdDate);
-                        const fileSize = (item.size / 1024).toFixed(1);
+                        // 콘텐츠 미리보기 텍스트 생성 
+                        let contentPreview = '';
+                        if (item.content) {
+                            // 마크다운 기호 제거 및 텍스트 정리
+                            contentPreview = item.content
+                                .replace(/[#*`]/g, '')
+                                .replace(/\n+/g, ' ')
+                                .replace(/\s+/g, ' ')
+                                .trim()
+                                .substring(0, 280) + '...';
+                        } else {
+                            contentPreview = '콘텐츠 미리보기를 불러오는 중...';
+                        }
                         
-                        // 파일명에서 정보 추출
-                        const isYahooFinance = item.filename.includes('finance_yahoo_com');
-                        const displayTitle = extractTitleFromFilename(item.filename);
+                        // 해시태그 추출 (마크다운에서 #태그 찾기)
+                        const keywords = item.content ? 
+                            [...new Set(item.content.match(/#[가-힣a-zA-Z0-9_]+/g) || [])].slice(0, 5) : [];
                         
                         return `
-                            <div class="content-card">
-                                <div class="content-card-header">
-                                    <div class="content-card-badges">
-                                        ${isYahooFinance ? '<span class="source-badge yahoo-finance">Yahoo Finance</span>' : '<span class="source-badge">Unknown</span>'}
-                                        <span class="content-type-badge standard">Standard</span>
-                                    </div>
-                                    <div class="content-card-actions">
-                                        <button class="btn-action btn-preview" onclick="toggleContentPreview('${item.filename}')">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn-action btn-copy" onclick="copyContentForced('${item.filename}')">
-                                            <i class="fas fa-copy"></i>
-                                        </button>
-                                        <button class="btn-action btn-download" onclick="downloadContentForced('${item.filename}')">
-                                            <i class="fas fa-download"></i>
-                                        </button>
-                                    </div>
+                            <div class="content-item">
+                                <div class="content-item-preview">
+                                    <p class="content-preview-text">${contentPreview}</p>
+                                    
+                                    ${keywords.length > 0 ? `
+                                        <div class="content-item-keywords">
+                                            ${keywords.map(keyword => `<span class="keyword-tag">${keyword}</span>`).join('')}
+                                        </div>
+                                    ` : ''}
                                 </div>
-                                <div class="content-card-body">
-                                    <h3 class="content-card-title">${displayTitle}</h3>
-                                    <div class="content-card-meta">
-                                        <div class="meta-item">
-                                            <i class="fas fa-calendar"></i>
-                                            <span>${timeAgo}</span>
-                                        </div>
-                                        <div class="meta-item">
-                                            <i class="fas fa-file"></i>
-                                            <span>${fileSize}KB</span>
-                                        </div>
-                                        <div class="meta-item">
-                                            <i class="fas fa-clock"></i>
-                                            <span>${createdDate.toLocaleString('ko-KR')}</span>
-                                        </div>
-                                    </div>
+                                
+                                <div class="content-item-actions">
+                                    <button class="content-action-btn preview-btn" onclick="toggleContentPreview('${item.filename}')">
+                                        <i class="fas fa-eye"></i>
+                                        <span>미리보기</span>
+                                    </button>
+                                    <button class="content-action-btn copy-btn" onclick="copyContentForced('${item.filename}')">
+                                        <i class="fas fa-copy"></i>
+                                        <span>복사</span>
+                                    </button>
+                                    <button class="content-action-btn download-btn" onclick="downloadContentForced('${item.filename}')">
+                                        <i class="fas fa-download"></i>
+                                        <span>다운로드</span>
+                                    </button>
+                                </div>
+                            </div>
                                 </div>
                                 <div class="content-preview" id="preview-${item.filename}" style="display: none;">
                                     <div class="preview-loading">
@@ -4345,13 +4356,77 @@ function getTimeAgo(date) {
     }
 }
 
+// 뉴스 미리보기 기능
+function previewNewsContent(url, title) {
+    console.log('📄 뉴스 미리보기:', url, title);
+    
+    // 간단한 미리보기 모달 생성
+    const modal = document.createElement('div');
+    modal.className = 'news-preview-modal';
+    modal.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-eye"></i> 뉴스 미리보기</h3>
+                    <button class="btn btn-icon" onclick="closeNewsPreview()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="news-preview-info">
+                        <h4>${title}</h4>
+                        <p class="news-url">${url}</p>
+                    </div>
+                    <div class="news-preview-actions">
+                        <button class="btn btn-primary" onclick="window.open('${url}', '_blank'); closeNewsPreview();">
+                            <i class="fas fa-external-link-alt"></i>
+                            원본 보기
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeNewsPreview()">
+                            <i class="fas fa-times"></i>
+                            닫기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 모달 닫기 이벤트
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal.querySelector('.modal-overlay')) {
+            closeNewsPreview();
+        }
+    });
+    
+    // ESC 키로 닫기
+    const escListener = function(e) {
+        if (e.key === 'Escape') {
+            closeNewsPreview();
+            document.removeEventListener('keydown', escListener);
+        }
+    };
+    document.addEventListener('keydown', escListener);
+    
+    showToast('뉴스 미리보기를 표시합니다.', 'info');
+}
+
+function closeNewsPreview() {
+    const modal = document.querySelector('.news-preview-modal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+}
+
 // 콘텐츠 미리보기 토글 함수
 // 토글 함수 삭제됨 - 팝업 모달 방식으로 변경
 
 // 간단한 복사/다운로드 함수
 async function copyContentForced(filename) {
     try {
-        const response = await fetch(`http://localhost:8080/api/generated-content/${filename}`);
+        const response = await fetch(`${API_BASE_URL}/api/generated-content/${filename}`);
         const result = await response.json();
         if (result.success) {
             await navigator.clipboard.writeText(result.data.content);
@@ -4365,7 +4440,7 @@ async function copyContentForced(filename) {
 
 async function downloadContentForced(filename) {
     try {
-        const response = await fetch(`http://localhost:8080/api/generated-content/${filename}`);
+        const response = await fetch(`${API_BASE_URL}/api/generated-content/${filename}`);
         const result = await response.json();
         if (result.success) {
             const blob = new Blob([result.data.content], { type: 'text/markdown' });
@@ -4421,7 +4496,7 @@ async function triggerCleanup() {
             
             // 생성된 콘텐츠 목록 새로고침
             if (tabState.current === 'generated-content') {
-                await loadGeneratedContentList();
+                showSessionContent();
             }
             
             return result.details;
@@ -4436,3 +4511,320 @@ async function triggerCleanup() {
 }
 
 console.log('✅ 자동 삭제 관리 기능이 로드되었습니다.');
+
+// ============================================================================
+// 간단한 세션 콘텐츠 관리 시스템
+// ============================================================================
+
+// ============================================================================
+// 🚀 새로운 간단한 미리보기 시스템 (제로 베이스)
+// ============================================================================
+
+function showSimplePreview(index) {
+    console.log('🚀 새로운 미리보기 시작:', index);
+    
+    // 1. 데이터 검증
+    if (!sessionContent || sessionContent.length === 0) {
+        console.error('❌ sessionContent가 비어있음');
+        alert('표시할 콘텐츠가 없습니다.');
+        return;
+    }
+    
+    if (index < 0 || index >= sessionContent.length) {
+        console.error('❌ 잘못된 인덱스:', index, '전체 길이:', sessionContent.length);
+        alert('콘텐츠를 찾을 수 없습니다.');
+        return;
+    }
+    
+    const content = sessionContent[index];
+    console.log('📄 미리보기 데이터:', {
+        title: content.title,
+        content_length: content.content ? content.content.length : 0,
+        content_type: content.content_type
+    });
+    
+    // 2. 기존 모달 제거 (중복 방지)
+    const existingModal = document.getElementById('simple-preview-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // 3. 마크다운을 HTML로 변환
+    let htmlContent;
+    if (content.content) {
+        if (typeof marked !== 'undefined') {
+            try {
+                htmlContent = marked.parse(content.content);
+                console.log('✅ marked.js로 마크다운 변환 완료');
+            } catch (error) {
+                console.warn('⚠️ marked.js 변환 실패, 기본 처리 사용:', error);
+                htmlContent = content.content.replace(/\n/g, '<br>');
+            }
+        } else {
+            // marked.js가 없으면 기본 마크다운 처리
+            htmlContent = content.content
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+                .replace(/\*(.*)\*/gim, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+            console.log('✅ 기본 마크다운 처리 완료');
+        }
+    } else {
+        htmlContent = '<p>콘텐츠가 없습니다.</p>';
+    }
+    
+    // 4. 모달 HTML 생성
+    const modalHTML = `
+        <div id="simple-preview-modal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        ">
+            <div style="
+                background: var(--bg-primary);
+                border: 1px solid var(--border-color);
+                border-radius: 16px;
+                max-width: 800px;
+                max-height: 90vh;
+                width: 100%;
+                overflow: hidden;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+                display: flex;
+                flex-direction: column;
+            ">
+                <!-- 헤더 -->
+                <div style="
+                    padding: 15px 20px;
+                    border-bottom: 1px solid #e5e7eb;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: var(--bg-secondary);
+                ">
+                    <h3 style="margin: 0; color: var(--text-primary); font-size: 16px; font-weight: 500;">
+                        📄 콘텐츠 미리보기
+                    </h3>
+                    <button onclick="closeSimplePreview()" style="
+                        background: none;
+                        border: none;
+                        font-size: 20px;
+                        cursor: pointer;
+                        color: var(--text-secondary);
+                        padding: 4px;
+                        border-radius: 4px;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='none'">
+                        ×
+                    </button>
+                </div>
+                
+                <!-- 콘텐츠 -->
+                <div style="
+                    padding: 24px;
+                    overflow-y: auto;
+                    flex: 1;
+                    line-height: 1.6;
+                    color: var(--text-primary);
+                    font-size: 15px;
+                ">
+                    ${htmlContent}
+                </div>
+                
+                <!-- 하단 버튼 -->
+                <div style="
+                    padding: 16px 24px;
+                    border-top: 1px solid var(--border-color);
+                    background: var(--bg-secondary);
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 12px;
+                ">
+                    <button onclick="copySimpleContent(${index})" style="
+                        background: linear-gradient(135deg, #10b981, #059669);
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        transition: all 0.2s;
+                        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)'">
+                        📋 복사
+                    </button>
+                    <button onclick="closeSimplePreview()" style="
+                        background: var(--bg-hover);
+                        color: var(--text-secondary);
+                        border: 1px solid var(--border-color);
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        transition: all 0.2s;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    " onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='var(--bg-hover)'">
+                        닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 5. 모달을 body에 추가
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // 6. 오버레이 클릭으로 닫기
+    const modal = document.getElementById('simple-preview-modal');
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeSimplePreview();
+        }
+    });
+    
+    // 7. ESC 키로 닫기
+    const escHandler = function(e) {
+        if (e.key === 'Escape') {
+            closeSimplePreview();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+    
+    console.log('✅ 새로운 미리보기 모달 표시 완료');
+}
+
+function closeSimplePreview() {
+    const modal = document.getElementById('simple-preview-modal');
+    if (modal) {
+        modal.remove();
+        console.log('✅ 미리보기 모달 닫기 완료');
+    }
+}
+
+function copySimpleContent(index) {
+    if (index >= 0 && index < sessionContent.length) {
+        const content = sessionContent[index];
+        if (content.content) {
+            navigator.clipboard.writeText(content.content).then(() => {
+                alert('클립보드에 복사되었습니다!');
+            }).catch(() => {
+                alert('복사에 실패했습니다.');
+            });
+        }
+    }
+}
+
+// 기존 복잡한 함수는 유지 (호환성을 위해)
+function previewSessionContent(index) {
+    // 새로운 함수로 리다이렉트
+    showSimplePreview(index);
+}
+
+// 콘텐츠 미리보기 (ID로 찾기)
+function previewContent(contentId) {
+    const content = sessionContent.find(item => item.id === contentId);
+    if (!content) {
+        showToast('콘텐츠를 찾을 수 없습니다.', 'error');
+        return;
+    }
+    
+    // 간단한 모달로 미리보기 표시
+    const modal = document.createElement('div');
+    modal.className = 'content-preview-modal';
+    modal.innerHTML = `
+        <div class="modal-overlay" onclick="closePreviewModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>${content.title}</h3>
+                <button onclick="closePreviewModal()" class="btn-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="content-preview">
+                    ${typeof marked !== 'undefined' ? marked.parse(content.content) : `<pre>${content.content}</pre>`}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+}
+
+function closePreviewModal() {
+    const modal = document.querySelector('.content-preview-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 콘텐츠 복사
+async function copyContent(contentId) {
+    const content = sessionContent.find(item => item.id === contentId);
+    if (!content) {
+        showToast('콘텐츠를 찾을 수 없습니다.', 'error');
+        return;
+    }
+    
+    try {
+        await navigator.clipboard.writeText(content.content);
+        showToast('콘텐츠가 클립보드에 복사되었습니다!', 'success');
+    } catch (error) {
+        showToast('복사에 실패했습니다.', 'error');
+    }
+}
+
+// 콘텐츠 다운로드
+function downloadContent(contentId) {
+    const content = sessionContent.find(item => item.id === contentId);
+    if (!content) {
+        showToast('콘텐츠를 찾을 수 없습니다.', 'error');
+        return;
+    }
+    
+    const filename = `${content.title.replace(/[^a-zA-Z0-9가-힣]/g, '_')}_${new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')}.md`;
+    const blob = new Blob([content.content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('파일이 다운로드되었습니다!', 'success');
+}
+
+// 시간 표시 유틸리티
+function getTimeAgo(date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return '방금 전';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}분 전`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}시간 전`;
+    return date.toLocaleDateString('ko-KR');
+}
+
+// ============================================================================
