@@ -47,10 +47,10 @@ os.makedirs('generated_content', exist_ok=True)
 # Store active jobs in memory (for production, use Redis or database)
 active_jobs = {}
 
-# 자동 삭제 기능 설정
+# 자동 삭제 기능 설정 (성능 최적화: 15분 → 1시간)
 AUTO_DELETE_ENABLED = True  # 자동 삭제 활성화/비활성화
-AUTO_DELETE_INTERVAL = 900  # 15분 (초 단위)
-AUTO_DELETE_AGE = 900  # 15분 이상 된 파일 삭제 (초 단위)
+AUTO_DELETE_INTERVAL = 3600  # 1시간 (초 단위) - 성능 개선
+AUTO_DELETE_AGE = 3600  # 1시간 후 삭제  # 15분 이상 된 파일 삭제 (초 단위)
 
 def cleanup_old_files():
     """1시간 이상 된 생성된 콘텐츠 파일들을 삭제"""
@@ -89,8 +89,7 @@ def cleanup_old_files():
         
         if deleted_count > 0:
             logger.info(f"✅ 자동 정리 완료: {deleted_count}개 파일 삭제")
-        else:
-            logger.info("🔍 자동 정리: 삭제할 파일 없음")
+        # 삭제할 파일이 없을 때는 로그 생략 (성능 최적화)
             
     except Exception as e:
         logger.error(f"❌ 자동 삭제 중 오류: {e}")
@@ -523,11 +522,8 @@ def batch_generate():
     try:
         data = request.get_json()
         
-        # 🔍 디버깅용 로그 추가
-        logger.info(f"[BATCH-GENERATE] 요청 데이터: {data}")
-        
         if not data or 'urls' not in data:
-            logger.error(f"[BATCH-GENERATE] URLs 누락 - 요청 데이터: {data}")
+            logger.error(f"[BATCH-GENERATE] URLs 누락")
             return jsonify({
                 'success': False,
                 'error': 'URLs are required',
@@ -536,7 +532,7 @@ def batch_generate():
         
         # API 키 검증
         if 'api_provider' not in data or 'api_key' not in data:
-            logger.error(f"[BATCH-GENERATE] API 자격 증명 누락 - api_provider: {data.get('api_provider')}, api_key: {'설정됨' if data.get('api_key') else '없음'}")
+            logger.error(f"[BATCH-GENERATE] API 자격 증명 누락")
             return jsonify({
                 'success': False,
                 'error': 'API provider and API key are required',
@@ -550,16 +546,14 @@ def batch_generate():
         content_type = data.get('content_type', 'standard')  # 기본값은 'standard'
         
         if not isinstance(urls, list) or len(urls) == 0:
-            logger.error(f"[BATCH-GENERATE] 잘못된 URLs 형식 - type: {type(urls)}, length: {len(urls) if isinstance(urls, list) else 'N/A'}")
             return jsonify({
                 'success': False,
                 'error': 'URLs must be a non-empty list',
                 'code': 'INVALID_URLS'
             }), 400
         
-        # 🚀 URL 개수 제한으로 타임아웃 방지 (2배 증가)
+        # URL 개수 제한으로 타임아웃 방지
         if len(urls) > 20:
-            logger.error(f"[BATCH-GENERATE] URL 개수 초과 - 요청: {len(urls)}개, 최대: 20개")
             return jsonify({
                 'success': False,
                 'error': 'Maximum 20 URLs allowed per batch to prevent timeout',
@@ -567,7 +561,6 @@ def batch_generate():
             }), 400
         
         if api_provider not in ['anthropic', 'openai']:
-            logger.error(f"[BATCH-GENERATE] 잘못된 API 제공자 - 제공자: {api_provider}")
             return jsonify({
                 'success': False,
                 'error': 'API provider must be anthropic or openai',
@@ -576,15 +569,11 @@ def batch_generate():
         
         # 콘텐츠 타입 검증
         if content_type not in ['standard', 'blog', 'enhanced_blog', 'threads']:
-            logger.error(f"[BATCH-GENERATE] 잘못된 콘텐츠 타입 - 타입: {content_type}")
             return jsonify({
                 'success': False,
                 'error': 'Content type must be standard, blog, enhanced_blog, or threads',
                 'code': 'INVALID_CONTENT_TYPE'
             }), 400
-        
-        # 🔍 모든 검증 통과 시 로그
-        logger.info(f"[BATCH-GENERATE] 검증 통과 - URLs: {len(urls)}개, API: {api_provider}, 타입: {content_type}")
         
         # 배치 작업 ID 생성
         batch_job_id = str(uuid.uuid4())
@@ -828,10 +817,9 @@ def extract_news_links():
                 'success': count_extracted > 0
             })
             
+            # 성공한 소스만 로깅 (성능 최적화)
             if count_extracted > 0:
                 logger.info(f"✅ {source['name']}: {count_extracted}개 뉴스 추출")
-            else:
-                logger.warning(f"❌ {source['name']}: 뉴스 추출 실패")
         
         # 중복 제거 (URL 기준) - 같은 URL의 뉴스가 여러 소스에서 나올 때 소스 정보 병합
         unique_news = []
