@@ -88,6 +88,12 @@ class BlogContentGenerator:
 설명: {extracted_data.get('description', '')}
 본문: {extracted_data['content']['text']}
 
+**마무리 요구사항:**
+- 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가해주세요.
+- 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
+- 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함해야 합니다.
+- 해시태그 앞에 "**태그:**"라는 제목을 붙여주세요.
+
 위 내용을 바탕으로 독자가 끝까지 흥미롭게 읽을 수 있는 완성형 블로그 콘텐츠를 작성해주세요."""
 
         response = self.converter.call_api(prompt, max_tokens=4000)
@@ -136,6 +142,12 @@ class BlogContentGenerator:
 제목: {extracted_data['title']}
 설명: {extracted_data.get('description', '')}
 본문: {extracted_data['content']['text']}
+
+**마무리 요구사항:**
+- 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가해주세요.
+- 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
+- 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함해야 합니다.
+- 해시태그 앞에 "**태그:**"라는 제목을 붙여주세요.
 
 완성형 HTML 블로그 콘텐츠를 작성해주세요. 블로그 에디터에 복사-붙여넣기 했을 때 포맷팅이 그대로 유지되도록 작성하세요."""
 
@@ -199,6 +211,12 @@ class BlogContentGenerator:
 설명: {extracted_data.get('description', '')}
 본문: {extracted_data['content']['text']}
 
+**마무리 요구사항:**
+- 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가해주세요.
+- 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
+- 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함해야 합니다.
+- 해시태그 앞에 "**태그:**"라는 제목을 붙여주세요.
+
 워드프레스에 바로 붙여넣을 수 있는 HTML 콘텐츠를 작성해주세요."""
 
         wordpress_content = self.converter.call_api(wordpress_prompt, max_tokens=4000)
@@ -217,6 +235,12 @@ class BlogContentGenerator:
 설명: {extracted_data.get('description', '')}
 본문: {extracted_data['content']['text']}
 
+**마무리 요구사항:**
+- 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가해주세요.
+- 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
+- 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함해야 합니다.
+- 해시태그 앞에 "**태그:**"라는 제목을 붙여주세요.
+
 티스토리에 바로 붙여넣을 수 있는 HTML 콘텐츠를 작성해주세요."""
 
         tistory_content = self.converter.call_api(tistory_prompt, max_tokens=4000)
@@ -234,6 +258,12 @@ class BlogContentGenerator:
 제목: {extracted_data['title']}
 설명: {extracted_data.get('description', '')}
 본문: {extracted_data['content']['text']}
+
+**마무리 요구사항:**
+- 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가해주세요.
+- 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
+- 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함해야 합니다.
+- 해시태그 앞에 "**태그:**"라는 제목을 붙여주세요.
 
 네이버 블로그에 바로 붙여넣을 수 있는 콘텐츠를 작성해주세요."""
 
