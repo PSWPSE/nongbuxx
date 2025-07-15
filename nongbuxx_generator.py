@@ -319,22 +319,27 @@ class NongbuxxGenerator:
         print(f"⚡ 최대 병렬 처리 수: {max_workers}")
         
         start_time = time.time()
-        results = []
         
-        # 병렬 처리
+        # 🔧 순서 보장을 위한 개선된 병렬 처리
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # 각 URL에 대한 future 생성
-            future_to_url = {
-                executor.submit(self.generate_content, url, None, content_type, selected_formats): url 
-                for url in urls
+            # URL에 인덱스를 추가하여 순서 보장
+            indexed_urls = [(i, url) for i, url in enumerate(urls)]
+            
+            # 각 URL에 대한 future 생성 (인덱스와 함께)
+            future_to_index_url = {
+                executor.submit(self._generate_with_index, index, url, content_type, selected_formats): (index, url)
+                for index, url in indexed_urls
             }
             
+            # 결과를 인덱스 순서대로 정렬하기 위한 딕셔너리
+            indexed_results = {}
+            
             # 결과 수집
-            for future in as_completed(future_to_url):
-                url = future_to_url[future]
+            for future in as_completed(future_to_index_url):
+                index, url = future_to_index_url[future]
                 try:
                     result = future.result()
-                    results.append(result)
+                    indexed_results[index] = result
                     
                     if result['success']:
                         print(f"✅ 성공: {url}")
@@ -343,11 +348,14 @@ class NongbuxxGenerator:
                         
                 except Exception as e:
                     print(f"❌ 예외 발생: {url} - {str(e)}")
-                    results.append({
+                    indexed_results[index] = {
                         'success': False,
                         'error': str(e),
                         'url': url
-                    })
+                    }
+        
+        # 🔧 인덱스 순서대로 결과 정렬
+        results = [indexed_results[i] for i in sorted(indexed_results.keys())]
         
         # 결과 통계
         success_count = sum(1 for r in results if r['success'])
@@ -359,6 +367,135 @@ class NongbuxxGenerator:
         print(f"   • 평균 시간: {total_time/len(urls):.2f}초/URL")
         
         return results
+    
+    def _generate_with_index(self, index, url, content_type='standard', selected_formats=None):
+        """
+        인덱스가 포함된 콘텐츠 생성 (파일명 중복 방지)
+        
+        Args:
+            index: URL 순서 인덱스
+            url: 추출할 뉴스 기사 URL
+            content_type: 콘텐츠 타입
+            selected_formats: 선택된 파일 형식 목록
+            
+        Returns:
+            dict: 결과 정보
+        """
+        print(f"\n🔗 URL 분석 중: {url}")
+        print(f"📝 콘텐츠 타입: {content_type}")
+        
+        # URL 유효성 검사
+        if not self.validate_url(url):
+            return {
+                'success': False,
+                'error': 'Invalid URL format',
+                'url': url
+            }
+        
+        # Step 1: 웹에서 콘텐츠 추출
+        print("📄 웹 콘텐츠 추출 중...")
+        start_time = time.time()
+        
+        # 웹 추출
+        extracted_content = self.extractor.extract_data(url)
+        
+        if not extracted_content.get('success', False):
+            return {
+                'success': False,
+                'error': f'Content extraction failed: {extracted_content.get("error", "Unknown error")}',
+                'url': url
+            }
+        
+        extraction_time = time.time() - start_time
+        print(f"✅ 웹 추출 완료 ({extraction_time:.2f}초)")
+        
+        # Step 2: AI 변환
+        print("🤖 AI 변환 중...")
+        conversion_start = time.time()
+        
+        # 완성형 블로그인 경우
+        if content_type == 'enhanced_blog':
+            blog_result = self.blog_generator.generate_blog_content(
+                extracted_content, 
+                selected_formats=selected_formats
+            )
+            
+            if blog_result['success']:
+                # 🔧 고유한 파일명 생성 (마이크로초 + 인덱스 포함)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                microsecond = datetime.now().microsecond
+                domain = self.extract_domain_name(url)
+                filename_prefix = f"{domain}_{timestamp}_{microsecond:06d}_{index:03d}_enhanced_blog"
+                
+                # 파일 저장
+                saved_files = self.blog_generator.save_blog_content(
+                    blog_result, 
+                    filename_prefix, 
+                    selected_formats
+                )
+                
+                conversion_time = time.time() - conversion_start
+                print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (선택된 형식: {selected_formats})")
+                print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
+                
+                # 메인 마크다운 파일 경로
+                main_file = saved_files[0] if saved_files else None
+                
+                return {
+                    'success': True,
+                    'url': url,
+                    'title': blog_result['title'],
+                    'output_file': Path(main_file) if main_file else None,
+                    'all_files': saved_files,
+                    'timestamp': datetime.now().isoformat(),
+                    'content_type': content_type,
+                    'selected_formats': selected_formats
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Blog generation failed: {blog_result.get("error", "Unknown error")}',
+                    'url': url
+                }
+        else:
+            # 일반 콘텐츠 변환
+            converted_content = self.converter.convert_to_markdown_content(
+                extracted_content, 
+                content_type=content_type
+            )
+            
+            if converted_content.get('success', False):
+                # 🔧 고유한 파일명 생성 (마이크로초 + 인덱스 포함)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                microsecond = datetime.now().microsecond
+                domain = self.extract_domain_name(url)
+                filename = f"{domain}_{timestamp}_{microsecond:06d}_{index:03d}_{content_type}.md"
+                
+                # 파일 저장
+                output_file = self.generated_dir / filename
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    f.write(converted_content['content'])
+                
+                conversion_time = time.time() - conversion_start
+                print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
+                
+                total_time = time.time() - start_time
+                print(f"💾 파일 저장 완료: {output_file} (총 {total_time:.2f}초)")
+                
+                return {
+                    'success': True,
+                    'url': url,
+                    'title': converted_content.get('title', 'Generated Content'),
+                    'output_file': output_file,
+                    'timestamp': datetime.now().isoformat(),
+                    'content_type': content_type
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Content conversion failed: {converted_content.get("error", "Unknown error")}',
+                    'url': url
+                }
     
     def cleanup(self):
         """리소스 정리"""
