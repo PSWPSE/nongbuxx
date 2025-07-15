@@ -46,21 +46,42 @@ class BlogContentGenerator:
 
 **중요: 작성 지침이나 메타 정보는 포함하지 마세요. 순수한 블로그 콘텐츠만 작성하세요.**
 
-**콘텐츠 요구사항:**
+**제목 작성 가이드라인:**
+- 독자들의 관심을 끌만한 매력적이고 깔끔하고 임팩트 있는 제목
+- 단순한 사실 전달보다는 독자의 호기심을 자극하는 제목
+- 클릭하고 싶게 만드는 강력한 어필 포인트 포함
+- 너무 길지 않으면서도 핵심 메시지가 명확한 제목
+
+**콘텐츠 구조 가이드라인:**
 - 5000자 이상의 완성형 블로그 포스트
 - 친근하고 설득력있는 말투 ("~에요", "~해요" 사용)
-- 읽기 쉬운 문단 구성
+- 단락 구분 없이 계속 내용을 전개하는 것이 아닌 명확한 단락형으로 제공
+- 각 단락마다 명확한 소제목 (## 또는 ###) 설정
+- 내용 전달과 읽는 피로도 감소, 내용 전개의 자연스러움 고려
+- 지루하지 않은 콘텐츠 소비를 목표로 구성
+
+**단락 구성 원칙:**
+- 전체 내용을 단락 제목만 봐도 대략 이해할 수 있는 정도로 핵심적인 포인트들로 구성
+- 단락 내용은 단락 제목에 걸맞게 쉽게 읽히되 내용은 잘 전달되는 내용전달력이 좋은 글로 구성
+- 각 단락은 2-4개 문단으로 구성하여 적절한 길이 유지
+- 단락 간 자연스러운 연결과 논리적 흐름 유지
+
+**구성 순서:**
+1. 매력적이고 임팩트 있는 제목 (한 줄)
+2. 한 줄 요약 (독자의 관심을 끄는 핵심 메시지)
+3. 서론 (독자 관심 유발, 2-3 문단)
+4. 본문 (명확한 소제목으로 구분된 단락형 구성):
+   - ## 핵심 포인트 1 (단락 제목만 봐도 내용 파악 가능)
+   - ## 핵심 포인트 2 (단락 제목만 봐도 내용 파악 가능)
+   - ## 핵심 포인트 3 (단락 제목만 봐도 내용 파악 가능)
+   - ## 추가 분석 및 전망 (단락 제목만 봐도 내용 파악 가능)
+5. 결론 (2-3 문단, 핵심 메시지 재강조)
+
+**추가 요구사항:**
 - 추가 배경 정보와 분석 포함
 - SEO 최적화 고려
 - 독자의 관심과 공감을 유발하는 내용
-
-**구성 순서:**
-1. 매력적인 제목 (한 줄)
-2. 한 줄 요약
-3. 서론 (독자 관심 유발)
-4. 본문 (논리적 구성)
-5. 추가 분석 및 전망
-6. 결론
+- 각 단락의 내용전달력을 극대화
 
 **원문 정보:**
 제목: {extracted_data['title']}
@@ -224,13 +245,14 @@ class BlogContentGenerator:
             'naver': self.converter.clean_response(naver_content)
         }
     
-    def save_blog_content(self, content_data, filename_prefix=None):
+    def save_blog_content(self, content_data, filename_prefix=None, selected_formats=None):
         """
-        생성된 블로그 콘텐츠를 파일로 저장
+        생성된 블로그 콘텐츠를 선택된 형식으로 저장
         
         Args:
             content_data: 생성된 콘텐츠 데이터
             filename_prefix: 파일명 접두사
+            selected_formats: 저장할 파일 형식 목록 (기본값: ['md', 'naver', 'tistory', 'wordpress'])
             
         Returns:
             dict: 저장된 파일 정보
@@ -239,32 +261,34 @@ class BlogContentGenerator:
         if filename_prefix is None:
             filename_prefix = f"blog_content_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
+        # 기본 선택 형식 (메타 JSON과 기본 HTML 제거)
+        if selected_formats is None:
+            selected_formats = ['md', 'naver', 'tistory', 'wordpress']
+        
         saved_files = {}
         
         # 마크다운 파일 저장
-        markdown_file = self.output_dir / f"{filename_prefix}.md"
-        with open(markdown_file, 'w', encoding='utf-8') as f:
-            f.write(content_data['markdown'])
-        saved_files['markdown'] = str(markdown_file)
+        if 'md' in selected_formats:
+            markdown_file = self.output_dir / f"{filename_prefix}.md"
+            with open(markdown_file, 'w', encoding='utf-8') as f:
+                f.write(content_data['markdown'])
+            saved_files['md'] = str(markdown_file)
         
-        # HTML 파일 저장
-        html_file = self.output_dir / f"{filename_prefix}.html"
-        with open(html_file, 'w', encoding='utf-8') as f:
-            f.write(content_data['html'])
-        saved_files['html'] = str(html_file)
+        # 플랫폼별 파일 저장 (기본 HTML 제거)
+        platform_mapping = {
+            'naver': 'naver',
+            'tistory': 'tistory', 
+            'wordpress': 'wordpress'
+        }
         
-        # 플랫폼별 파일 저장
-        for platform, content in content_data['platform_optimized'].items():
-            platform_file = self.output_dir / f"{filename_prefix}_{platform}.html"
-            with open(platform_file, 'w', encoding='utf-8') as f:
-                f.write(content)
-            saved_files[platform] = str(platform_file)
+        for format_key, platform_key in platform_mapping.items():
+            if format_key in selected_formats and platform_key in content_data['platform_optimized']:
+                platform_file = self.output_dir / f"{filename_prefix}_{platform_key}.html"
+                with open(platform_file, 'w', encoding='utf-8') as f:
+                    f.write(content_data['platform_optimized'][platform_key])
+                saved_files[format_key] = str(platform_file)
         
-        # 메타 정보 저장
-        meta_file = self.output_dir / f"{filename_prefix}_meta.json"
-        with open(meta_file, 'w', encoding='utf-8') as f:
-            json.dump(content_data['meta_info'], f, ensure_ascii=False, indent=2)
-        saved_files['meta'] = str(meta_file)
+        # 메타 정보와 기본 HTML 파일 생성 제거됨
         
         return saved_files
 

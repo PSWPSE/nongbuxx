@@ -32,7 +32,6 @@ const elements = {
     themeText: document.getElementById('themeText'),
     newsExtractorBtn: document.getElementById('newsExtractorBtn'),
     newsExtractorSection: document.getElementById('newsExtractorSection'),
-    newsKeyword: document.getElementById('newsKeyword'),
     newsCount: document.getElementById('newsCount'),
     extractNewsBtn: document.getElementById('extractNewsBtn'),
     cancelNewsExtractorBtn: document.getElementById('cancelNewsExtractorBtn'),
@@ -42,6 +41,7 @@ const elements = {
     selectAllNewsBtn: document.getElementById('selectAllNewsBtn'),
     deselectAllNewsBtn: document.getElementById('deselectAllNewsBtn'),
     generateSelectedBtn: document.getElementById('generateSelectedBtn'),
+    generateSelectedBtn2: document.getElementById('generateSelectedBtn2'),
     generatedContentListSection: document.getElementById('generatedContentListSection'),
     generatedContentList: document.getElementById('generatedContentList'),
     downloadAllGeneratedBtn: document.getElementById('downloadAllGeneratedBtn'),
@@ -137,6 +137,9 @@ document.addEventListener('DOMContentLoaded', function() {
     updateUrlInputButtons();
     initKeyboardShortcuts();
     loadUserPreferences();
+    
+    // 콘텐츠 타입 선택 초기화
+    handleContentTypeChange();
     
     // 출처 관리 초기화
     loadAvailableSources();
@@ -311,22 +314,25 @@ function updateSelectedNewsSummary() {
         </div>
     `;
     
-    // 콘텐츠 생성 탭의 버튼들 활성화
+    // 콘텐츠 생성 탭의 버튼 활성화
     const generateSelectedBtn2 = document.getElementById('generateSelectedBtn2');
-    const generateSelectedBlogBtn2 = document.getElementById('generateSelectedBlogBtn2');
     
     if (generateSelectedBtn2) {
         generateSelectedBtn2.disabled = selectedArticles.length === 0;
+        
+        // 선택된 콘텐츠 타입에 따라 버튼 텍스트 업데이트
+        const selectedType = getSelectedContentType();
+        const typeNames = {
+            'standard': '마크다운',
+            'threads': 'Threads',
+            'enhanced_blog': '완성형 블로그'
+        };
+        
+        const typeName = typeNames[selectedType] || '콘텐츠';
+        
         generateSelectedBtn2.innerHTML = selectedArticles.length > 0 ? 
-            `<i class="fas fa-magic"></i> 선택된 뉴스 일괄 생성 (${selectedArticles.length}개)` : 
-            '<i class="fas fa-magic"></i> 선택된 뉴스 일괄 생성';
-    }
-    
-    if (generateSelectedBlogBtn2) {
-        generateSelectedBlogBtn2.disabled = selectedArticles.length === 0;
-        generateSelectedBlogBtn2.innerHTML = selectedArticles.length > 0 ? 
-            `<i class="fas fa-blog"></i> 선택된 뉴스 블로그 생성 (${selectedArticles.length}개)` : 
-            '<i class="fas fa-blog"></i> 선택된 뉴스 블로그 생성';
+            `<i class="fas fa-magic"></i> ${typeName} 생성 (${selectedArticles.length}개)` : 
+            `<i class="fas fa-magic"></i> ${typeName} 생성`;
     }
 }
 
@@ -338,7 +344,37 @@ function updateSelectedNewsSummary() {
 function initEventListeners() {
     // 폼 제출
     if (elements.urlForm) {
-        elements.urlForm.addEventListener('submit', handleFormSubmit);
+        elements.urlForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const urls = getUrlsFromForm();
+            if (urls.length === 0) {
+                showToast('URL을 입력해주세요.', 'error');
+                return;
+            }
+            
+            // 선택된 콘텐츠 타입 확인
+            const contentType = e.submitter.dataset.contentType || 'standard';
+            
+            // 버튼 상태 업데이트
+            const buttons = elements.urlForm.querySelectorAll('button[type="submit"]');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 처리 중...';
+            });
+            
+            try {
+                await handleFormSubmit(urls, contentType);
+            } catch (error) {
+                console.error('Content generation error:', error);
+                showToast('콘텐츠 생성 중 오류가 발생했습니다.', 'error');
+            } finally {
+                // 버튼 상태 복구
+                buttons.forEach(btn => {
+                    btn.disabled = false;
+                    btn.innerHTML = btn.innerHTML.replace(/<i class="fas fa-spinner fa-spin"><\/i> 처리 중.../, btn.innerHTML);
+                });
+            }
+        });
     }
     
     // 테마 토글
@@ -351,11 +387,7 @@ function initEventListeners() {
         elements.extractNewsBtn.addEventListener('click', handleNewsExtraction);
     }
     
-    // URL 직접 입력 관련 (서브 흐름)
-    const directUrlBtn = document.getElementById('directUrlBtn');
-    if (directUrlBtn) {
-        directUrlBtn.addEventListener('click', showUrlInputSection);
-    }
+    // URL 직접 입력 관련 (서브 흐름) - 제거됨
     // 삭제된 버튼: backToNewsExtractorBtn
     const resetUrlInputBtn = document.getElementById('resetUrlInputBtn');
     if (resetUrlInputBtn) {
@@ -371,28 +403,22 @@ function initEventListeners() {
         elements.generateSelectedBtn.addEventListener('click', handleGenerateSelectedNews);
     }
     
-    // 콘텐츠 생성 탭의 버튼들
+    // 콘텐츠 생성 탭의 버튼
     const generateSelectedBtn2 = document.getElementById('generateSelectedBtn2');
-    const generateSelectedBlogBtn2 = document.getElementById('generateSelectedBlogBtn2');
-    const generateSelectedEnhancedBlogBtn2 = document.getElementById('generateSelectedEnhancedBlogBtn2');
     
     if (generateSelectedBtn2) {
-        generateSelectedBtn2.addEventListener('click', handleGenerateSelectedNews);
-    }
-    if (generateSelectedBlogBtn2) {
-        generateSelectedBlogBtn2.addEventListener('click', handleGenerateSelectedBlogNews);
-    }
-    if (generateSelectedEnhancedBlogBtn2) {
-        generateSelectedEnhancedBlogBtn2.addEventListener('click', handleGenerateSelectedEnhancedBlogNews);
+        generateSelectedBtn2.addEventListener('click', handleGenerateSelectedNewsWithType);
     }
     
-    // 블로그 콘텐츠 생성 버튼 이벤트 리스너
-    const generateBlogBtn = document.getElementById('generateBlogBtn');
+    // 콘텐츠 타입 변경 이벤트 리스너
+    const contentTypeRadios = document.querySelectorAll('input[name="contentType"]');
+    contentTypeRadios.forEach(radio => {
+        radio.addEventListener('change', handleContentTypeChange);
+    });
+    
+    // 완성형 블로그 콘텐츠 생성 버튼 이벤트 리스너
     const generateEnhancedBlogBtn = document.getElementById('generateEnhancedBlogBtn');
     
-    if (generateBlogBtn) {
-        generateBlogBtn.addEventListener('click', handleBlogGeneration);
-    }
     if (generateEnhancedBlogBtn) {
         generateEnhancedBlogBtn.addEventListener('click', handleEnhancedBlogGeneration);
     }
@@ -649,11 +675,6 @@ async function handleFormSubmit(e) {
     await generateContent(contentType);
 }
 
-// 블로그 콘텐츠 생성 처리
-async function handleBlogGeneration() {
-    await generateContent('blog');
-}
-
 // 완성형 블로그 콘텐츠 생성 처리
 async function handleEnhancedBlogGeneration() {
     await generateContent('enhanced_blog');
@@ -688,9 +709,7 @@ async function generateContent(contentType = 'standard') {
         // 콘텐츠 타입에 따른 진행률 표시
         const progressTitle = document.getElementById('progressTitle');
         if (progressTitle) {
-            if (contentType === 'blog') {
-                progressTitle.textContent = '블로그 콘텐츠 생성 중...';
-            } else if (contentType === 'enhanced_blog') {
+            if (contentType === 'enhanced_blog') {
                 progressTitle.textContent = '완성형 블로그 콘텐츠 생성 중...';
             } else {
                 progressTitle.textContent = '콘텐츠 생성 중...';
@@ -699,9 +718,7 @@ async function generateContent(contentType = 'standard') {
         
         // 프로그레스 시뮬레이션 시작 (완성형 블로그 콘텐츠는 가장 오래 걸림)
         let duration = 60000; // 기본값 (2배 증가)
-        if (contentType === 'blog') {
-            duration = 90000; // 2배 증가
-        } else if (contentType === 'enhanced_blog') {
+        if (contentType === 'enhanced_blog') {
             duration = 120000; // 완성형 블로그는 더 오래 걸림 (2배 증가)
         }
         startProgressSimulation(duration);
@@ -740,7 +757,7 @@ async function generateContent(contentType = 'standard') {
         let userFriendlyMessage = error.message;
         
         if (error.message.includes('Maximum 20 URLs allowed') || error.message.includes('20 URLs')) {
-            userFriendlyMessage = `⚠️ 뉴스 개수 제한: 최대 20개의 뉴스만 선택할 수 있습니다. 타임아웃 방지를 위한 제한입니다.`;
+            userFriendlyMessage = `⚠️ 뉴스 개수 제한: 최대 20개의 뉴스만 선택할 수 있습니다. 안정성을 위한 제한입니다.`;
         } else if (error.message.includes('INVALID_API_PROVIDER') || error.message.includes('API provider must be')) {
             userFriendlyMessage = `🔑 API 키 미설정: 우측 상단 'API 키 설정' 버튼을 클릭하여 Anthropic 또는 OpenAI API 키를 설정해주세요.`;
         } else if (error.message.includes('network') || error.message.includes('연결')) {
@@ -801,10 +818,7 @@ function hideAllSections() {
     });
     
     // URL 입력 섹션 숨기기
-    const urlInputSection = document.getElementById('urlInputSection');
-    if (urlInputSection) {
-        urlInputSection.style.display = 'none';
-    }
+    // urlInputSection 제거됨
     
     // 뉴스 선택 섹션은 조건부로 숨기기 (뉴스가 있고 뉴스 추출 탭인 경우 유지)
     if (elements.newsSelectionSection) {
@@ -964,26 +978,7 @@ function hideNewsExtractorSection() {
     }
 }
 
-// URL 직접 입력 섹션 관리
-function showUrlInputSection() {
-    hideAllSections();
-    const urlInputSection = document.getElementById('urlInputSection');
-    if (urlInputSection) {
-        urlInputSection.style.display = 'block';
-    }
-}
-
-function hideUrlInputSection() {
-    const urlInputSection = document.getElementById('urlInputSection');
-    if (urlInputSection) {
-        urlInputSection.style.display = 'none';
-    }
-    // 메인 뉴스 추출 섹션은 항상 표시
-    const newsExtractorSection = document.getElementById('newsExtractorSection');
-    if (newsExtractorSection) {
-        newsExtractorSection.style.display = 'block';
-    }
-}
+// URL 직접 입력 섹션 관리 함수들 - 제거됨
 
 function resetUrlInputForm() {
     // URL 입력 폼 초기화
@@ -1007,7 +1002,7 @@ function resetUrlInputForm() {
 }
 
 async function handleNewsExtraction() {
-    const keyword = elements.newsKeyword ? elements.newsKeyword.value.trim() : '';
+    const keyword = ''; // 키워드 입력 창이 제거되어 빈 문자열로 고정
     const count = elements.newsCount ? parseInt(elements.newsCount.value) || 10 : 10;
     
     if (count < 1 || count > 50) {
@@ -1144,7 +1139,7 @@ function showNewsSelectionSection() {
             ${extractedNews.length > 20 ? `
                 <div class="news-limit-notice">
                     <i class="fas fa-info-circle"></i>
-                    <span>⚠️ 타임아웃 방지를 위해 최대 20개의 뉴스만 선택할 수 있습니다.</span>
+                    <span>💡 20개 이상 선택 시 자동으로 처음 20개만 처리됩니다.</span>
                 </div>
             ` : ''}
             ${sourceStatsHtml}
@@ -1298,9 +1293,9 @@ function toggleNewsSelection(index) {
         newsItem.classList.remove('selected');
         checkbox.classList.remove('checked');
     } else {
-        // 🚨 20개 제한 체크
+        // 🚨 20개 제한 체크 (안정성 우선)
         if (selectedNewsUrls.length >= 20) {
-            showToast('⚠️ 최대 20개의 뉴스만 선택할 수 있습니다. 타임아웃 방지를 위한 제한입니다.', 'warning');
+            showToast('⚠️ 최대 20개의 뉴스만 선택할 수 있습니다.', 'warning');
             return;
         }
         
@@ -1339,68 +1334,40 @@ function updateGenerateButtonState() {
             '<i class="fas fa-check"></i> 선택한 뉴스 확정';
     }
     
-    // 블로그 생성 버튼도 동일하게 활성화/비활성화
-    const generateSelectedBlogBtn = document.getElementById('generateSelectedBlogBtn');
-    if (generateSelectedBlogBtn) {
-        generateSelectedBlogBtn.disabled = !hasSelected;
-        generateSelectedBlogBtn.innerHTML = hasSelected ? 
-            `<i class="fas fa-blog"></i> 선택된 뉴스 블로그 생성 (${count}개)` : 
-            '<i class="fas fa-blog"></i> 선택된 뉴스 블로그 생성';
-    }
-    
-    // 콘텐츠 생성 탭의 버튼들도 동일하게 업데이트
+    // 콘텐츠 생성 탭의 버튼들 상태 업데이트
     const generateSelectedBtn2 = document.getElementById('generateSelectedBtn2');
     if (generateSelectedBtn2) {
         generateSelectedBtn2.disabled = !hasSelected;
+        
+        // 선택된 콘텐츠 타입에 따라 버튼 텍스트 업데이트
+        const selectedType = getSelectedContentType();
+        const typeNames = {
+            'standard': '마크다운',
+            'threads': 'Threads',
+            'enhanced_blog': '완성형 블로그'
+        };
+        
+        const typeName = typeNames[selectedType] || '콘텐츠';
+        
         generateSelectedBtn2.innerHTML = hasSelected ? 
-            `<i class="fas fa-magic"></i> 선택된 뉴스 일괄 생성 (${count}개)` : 
-            '<i class="fas fa-magic"></i> 선택된 뉴스 일괄 생성';
+            `<i class="fas fa-magic"></i> ${typeName} 생성 (${count}개)` : 
+            `<i class="fas fa-magic"></i> ${typeName} 생성`;
     }
     
-    const generateSelectedBlogBtn2 = document.getElementById('generateSelectedBlogBtn2');
-    if (generateSelectedBlogBtn2) {
-        generateSelectedBlogBtn2.disabled = !hasSelected;
-        generateSelectedBlogBtn2.innerHTML = hasSelected ? 
-            `<i class="fas fa-blog"></i> 선택된 뉴스 블로그 생성 (${count}개)` : 
-            '<i class="fas fa-blog"></i> 선택된 뉴스 블로그 생성';
-    }
-    
-    // 완성형 블로그 생성 버튼 상태 업데이트
-    const generateSelectedEnhancedBlogBtn2 = document.getElementById('generateSelectedEnhancedBlogBtn2');
-    if (generateSelectedEnhancedBlogBtn2) {
-        generateSelectedEnhancedBlogBtn2.disabled = !hasSelected;
-        generateSelectedEnhancedBlogBtn2.innerHTML = hasSelected ? 
-            `<i class="fas fa-star"></i> 선택된 뉴스 완성형 블로그 생성 (${count}개)` : 
-            '<i class="fas fa-star"></i> 선택된 뉴스 완성형 블로그 생성';
-    }
+    // 파일 유형 선택 토글 표시 업데이트
+    updateFormatSelectionVisibility();
 }
 
 function selectAllNews() {
-    // 🚨 20개 제한 체크
-    if (extractedNews.length > 20) {
-        selectedNewsUrls = extractedNews.slice(0, 20).map(article => article.url);
-        elements.newsList.querySelectorAll('.news-item').forEach((item, index) => {
-            if (index < 20) {
-                item.classList.add('selected');
-                item.querySelector('.news-checkbox').classList.add('checked');
-            } else {
-                item.classList.remove('selected');
-                item.querySelector('.news-checkbox').classList.remove('checked');
-            }
-        });
-        updateSelectedCount();
-        saveUserPreferences();
-        showToast(`⚠️ 최대 20개만 선택되었습니다. (총 ${extractedNews.length}개 중 20개)`, 'warning');
-    } else {
-        selectedNewsUrls = extractedNews.map(article => article.url);
-        elements.newsList.querySelectorAll('.news-item').forEach(item => {
-            item.classList.add('selected');
-            item.querySelector('.news-checkbox').classList.add('checked');
-        });
-        updateSelectedCount();
-        saveUserPreferences();
-        showToast('모든 뉴스가 선택되었습니다.', 'info');
-    }
+    // 🚨 모든 뉴스 선택 (백엔드에서 자동으로 100개로 제한됨)
+    selectedNewsUrls = extractedNews.map(article => article.url);
+    elements.newsList.querySelectorAll('.news-item').forEach(item => {
+        item.classList.add('selected');
+        item.querySelector('.news-checkbox').classList.add('checked');
+    });
+    updateSelectedCount();
+    saveUserPreferences();
+    showToast('모든 뉴스가 선택되었습니다.', 'info');
 }
 
 function deselectAllNews() {
@@ -1418,12 +1385,64 @@ async function handleGenerateSelectedNews() {
     await generateSelectedNews('standard');
 }
 
-async function handleGenerateSelectedBlogNews() {
-    await generateSelectedNews('blog');
+async function handleGenerateSelectedEnhancedBlogNews() {
+    const selectedFormats = getSelectedFormats();
+    console.log('선택된 형식:', selectedFormats);
+    await generateSelectedNews('enhanced_blog', selectedFormats);
 }
 
-async function handleGenerateSelectedEnhancedBlogNews() {
-    await generateSelectedNews('enhanced_blog');
+// 새로운 통합 핸들러 함수
+async function handleGenerateSelectedNewsWithType() {
+    const selectedContentType = getSelectedContentType();
+    console.log('선택된 콘텐츠 타입:', selectedContentType);
+    
+    if (selectedContentType === 'enhanced_blog') {
+        const selectedFormats = getSelectedFormats();
+        console.log('선택된 형식:', selectedFormats);
+        await generateSelectedNews('enhanced_blog', selectedFormats);
+    } else {
+        await generateSelectedNews(selectedContentType);
+    }
+}
+
+// 콘텐츠 타입 변경 핸들러
+function handleContentTypeChange() {
+    const selectedType = getSelectedContentType();
+    const formatContainer = document.getElementById('formatSelectionContainer');
+    
+    if (formatContainer) {
+        if (selectedType === 'enhanced_blog') {
+            formatContainer.style.display = 'block';
+        } else {
+            formatContainer.style.display = 'none';
+        }
+    }
+    
+    // 버튼 텍스트 업데이트
+    updateGenerateButtonText();
+}
+
+// 선택된 콘텐츠 타입 가져오기
+function getSelectedContentType() {
+    const selectedRadio = document.querySelector('input[name="contentType"]:checked');
+    return selectedRadio ? selectedRadio.value : 'standard';
+}
+
+// 생성 버튼 텍스트 업데이트
+function updateGenerateButtonText() {
+    const selectedType = getSelectedContentType();
+    const generateBtn = document.getElementById('generateSelectedBtn2');
+    
+    if (generateBtn) {
+        const typeNames = {
+            'standard': '마크다운',
+            'threads': 'Threads',
+            'enhanced_blog': '완성형 블로그'
+        };
+        
+        const typeName = typeNames[selectedType] || '콘텐츠';
+        generateBtn.innerHTML = `<i class="fas fa-magic"></i> ${typeName} 생성`;
+    }
 }
 
 // 선택한 뉴스 확정 및 콘텐츠 생성 탭으로 이동
@@ -1438,7 +1457,7 @@ function handleConfirmSelectedNews() {
     showToast(`${selectedNewsUrls.length}개의 뉴스가 선택되었습니다.`, 'success');
 }
 
-async function generateSelectedNews(contentType = 'standard') {
+async function generateSelectedNews(contentType = 'standard', selectedFormats = null) {
     if (selectedNewsUrls.length === 0) {
         showToast('선택된 뉴스가 없습니다.', 'warning');
         return;
@@ -1477,10 +1496,7 @@ async function generateSelectedNews(contentType = 'standard') {
         let estimatedTimePerBatch = 30; // 기본값
         let timeoutDuration = 480000; // 8분 기본 타임아웃 (2배 증가)
         
-        if (contentType === 'blog') {
-            estimatedTimePerBatch = 45;
-            timeoutDuration = 720000; // 12분 타임아웃 (2배 증가)
-        } else if (contentType === 'enhanced_blog') {
+        if (contentType === 'enhanced_blog') {
             estimatedTimePerBatch = 60; // 완성형 블로그는 더 오래 걸림
             timeoutDuration = 1200000; // 20분 타임아웃 (2배 증가)
         }
@@ -1509,7 +1525,8 @@ async function generateSelectedNews(contentType = 'standard') {
                     urls: selectedNewsUrls,
                     api_provider: apiSettings.provider,
                     api_key: apiSettings.key,
-                    content_type: contentType
+                    content_type: contentType,
+                    ...(contentType === 'enhanced_blog' && selectedFormats && { selected_formats: selectedFormats })
                 }),
                 signal: controller.signal
             });
@@ -1566,8 +1583,7 @@ async function generateSelectedNews(contentType = 'standard') {
                     // 생성된 콘텐츠 탭으로 자동 전환
                     switchTab('generated-content');
                     
-                    const contentTypeName = contentType === 'enhanced_blog' ? '완성형 블로그 ' : 
-                                          contentType === 'blog' ? '블로그 ' : '';
+                                    const contentTypeName = contentType === 'enhanced_blog' ? '완성형 블로그 ' : '';
                     const performanceInfo = `(평균 ${avgTimePerItem}초/개, 총 ${processingTime.toFixed(1)}초)`;
                     
                     showToast(
@@ -1601,8 +1617,8 @@ async function generateSelectedNews(contentType = 'standard') {
         
         if (error.message.includes('timeout') || error.message.includes('초과')) {
             userFriendlyMessage = `⏱️ 처리 시간 초과: 선택한 뉴스가 너무 많거나 서버가 바쁩니다. 뉴스 개수를 줄이고 다시 시도해주세요.`;
-        } else if (error.message.includes('Maximum 20 URLs allowed') || error.message.includes('20 URLs')) {
-            userFriendlyMessage = `⚠️ 뉴스 개수 제한: 최대 20개의 뉴스만 선택할 수 있습니다. 타임아웃 방지를 위한 제한입니다.`;
+        } else if (error.message.includes('Maximum 100 URLs allowed') || error.message.includes('100 URLs')) {
+            userFriendlyMessage = `⚠️ 뉴스 개수 제한: 최대 100개의 뉴스만 선택할 수 있습니다. 타임아웃 방지를 위한 제한입니다.`;
         } else if (error.message.includes('INVALID_API_PROVIDER') || error.message.includes('API provider must be')) {
             userFriendlyMessage = `🔑 API 키 미설정: 우측 상단 'API 키 설정' 버튼을 클릭하여 Anthropic 또는 OpenAI API 키를 설정해주세요.`;
         } else if (error.message.includes('network') || error.message.includes('연결')) {
@@ -2199,7 +2215,6 @@ function resetAllFeatures() {
     additionalRows.forEach(row => row.remove());
     
     // 뉴스 추출 입력 필드 초기화
-    if (elements.newsKeyword) elements.newsKeyword.value = '';
     if (elements.newsCount) elements.newsCount.value = '10';
     
     // 메인 뉴스 추출 섹션 확실히 표시
@@ -2524,15 +2539,13 @@ function initKeyboardShortcuts() {
 
 function handleEscapeKey() {
     // 현재 활성 섹션에 따라 뒤로가기 처리
-    const urlInputSection = document.getElementById('urlInputSection');
     const newsSelectionSection = document.getElementById('newsSelectionSection');
     const generatedContentListSection = document.getElementById('generatedContentListSection');
     const apiSettingsSection = document.getElementById('apiSettingsModalSection');
     
     if (apiSettingsSection && apiSettingsSection.style.display !== 'none') {
         hideApiSettingsModal();
-    } else if (urlInputSection && urlInputSection.style.display !== 'none') {
-        hideUrlInputSection();
+    // urlInputSection 제거됨
     } else if (generatedContentListSection && generatedContentListSection.style.display !== 'none') {
         hideAllSections();
     } else if (newsSelectionSection && newsSelectionSection.style.display !== 'none') {
@@ -2568,7 +2581,7 @@ function saveUserPreferences() {
         // 🚨 자동 복원 방지: selectedNewsUrls 저장 제거
         // selectedNewsUrls: selectedNewsUrls,
         newsSort: document.getElementById('newsSortSelect')?.value || 'newest',
-        lastKeyword: document.getElementById('newsKeyword')?.value || '',
+        lastKeyword: '', // 키워드 입력 창이 제거되어 빈 문자열로 고정
         lastCount: document.getElementById('newsCount')?.value || 10,
         timestamp: Date.now()
     };
@@ -2597,12 +2610,7 @@ function loadUserPreferences() {
             }
         }
         
-        if (preferences.lastKeyword) {
-            const keywordInput = document.getElementById('newsKeyword');
-            if (keywordInput) {
-                keywordInput.value = preferences.lastKeyword;
-            }
-        }
+        // 키워드 입력 창이 제거되어 해당 코드 삭제
         
         if (preferences.lastCount) {
             const countInput = document.getElementById('newsCount');
@@ -4373,61 +4381,134 @@ async function loadGeneratedContentListForced() {
                     // 파일을 최신 순으로 정렬
                     files.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                     
-                    contentListElement.innerHTML = files.map((item, index) => {
-                        // 콘텐츠 미리보기 텍스트 생성 
-                        let contentPreview = '';
-                        if (item.content) {
-                            // 마크다운 기호 제거 및 텍스트 정리
-                            contentPreview = item.content
-                                .replace(/[#*`]/g, '')
-                                .replace(/\n+/g, ' ')
-                                .replace(/\s+/g, ' ')
-                                .trim()
-                                .substring(0, 280) + '...';
-                        } else {
-                            contentPreview = '콘텐츠 미리보기를 불러오는 중...';
-                        }
-                        
-                        // 해시태그 추출 (마크다운에서 #태그 찾기)
-                        const keywords = item.content ? 
-                            [...new Set(item.content.match(/#[가-힣a-zA-Z0-9_]+/g) || [])].slice(0, 5) : [];
-                        
-                        return `
-                            <div class="content-item">
-                                <div class="content-item-preview">
-                                    <p class="content-preview-text">${contentPreview}</p>
-                                    
-                                    ${keywords.length > 0 ? `
-                                        <div class="content-item-keywords">
-                                            ${keywords.map(keyword => `<span class="keyword-tag">${keyword}</span>`).join('')}
-                                        </div>
-                                    ` : ''}
-                                </div>
+                    // 완성형 블로그 파일들 그룹핑
+                    const { groups, regularFiles } = groupEnhancedBlogFiles(files);
+                    
+                    // 모든 파일들 (그룹 + 일반 파일) 통합하여 최신 순 정렬
+                    const allItems = [
+                        ...groups.map(group => ({ ...group, isGroup: true })),
+                        ...regularFiles.map(file => ({ ...file, isGroup: false }))
+                    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    
+                    contentListElement.innerHTML = allItems.map((item, index) => {
+                        if (item.isGroup) {
+                            // 완성형 블로그 그룹 처리
+                            const group = item;
+                            let contentPreview = '';
+                            if (group.content) {
+                                contentPreview = group.content
+                                    .replace(/[#*`]/g, '')
+                                    .replace(/\n+/g, ' ')
+                                    .replace(/\s+/g, ' ')
+                                    .trim()
+                                    .substring(0, 280) + '...';
+                            } else {
+                                contentPreview = '콘텐츠 미리보기를 불러오는 중...';
+                            }
+                            
+                            const keywords = group.content ? 
+                                [...new Set(group.content.match(/#[가-힣a-zA-Z0-9_]+/g) || [])].slice(0, 5) : [];
                                 
-                                <div class="content-item-actions">
-                                    <button class="content-action-btn preview-btn" onclick="toggleContentPreview('${item.filename}')">
-                                        <i class="fas fa-eye"></i>
-                                        <span>미리보기</span>
-                                    </button>
-                                    <button class="content-action-btn copy-btn" onclick="copyContentForced('${item.filename}')">
-                                        <i class="fas fa-copy"></i>
-                                        <span>복사</span>
-                                    </button>
-                                    <button class="content-action-btn download-btn" onclick="downloadContentForced('${item.filename}')">
-                                        <i class="fas fa-download"></i>
-                                        <span>다운로드</span>
-                                    </button>
-                                </div>
-                            </div>
-                                </div>
-                                <div class="content-preview" id="preview-${item.filename}" style="display: none;">
-                                    <div class="preview-loading">
-                                        <i class="fas fa-spinner fa-spin"></i>
-                                        <span>콘텐츠 로딩 중...</span>
+                            const firstFile = group.files[0];
+                            
+                            return `
+                                <div class="content-item enhanced-blog-group">
+                                    <div class="content-item-header">
+                                        <span class="enhanced-blog-badge">
+                                            <i class="fas fa-star"></i>
+                                            완성형 블로그
+                                        </span>
+                                        <span class="file-count">${group.files.length}개 파일</span>
+                                    </div>
+                                    
+                                    ${createFileTypeSelector(group.baseName, group.files)}
+                                    
+                                    <div class="content-item-preview">
+                                        <p class="content-preview-text">${contentPreview}</p>
+                                        
+                                        ${keywords.length > 0 ? `
+                                            <div class="content-item-keywords">
+                                                ${keywords.map(keyword => `<span class="keyword-tag">${keyword}</span>`).join('')}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    
+                                    <div class="content-item-actions">
+                                        <button class="content-action-btn preview-btn" onclick="toggleEnhancedBlogPreview('${group.baseName}')">
+                                            <i class="fas fa-eye"></i>
+                                            <span>미리보기</span>
+                                        </button>
+                                        <button class="content-action-btn copy-btn" onclick="copyEnhancedBlogContent('${group.baseName}')">
+                                            <i class="fas fa-copy"></i>
+                                            <span>복사</span>
+                                        </button>
+                                        <button class="content-action-btn download-btn" onclick="downloadEnhancedBlogContent('${group.baseName}')">
+                                            <i class="fas fa-download"></i>
+                                            <span>다운로드</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="content-preview" id="preview-${group.baseName}" style="display: none;">
+                                        <div class="preview-loading">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <span>콘텐츠 로딩 중...</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
+                        } else {
+                            // 일반 파일 처리
+                            let contentPreview = '';
+                            if (item.content) {
+                                contentPreview = item.content
+                                    .replace(/[#*`]/g, '')
+                                    .replace(/\n+/g, ' ')
+                                    .replace(/\s+/g, ' ')
+                                    .trim()
+                                    .substring(0, 280) + '...';
+                            } else {
+                                contentPreview = '콘텐츠 미리보기를 불러오는 중...';
+                            }
+                            
+                            const keywords = item.content ? 
+                                [...new Set(item.content.match(/#[가-힣a-zA-Z0-9_]+/g) || [])].slice(0, 5) : [];
+                            
+                            return `
+                                <div class="content-item">
+                                    <div class="content-item-preview">
+                                        <p class="content-preview-text">${contentPreview}</p>
+                                        
+                                        ${keywords.length > 0 ? `
+                                            <div class="content-item-keywords">
+                                                ${keywords.map(keyword => `<span class="keyword-tag">${keyword}</span>`).join('')}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    
+                                    <div class="content-item-actions">
+                                        <button class="content-action-btn preview-btn" onclick="toggleContentPreview('${item.filename}')">
+                                            <i class="fas fa-eye"></i>
+                                            <span>미리보기</span>
+                                        </button>
+                                        <button class="content-action-btn copy-btn" onclick="copyContentForced('${item.filename}')">
+                                            <i class="fas fa-copy"></i>
+                                            <span>복사</span>
+                                        </button>
+                                        <button class="content-action-btn download-btn" onclick="downloadContentForced('${item.filename}')">
+                                            <i class="fas fa-download"></i>
+                                            <span>다운로드</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="content-preview" id="preview-${item.filename}" style="display: none;">
+                                        <div class="preview-loading">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <span>콘텐츠 로딩 중...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
                     }).join('');
                 }
                 console.log('✅ 강제 렌더링 완료');
@@ -4953,4 +5034,281 @@ function getTimeAgo(date) {
     return date.toLocaleDateString('ko-KR');
 }
 
-// ============================================================================
+// 파일 유형 선택 토글 관리
+function updateFormatSelectionVisibility() {
+    const formatSelectionContainer = document.getElementById('formatSelectionContainer');
+    const enhancedBlogBtn = document.getElementById('generateSelectedEnhancedBlogBtn2');
+    
+    if (formatSelectionContainer && enhancedBlogBtn) {
+        // 완성형 블로그 생성 버튼이 활성화되어 있을 때만 토글 표시
+        const shouldShow = selectedNewsUrls.length > 0;
+        formatSelectionContainer.style.display = shouldShow ? 'block' : 'none';
+    }
+}
+
+// 선택된 파일 형식 가져오기
+function getSelectedFormats() {
+    const formatCheckboxes = ['formatMd', 'formatNaver', 'formatTistory', 'formatWordpress'];
+    const selectedFormats = [];
+    
+    formatCheckboxes.forEach(checkboxId => {
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox && checkbox.checked) {
+            selectedFormats.push(checkbox.value);
+        }
+    });
+    
+    // 아무것도 선택되지 않았으면 기본값 (md)
+    if (selectedFormats.length === 0) {
+        selectedFormats.push('md');
+    }
+    
+    return selectedFormats;
+}
+
+// 완성형 블로그 생성 처리 (수정)
+async function handleGenerateSelectedEnhancedBlogNews() {
+    const selectedFormats = getSelectedFormats();
+    console.log('선택된 형식:', selectedFormats);
+    await generateSelectedNews('enhanced_blog', selectedFormats);
+}
+
+// 완성형 블로그 파일인지 확인
+function isEnhancedBlogFile(filename) {
+    return filename && filename.includes('_enhanced_blog');
+}
+
+// 완성형 블로그 파일들을 그룹핑
+function groupEnhancedBlogFiles(files) {
+    const groups = {};
+    const regularFiles = [];
+    
+    files.forEach(file => {
+        if (isEnhancedBlogFile(file.filename)) {
+            // enhanced_blog 파일의 기본명 추출 (확장자와 플랫폼명 제거)
+            const baseName = file.filename.replace(/\.(md|html)$/, '').replace(/_(naver|tistory|wordpress)$/, '');
+            
+            if (!groups[baseName]) {
+                groups[baseName] = {
+                    baseName,
+                    files: [],
+                    content: file.content || '',
+                    created_at: file.created_at
+                };
+            }
+            
+            // 파일 유형 결정
+            let fileType = 'md';
+            if (file.filename.endsWith('_naver.html')) fileType = 'naver';
+            else if (file.filename.endsWith('_tistory.html')) fileType = 'tistory';
+            else if (file.filename.endsWith('_wordpress.html')) fileType = 'wordpress';
+            
+            groups[baseName].files.push({
+                ...file,
+                fileType
+            });
+        } else {
+            regularFiles.push(file);
+        }
+    });
+    
+    return { groups: Object.values(groups), regularFiles };
+}
+
+// 완성형 블로그 파일 유형 선택기 HTML 생성
+function createFileTypeSelector(groupBaseName, files) {
+    const availableTypes = files.map(f => f.fileType);
+    
+    return `
+        <div class="file-type-selector" id="selector-${groupBaseName}">
+            <div class="file-type-options">
+                ${availableTypes.map(type => {
+                    const typeInfo = {
+                        md: { icon: 'fab fa-markdown', label: 'Markdown' },
+                        naver: { icon: 'fas fa-globe', label: '네이버 블로그' },
+                        tistory: { icon: 'fas fa-blog', label: '티스토리' },
+                        wordpress: { icon: 'fab fa-wordpress', label: '워드프레스' }
+                    };
+                    
+                    const info = typeInfo[type] || { icon: 'fas fa-file', label: type };
+                    const isFirst = type === availableTypes[0];
+                    
+                    return `
+                        <button class="file-type-btn ${isFirst ? 'active' : ''}" 
+                                onclick="switchFileType('${groupBaseName}', '${type}')"
+                                data-type="${type}">
+                            <i class="${info.icon}"></i>
+                            <span>${info.label}</span>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// 파일 유형 전환 함수
+function switchFileType(groupBaseName, selectedType) {
+    const selector = document.getElementById(`selector-${groupBaseName}`);
+    const previewContainer = document.getElementById(`preview-${groupBaseName}`);
+    
+    if (!selector || !previewContainer) return;
+    
+    // 버튼 상태 업데이트
+    selector.querySelectorAll('.file-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === selectedType);
+    });
+    
+    // 해당 파일의 콘텐츠로 미리보기 업데이트
+    updateEnhancedBlogPreview(groupBaseName, selectedType);
+}
+
+// 완성형 블로그 미리보기 토글
+function toggleEnhancedBlogPreview(groupBaseName) {
+    const previewDiv = document.getElementById(`preview-${groupBaseName}`);
+    if (!previewDiv) return;
+    
+    if (previewDiv.style.display === 'none') {
+        // 현재 선택된 파일 유형 가져오기
+        const selector = document.getElementById(`selector-${groupBaseName}`);
+        const activeBtn = selector ? selector.querySelector('.file-type-btn.active') : null;
+        const selectedType = activeBtn ? activeBtn.dataset.type : 'md';
+        
+        updateEnhancedBlogPreview(groupBaseName, selectedType);
+        previewDiv.style.display = 'block';
+    } else {
+        previewDiv.style.display = 'none';
+    }
+}
+
+// 완성형 블로그 미리보기 업데이트
+async function updateEnhancedBlogPreview(groupBaseName, selectedType) {
+    const previewDiv = document.getElementById(`preview-${groupBaseName}`);
+    if (!previewDiv) return;
+    
+    try {
+        // 선택된 유형에 맞는 파일명 생성
+        let filename = `${groupBaseName}.md`;
+        if (selectedType === 'naver') filename = `${groupBaseName}_naver.html`;
+        else if (selectedType === 'tistory') filename = `${groupBaseName}_tistory.html`;
+        else if (selectedType === 'wordpress') filename = `${groupBaseName}_wordpress.html`;
+        
+        // 파일 내용 가져오기
+        const response = await fetch(`${API_BASE_URL}/api/generated-content/${filename}`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            let content = result.data.content;
+            
+            if (selectedType === 'md') {
+                // 마크다운 형식으로 표시
+                previewDiv.innerHTML = `
+                    <div class="content-preview-header">
+                        <h4><i class="fab fa-markdown"></i> Markdown 미리보기</h4>
+                    </div>
+                    <div class="content-preview-body">
+                        <pre class="markdown-preview">${content}</pre>
+                    </div>
+                `;
+            } else {
+                // HTML 형식으로 표시
+                const platformNames = {
+                    naver: '네이버 블로그',
+                    tistory: '티스토리', 
+                    wordpress: '워드프레스'
+                };
+                
+                previewDiv.innerHTML = `
+                    <div class="content-preview-header">
+                        <h4><i class="fas fa-globe"></i> ${platformNames[selectedType]} 미리보기</h4>
+                    </div>
+                    <div class="content-preview-body">
+                        <div class="html-preview">${content}</div>
+                    </div>
+                `;
+            }
+        } else {
+            previewDiv.innerHTML = `
+                <div class="preview-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>미리보기를 불러올 수 없습니다.</span>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('미리보기 로드 실패:', error);
+        previewDiv.innerHTML = `
+            <div class="preview-error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>미리보기 로드 중 오류가 발생했습니다.</span>
+            </div>
+        `;
+    }
+}
+
+// 완성형 블로그 콘텐츠 복사
+async function copyEnhancedBlogContent(groupBaseName) {
+    try {
+        // 현재 선택된 파일 유형 가져오기
+        const selector = document.getElementById(`selector-${groupBaseName}`);
+        const activeBtn = selector ? selector.querySelector('.file-type-btn.active') : null;
+        const selectedType = activeBtn ? activeBtn.dataset.type : 'md';
+        
+        // 선택된 유형에 맞는 파일명 생성
+        let filename = `${groupBaseName}.md`;
+        if (selectedType === 'naver') filename = `${groupBaseName}_naver.html`;
+        else if (selectedType === 'tistory') filename = `${groupBaseName}_tistory.html`;
+        else if (selectedType === 'wordpress') filename = `${groupBaseName}_wordpress.html`;
+        
+        // 파일 내용 가져오기
+        const response = await fetch(`${API_BASE_URL}/api/generated-content/${filename}`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            await navigator.clipboard.writeText(result.data.content);
+            
+            const platformNames = {
+                md: 'Markdown',
+                naver: '네이버 블로그',
+                tistory: '티스토리',
+                wordpress: '워드프레스'
+            };
+            
+            showToast(`${platformNames[selectedType]} 콘텐츠가 클립보드에 복사되었습니다.`, 'success');
+        } else {
+            showToast('콘텐츠 복사에 실패했습니다.', 'error');
+        }
+    } catch (error) {
+        console.error('복사 실패:', error);
+        showToast('콘텐츠 복사 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+// 완성형 블로그 콘텐츠 다운로드
+async function downloadEnhancedBlogContent(groupBaseName) {
+    try {
+        // 현재 선택된 파일 유형 가져오기
+        const selector = document.getElementById(`selector-${groupBaseName}`);
+        const activeBtn = selector ? selector.querySelector('.file-type-btn.active') : null;
+        const selectedType = activeBtn ? activeBtn.dataset.type : 'md';
+        
+        // 선택된 유형에 맞는 파일명 생성
+        let filename = `${groupBaseName}.md`;
+        if (selectedType === 'naver') filename = `${groupBaseName}_naver.html`;
+        else if (selectedType === 'tistory') filename = `${groupBaseName}_tistory.html`;
+        else if (selectedType === 'wordpress') filename = `${groupBaseName}_wordpress.html`;
+        
+        // 파일 다운로드
+        const link = document.createElement('a');
+        link.href = `${API_BASE_URL}/api/download/${filename}`;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('파일 다운로드가 시작되었습니다.', 'success');
+    } catch (error) {
+        console.error('다운로드 실패:', error);
+        showToast('파일 다운로드 중 오류가 발생했습니다.', 'error');
+    }
+}

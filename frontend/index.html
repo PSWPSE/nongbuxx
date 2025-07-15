@@ -63,10 +63,6 @@
                         <div class="card-header">
                             <h2><i class="fas fa-newspaper"></i> 뉴스 링크 추출</h2>
                             <div class="header-controls">
-                                <button type="button" id="directUrlBtn" class="btn btn-header">
-                                    <i class="fas fa-link"></i>
-                                    URL 직접 입력
-                                </button>
                                 <button type="button" id="sourceManagementBtn" class="btn btn-header">
                                     <i class="fas fa-globe"></i>
                                     출처 설정
@@ -82,25 +78,16 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="newsKeyword">검색 키워드 (선택사항)</label>
-                            <input 
-                                type="text" 
-                                id="newsKeyword" 
-                                placeholder="예: Tesla AI, Bitcoin, 주식 시장"
-                            >
-                            <small class="input-hint">키워드를 입력하지 않으면 최신 뉴스를 추출합니다</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="newsCount">추출할 뉴스 개수</label>
-                            <input 
-                                type="number" 
-                                id="newsCount" 
-                                min="1" 
-                                max="50" 
-                                value="10"
-                            >
-                            <small class="input-hint">1~50개 사이로 설정해주세요</small>
-                        </div>
+                                <label for="newsCount">추출할 뉴스 개수</label>
+                                <input 
+                                    type="number" 
+                                    id="newsCount" 
+                                    min="1" 
+                                    max="50" 
+                                    value="10"
+                                >
+                                <small class="input-hint">1~50개 사이로 설정해주세요</small>
+                            </div>
                         <div class="form-group">
                             <label for="newsSourcesSelect">출처 선택</label>
                             <div class="source-selection-container">
@@ -124,58 +111,6 @@
                                 초기화
                             </button>
                         </div>
-                    </div>
-                </section>
-
-                <!-- URL Input Section (Sub Flow - Collapsible) -->
-                <section class="input-section" id="urlInputSection" style="display: none;">
-                    <div class="input-card">
-                        <div class="card-header">
-                            <h2><i class="fas fa-link"></i> URL 직접 입력</h2>
-                            <div class="header-controls">
-                                <!-- 헤더 컨트롤 공간 -->
-                            </div>
-                        </div>
-                        <form id="urlForm">
-                            <div class="url-inputs-container" id="urlInputsContainer">
-                                <div class="url-input-row" data-index="0">
-                                    <div class="form-group">
-                                        <div class="input-with-buttons">
-                                            <input 
-                                                type="url" 
-                                                id="urlInput-0" 
-                                                name="urlInput[]"
-                                                placeholder="https://news.example.com/article"
-                                                required
-                                                data-clicked="false"
-                                            >
-                                            <button type="button" class="btn btn-icon add-url-btn" onclick="addUrlInput(0)">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary" data-content-type="standard">
-                                    <i class="fas fa-magic"></i>
-                                    콘텐츠 생성
-                                </button>
-                                <button type="button" id="generateBlogBtn" class="btn btn-success">
-                                    <i class="fas fa-blog"></i>
-                                    블로그 콘텐츠 생성
-                                </button>
-                                <button type="button" id="generateEnhancedBlogBtn" class="btn btn-info">
-                                    <i class="fas fa-star"></i>
-                                    완성형 블로그 콘텐츠 생성
-                                </button>
-                                <button type="button" id="resetUrlInputBtn" class="btn btn-secondary">
-                                    <i class="fas fa-refresh"></i>
-                                    초기화
-                                </button>
-                            </div>
-                        </form>
                     </div>
                 </section>
 
@@ -239,18 +174,75 @@
                             <p>뉴스 추출 탭에서 뉴스를 선택해주세요.</p>
                         </div>
                         <div class="generation-options">
+                            <!-- 완성형 블로그 파일 유형 선택 -->
+                            <div class="format-selection-container" id="formatSelectionContainer" style="display: none;">
+                                <div class="format-selection-header">
+                                    <h4><i class="fas fa-file-alt"></i> 생성할 파일 유형 선택</h4>
+                                    <p class="format-description">원하는 블로그 플랫폼에 맞는 파일만 선택하세요</p>
+                                </div>
+                                <div class="format-options">
+                                    <label class="format-option">
+                                        <input type="checkbox" id="formatNaver" value="naver" checked>
+                                        <span class="format-label">
+                                            <i class="fas fa-globe"></i>
+                                            <span>네이버 블로그</span>
+                                        </span>
+                                    </label>
+                                    <label class="format-option">
+                                        <input type="checkbox" id="formatTistory" value="tistory">
+                                        <span class="format-label">
+                                            <i class="fas fa-blog"></i>
+                                            <span>티스토리</span>
+                                        </span>
+                                    </label>
+                                    <label class="format-option">
+                                        <input type="checkbox" id="formatWordpress" value="wordpress">
+                                        <span class="format-label">
+                                            <i class="fab fa-wordpress"></i>
+                                            <span>워드프레스</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- 콘텐츠 타입 선택 -->
+                            <div class="content-type-selection">
+                                <div class="content-type-header">
+                                    <h4><i class="fas fa-palette"></i> 콘텐츠 타입 선택</h4>
+                                    <p class="content-type-description">생성할 콘텐츠의 스타일을 선택하세요 (하나만 선택 가능)</p>
+                                </div>
+                                <div class="content-type-options">
+                                    <label class="content-type-option">
+                                        <input type="radio" name="contentType" value="standard" checked>
+                                        <span class="content-type-label">
+                                            <i class="fas fa-magic"></i>
+                                            <span>Markdown (.md)</span>
+                                            <small>표준 마크다운 형식</small>
+                                        </span>
+                                    </label>
+                                    <label class="content-type-option">
+                                        <input type="radio" name="contentType" value="threads">
+                                        <span class="content-type-label">
+                                            <i class="fas fa-comment-dots"></i>
+                                            <span>Threads</span>
+                                            <small>490자 미만 짧은 콘텐츠</small>
+                                        </span>
+                                    </label>
+                                    <label class="content-type-option">
+                                        <input type="radio" name="contentType" value="enhanced_blog">
+                                        <span class="content-type-label">
+                                            <i class="fas fa-star"></i>
+                                            <span>완성형 블로그</span>
+                                            <small>플랫폼별 다중 형식 지원</small>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            
                             <div class="form-actions">
-                                <button type="button" id="generateSelectedBtn2" class="btn btn-success" disabled>
+                                <button type="button" id="generateSelectedBtn2" class="btn btn-primary" disabled>
                                     <i class="fas fa-magic"></i>
-                                    선택된 뉴스 일괄 생성
-                                </button>
-                                <button type="button" id="generateSelectedBlogBtn2" class="btn btn-info" disabled>
-                                    <i class="fas fa-blog"></i>
-                                    선택된 뉴스 블로그 생성
-                                </button>
-                                <button type="button" id="generateSelectedEnhancedBlogBtn2" class="btn btn-warning" disabled>
-                                    <i class="fas fa-star"></i>
-                                    선택된 뉴스 완성형 블로그 생성
+                                    선택된 뉴스 생성
                                 </button>
                             </div>
                         </div>

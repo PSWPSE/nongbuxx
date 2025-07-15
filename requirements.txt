@@ -17,6 +17,7 @@ flask-socketio>=5.3.0
 # Additional utilities for web deployment
 gunicorn>=21.2.0
 python-multipart>=0.0.6
+psutil>=5.9.0
 
 # Development dependencies
 pytest>=7.4.0

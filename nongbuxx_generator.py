@@ -26,23 +26,126 @@ class NongbuxxGenerator:
         self.api_provider = api_provider
         self.api_key = api_key
         self.save_intermediate = save_intermediate
+        self.extractor = None
+        self.converter = None
+        self.blog_generator = None
         
-        # 출력 디렉토리 설정
-        self.generated_dir = Path('generated_content')
-        self.extracted_dir = Path('extracted_articles')
+        # 초기화 상태 추적
+        self._initialization_errors = []
+        self._is_properly_initialized = False
         
-        # 디렉토리 생성
-        self.generated_dir.mkdir(exist_ok=True)
-        if save_intermediate:
-            self.extracted_dir.mkdir(exist_ok=True)
+        try:
+            # 출력 디렉토리 설정
+            self.generated_dir = Path('generated_content')
+            self.extracted_dir = Path('extracted_articles')
+            
+            # 디렉토리 생성
+            self.generated_dir.mkdir(exist_ok=True)
+            if save_intermediate:
+                self.extracted_dir.mkdir(exist_ok=True)
+            
+            # 🛡️ 안전한 모듈 초기화 (각각 개별적으로 검증)
+            self._initialize_components()
+            
+            # 최종 초기화 검증
+            self._validate_initialization()
+            
+            key_status = "사용자 제공" if api_key else "환경변수"
+            print(f"NONGBUXX Generator 초기화 완료 (API: {api_provider}, 키: {key_status})")
+            
+        except Exception as e:
+            self._initialization_errors.append(f"전체 초기화 실패: {str(e)}")
+            raise ValueError(f"NONGBUXX Generator 초기화 실패: {str(e)}")
+    
+    def _initialize_components(self):
+        """각 컴포넌트를 안전하게 초기화"""
+        # WebExtractor 초기화
+        try:
+            self.extractor = WebExtractor(use_selenium=False, save_to_file=self.save_intermediate)
+            if self.extractor is None:
+                raise ValueError("WebExtractor 초기화 결과가 None입니다")
+            print("✅ WebExtractor 초기화 성공")
+        except Exception as e:
+            error_msg = f"WebExtractor 초기화 실패: {str(e)}"
+            self._initialization_errors.append(error_msg)
+            raise ValueError(error_msg)
         
-        # 모듈 초기화
-        self.extractor = WebExtractor(use_selenium=False, save_to_file=save_intermediate)
-        self.converter = NewsConverter(api_provider=api_provider, api_key=api_key)
-        self.blog_generator = BlogContentGenerator(api_provider=api_provider, api_key=api_key)
+        # NewsConverter 초기화
+        try:
+            self.converter = NewsConverter(api_provider=self.api_provider, api_key=self.api_key)
+            if self.converter is None:
+                raise ValueError("NewsConverter 초기화 결과가 None입니다")
+            
+            # API 클라이언트 확인
+            if self.api_provider == 'anthropic' and not hasattr(self.converter, 'anthropic_client'):
+                raise ValueError("NewsConverter Anthropic 클라이언트 초기화 실패")
+            elif self.api_provider == 'openai' and not hasattr(self.converter, 'openai_client'):
+                raise ValueError("NewsConverter OpenAI 클라이언트 초기화 실패")
+            
+            print("✅ NewsConverter 초기화 성공")
+        except Exception as e:
+            error_msg = f"NewsConverter 초기화 실패: {str(e)}"
+            self._initialization_errors.append(error_msg)
+            raise ValueError(error_msg)
         
-        key_status = "사용자 제공" if api_key else "환경변수"
-        print(f"NONGBUXX Generator 초기화 완료 (API: {api_provider}, 키: {key_status})")
+        # BlogContentGenerator 초기화
+        try:
+            self.blog_generator = BlogContentGenerator(api_provider=self.api_provider, api_key=self.api_key)
+            if self.blog_generator is None:
+                raise ValueError("BlogContentGenerator 초기화 결과가 None입니다")
+            print("✅ BlogContentGenerator 초기화 성공")
+        except Exception as e:
+            error_msg = f"BlogContentGenerator 초기화 실패: {str(e)}"
+            self._initialization_errors.append(error_msg)
+            raise ValueError(error_msg)
+    
+    def _validate_initialization(self):
+        """초기화 상태 검증"""
+        validation_errors = []
+        
+        # 필수 컴포넌트 존재 확인
+        if self.extractor is None:
+            validation_errors.append("extractor가 None입니다")
+        elif not hasattr(self.extractor, 'extract_data'):
+            validation_errors.append("extractor에 extract_data 메서드가 없습니다")
+        
+        if self.converter is None:
+            validation_errors.append("converter가 None입니다")
+        elif not hasattr(self.converter, 'convert_from_data'):
+            validation_errors.append("converter에 convert_from_data 메서드가 없습니다")
+        
+        if self.blog_generator is None:
+            validation_errors.append("blog_generator가 None입니다")
+        elif not hasattr(self.blog_generator, 'generate_rich_text_blog_content'):
+            validation_errors.append("blog_generator에 generate_rich_text_blog_content 메서드가 없습니다")
+        
+        # 메서드 존재 확인
+        if not hasattr(self, 'batch_generate'):
+            validation_errors.append("batch_generate 메서드가 없습니다")
+        elif not callable(getattr(self, 'batch_generate', None)):
+            validation_errors.append("batch_generate가 호출 가능하지 않습니다")
+        
+        if validation_errors:
+            error_msg = "초기화 검증 실패: " + "; ".join(validation_errors)
+            self._initialization_errors.extend(validation_errors)
+            raise ValueError(error_msg)
+        
+        self._is_properly_initialized = True
+        print("✅ 모든 컴포넌트 초기화 검증 완료")
+    
+    def is_ready(self):
+        """Generator가 사용 준비가 되었는지 확인"""
+        return (
+            self._is_properly_initialized and 
+            self.extractor is not None and 
+            self.converter is not None and 
+            self.blog_generator is not None and
+            len(self._initialization_errors) == 0
+        )
+    
+    def get_initialization_errors(self):
+        """초기화 중 발생한 에러 목록 반환"""
+        return self._initialization_errors.copy()
     
     def validate_url(self, url):
         """URL 유효성 검사"""
@@ -62,14 +165,15 @@ class NongbuxxGenerator:
         except:
             return 'article'
     
-    def generate_content(self, url, custom_filename=None, content_type='standard'):
+    def generate_content(self, url, custom_filename=None, content_type='standard', selected_formats=None):
         """
         URL에서 콘텐츠를 추출하고 마크다운으로 변환 (최적화된 버전)
         
         Args:
             url: 추출할 뉴스 기사 URL
             custom_filename: 사용자 지정 파일명 (선택사항)
-            content_type: 콘텐츠 타입 ('standard' 또는 'blog')
+            content_type: 콘텐츠 타입 ('standard', 'blog', 'enhanced_blog')
+            selected_formats: 선택된 파일 형식 목록 (완성형 블로그 전용)
             
         Returns:
             dict: 결과 정보 (성공 여부, 파일 경로 등)
@@ -113,16 +217,36 @@ class NongbuxxGenerator:
             rich_content = self.blog_generator.generate_rich_text_blog_content(extracted_content)
             converted_content = rich_content['markdown']  # 기본적으로 마크다운 반환
             
-            # 추가 형식들도 파일로 저장
+            # 추가 형식들도 파일로 저장 (선택된 형식만)
             domain = self.extract_domain_name(url)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename_prefix = f"{domain}_{timestamp}_enhanced_blog"
             
-            self.blog_generator.save_blog_content(rich_content, filename_prefix)
-            print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (HTML, 플랫폼별 최적화 포함)")
+            # 선택된 형식만 저장
+            saved_files = self.blog_generator.save_blog_content(rich_content, filename_prefix, selected_formats)
+            print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (선택된 형식: {selected_formats or 'all'})")
+            
+            # 생성된 파일 정보 반환에 추가
+            return {
+                'success': True,
+                'output_file': Path(saved_files.get('md', list(saved_files.values())[0])),  # 기본적으로 md 파일 경로
+                'saved_files': saved_files,  # 생성된 모든 파일 정보
+                'title': extracted_content.get('title', '제목 없음'),
+                'content_type': content_type,
+                'url': url,
+                'timestamp': datetime.now().isoformat(),
+                'processing_time': time.time() - start_time
+            }
             
         elif content_type == 'blog':
             converted_content = self.converter.convert_from_data_blog(extracted_content)
+        elif content_type == 'threads':
+            # Threads용 짧은 콘텐츠 생성 (490자 미만)
+            converted_content = self.converter.generate_threads_content({
+                'title': extracted_content.get('title', ''),
+                'description': extracted_content.get('description', ''),
+                'content': extracted_content['content']['text']
+            })
         else:
             converted_content = self.converter.convert_from_data(extracted_content)
         
@@ -136,7 +260,7 @@ class NongbuxxGenerator:
         conversion_time = time.time() - conversion_start
         print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
         
-        # Step 3: 파일명 생성 및 저장
+        # Step 3: 파일명 생성 및 저장 (일반 콘텐츠만 해당)
         if custom_filename:
             filename = f"{custom_filename}_{content_type}.md"
         else:
@@ -173,13 +297,14 @@ class NongbuxxGenerator:
                 'url': url
             }
     
-    def batch_generate(self, urls, content_type='standard', max_workers=3):
+    def batch_generate(self, urls, content_type='standard', selected_formats=None, max_workers=3):
         """
         다중 URL에서 콘텐츠를 병렬로 생성 (성능 최적화)
         
         Args:
             urls: URL 목록
-            content_type: 콘텐츠 타입 ('standard' 또는 'blog')
+            content_type: 콘텐츠 타입 ('standard', 'blog', 'enhanced_blog')
+            selected_formats: 선택된 파일 형식 목록 (완성형 블로그 전용)
             max_workers: 최대 병렬 처리 수 (기본값: 3)
             
         Returns:
@@ -189,6 +314,8 @@ class NongbuxxGenerator:
             return []
         
         print(f"\n🚀 병렬 배치 생성 시작: {len(urls)}개 URL (타입: {content_type})")
+        if content_type == 'enhanced_blog' and selected_formats:
+            print(f"📋 선택된 형식: {selected_formats}")
         print(f"⚡ 최대 병렬 처리 수: {max_workers}")
         
         start_time = time.time()
@@ -198,7 +325,7 @@ class NongbuxxGenerator:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # 각 URL에 대한 future 생성
             future_to_url = {
-                executor.submit(self.generate_content, url, None, content_type): url 
+                executor.submit(self.generate_content, url, None, content_type, selected_formats): url 
                 for url in urls
             }
             

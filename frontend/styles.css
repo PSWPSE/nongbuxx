@@ -7180,3 +7180,339 @@ textarea:focus-visible {
     background: #8b5cf6;
     color: white;
 }
+
+/* 파일 유형 선택 토글 스타일 */
+.format-selection-container {
+    margin-bottom: 20px;
+    padding: 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.format-selection-header h4 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.format-description {
+    margin: 0 0 16px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.format-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.format-option {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.format-option:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.format-option input[type="checkbox"] {
+    margin-right: 10px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.format-label {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #333;
+}
+
+.format-label i {
+    margin-right: 8px;
+    font-size: 16px;
+    color: #666;
+}
+
+.format-option input[type="checkbox"]:checked + .format-label {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.format-option input[type="checkbox"]:checked + .format-label i {
+    color: #007bff;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .format-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 파일 유형 선택기 스타일 */
+.file-type-selector {
+    margin: 12px 0;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.file-type-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.file-type-btn {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    color: #666;
+}
+
+.file-type-btn:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.file-type-btn.active {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: #fff;
+}
+
+.file-type-btn i {
+    margin-right: 6px;
+    font-size: 14px;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .file-type-options {
+        flex-direction: column;
+    }
+    
+    .file-type-btn {
+        justify-content: center;
+    }
+}
+
+/* 완성형 블로그 그룹 스타일 */
+.enhanced-blog-group {
+    border: 2px solid #ffc107;
+    background: linear-gradient(135deg, #fff9c4 0%, #ffffff 100%);
+}
+
+.content-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.enhanced-blog-badge {
+    display: flex;
+    align-items: center;
+    background-color: #ffc107;
+    color: #212529;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.enhanced-blog-badge i {
+    margin-right: 4px;
+    font-size: 12px;
+}
+
+.file-count {
+    font-size: 12px;
+    color: #6c757d;
+    background-color: #f8f9fa;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* 기존 스타일 유지 */
+
+/* 콘텐츠 타입 선택 UI */
+.content-type-selection {
+    margin: 24px 0;
+    padding: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.content-type-header {
+    margin-bottom: 16px;
+}
+
+.content-type-header h4 {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.content-type-header h4 i {
+    color: var(--primary-color);
+    font-size: 14px;
+}
+
+.content-type-description {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 0;
+}
+
+.content-type-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.content-type-option {
+    position: relative;
+    display: block;
+    cursor: pointer;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    background: var(--bg-card);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.content-type-option:hover {
+    border-color: var(--primary-color);
+    background: var(--bg-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.content-type-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.content-type-option input[type="radio"]:checked + .content-type-label {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.content-type-option input[type="radio"]:checked ~ * {
+    border-color: var(--primary-color);
+}
+
+.content-type-option:has(input[type="radio"]:checked) {
+    border-color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.05);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.content-type-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    pointer-events: none;
+    transition: all 0.2s ease;
+}
+
+.content-type-label i {
+    color: var(--primary-color);
+    font-size: 18px;
+    margin-top: 2px;
+    min-width: 18px;
+}
+
+.content-type-label > span:last-child {
+    flex: 1;
+}
+
+.content-type-label > span > span {
+    display: block;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.content-type-label small {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* Threads 아이콘을 위한 특별 스타일 */
+.content-type-option .fa-comment-dots {
+    color: var(--primary-color);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .content-type-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .content-type-option {
+        padding: 14px;
+    }
+    
+    .content-type-label {
+        gap: 10px;
+    }
+    
+    .content-type-label i {
+        font-size: 16px;
+    }
+}
+
+/* 완성형 블로그 형식 선택 컨테이너 숨김 처리 */
+.format-selection-container {
+    transition: all 0.3s ease;
+}
+
+.format-selection-container[style*="display: none"] {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+}
+
+/* 접근성 개선 */
+.content-type-option:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.content-type-option input[type="radio"]:focus {
+    outline: none;
+}
