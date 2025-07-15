@@ -415,12 +415,9 @@ class NongbuxxGenerator:
         
         # 완성형 블로그인 경우
         if content_type == 'enhanced_blog':
-            blog_result = self.blog_generator.generate_blog_content(
-                extracted_content, 
-                selected_formats=selected_formats
-            )
+            blog_result = self.blog_generator.generate_rich_text_blog_content(extracted_content)
             
-            if blog_result['success']:
+            if blog_result:
                 # 🔧 고유한 파일명 생성 (마이크로초 + 인덱스 포함)
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 microsecond = datetime.now().microsecond
@@ -439,12 +436,12 @@ class NongbuxxGenerator:
                 print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
                 
                 # 메인 마크다운 파일 경로
-                main_file = saved_files[0] if saved_files else None
+                main_file = saved_files.get('md') if saved_files else None
                 
                 return {
                     'success': True,
                     'url': url,
-                    'title': blog_result['title'],
+                    'title': blog_result['meta_info']['title'],
                     'output_file': Path(main_file) if main_file else None,
                     'all_files': saved_files,
                     'timestamp': datetime.now().isoformat(),
@@ -454,7 +451,7 @@ class NongbuxxGenerator:
             else:
                 return {
                     'success': False,
-                    'error': f'Blog generation failed: {blog_result.get("error", "Unknown error")}',
+                    'error': f'Blog generation failed: 콘텐츠 생성 중 오류가 발생했습니다.',
                     'url': url
                 }
         else:
