@@ -739,7 +739,9 @@ async function generateContent(contentType = 'standard') {
         // 🚀 개선된 에러 메시지
         let userFriendlyMessage = error.message;
         
-        if (error.message.includes('INVALID_API_PROVIDER') || error.message.includes('API provider must be')) {
+        if (error.message.includes('Maximum 20 URLs allowed') || error.message.includes('20 URLs')) {
+            userFriendlyMessage = `⚠️ 뉴스 개수 제한: 최대 20개의 뉴스만 선택할 수 있습니다. 타임아웃 방지를 위한 제한입니다.`;
+        } else if (error.message.includes('INVALID_API_PROVIDER') || error.message.includes('API provider must be')) {
             userFriendlyMessage = `🔑 API 키 미설정: 우측 상단 'API 키 설정' 버튼을 클릭하여 Anthropic 또는 OpenAI API 키를 설정해주세요.`;
         } else if (error.message.includes('network') || error.message.includes('연결')) {
             userFriendlyMessage = `🌐 네트워크 오류: 인터넷 연결을 확인하고 다시 시도해주세요.`;
@@ -1139,6 +1141,12 @@ function showNewsSelectionSection() {
         elements.newsExtractionInfo.innerHTML = `
             <h3>뉴스 추출 완료</h3>
             <p>총 ${extractedNews.length}개의 뉴스를 추출했습니다. 콘텐츠로 변환할 뉴스를 선택해주세요.</p>
+            ${extractedNews.length > 20 ? `
+                <div class="news-limit-notice">
+                    <i class="fas fa-info-circle"></i>
+                    <span>⚠️ 타임아웃 방지를 위해 최대 20개의 뉴스만 선택할 수 있습니다.</span>
+                </div>
+            ` : ''}
             ${sourceStatsHtml}
         `;
     }
@@ -1290,6 +1298,12 @@ function toggleNewsSelection(index) {
         newsItem.classList.remove('selected');
         checkbox.classList.remove('checked');
     } else {
+        // 🚨 20개 제한 체크
+        if (selectedNewsUrls.length >= 20) {
+            showToast('⚠️ 최대 20개의 뉴스만 선택할 수 있습니다. 타임아웃 방지를 위한 제한입니다.', 'warning');
+            return;
+        }
+        
         // 선택
         selectedNewsUrls.push(article.url);
         newsItem.classList.add('selected');
@@ -1362,14 +1376,31 @@ function updateGenerateButtonState() {
 }
 
 function selectAllNews() {
-    selectedNewsUrls = extractedNews.map(article => article.url);
-    elements.newsList.querySelectorAll('.news-item').forEach(item => {
-        item.classList.add('selected');
-        item.querySelector('.news-checkbox').classList.add('checked');
-    });
-    updateSelectedCount();
-    saveUserPreferences();
-    showToast('모든 뉴스가 선택되었습니다.', 'info');
+    // 🚨 20개 제한 체크
+    if (extractedNews.length > 20) {
+        selectedNewsUrls = extractedNews.slice(0, 20).map(article => article.url);
+        elements.newsList.querySelectorAll('.news-item').forEach((item, index) => {
+            if (index < 20) {
+                item.classList.add('selected');
+                item.querySelector('.news-checkbox').classList.add('checked');
+            } else {
+                item.classList.remove('selected');
+                item.querySelector('.news-checkbox').classList.remove('checked');
+            }
+        });
+        updateSelectedCount();
+        saveUserPreferences();
+        showToast(`⚠️ 최대 20개만 선택되었습니다. (총 ${extractedNews.length}개 중 20개)`, 'warning');
+    } else {
+        selectedNewsUrls = extractedNews.map(article => article.url);
+        elements.newsList.querySelectorAll('.news-item').forEach(item => {
+            item.classList.add('selected');
+            item.querySelector('.news-checkbox').classList.add('checked');
+        });
+        updateSelectedCount();
+        saveUserPreferences();
+        showToast('모든 뉴스가 선택되었습니다.', 'info');
+    }
 }
 
 function deselectAllNews() {
@@ -1570,6 +1601,8 @@ async function generateSelectedNews(contentType = 'standard') {
         
         if (error.message.includes('timeout') || error.message.includes('초과')) {
             userFriendlyMessage = `⏱️ 처리 시간 초과: 선택한 뉴스가 너무 많거나 서버가 바쁩니다. 뉴스 개수를 줄이고 다시 시도해주세요.`;
+        } else if (error.message.includes('Maximum 20 URLs allowed') || error.message.includes('20 URLs')) {
+            userFriendlyMessage = `⚠️ 뉴스 개수 제한: 최대 20개의 뉴스만 선택할 수 있습니다. 타임아웃 방지를 위한 제한입니다.`;
         } else if (error.message.includes('INVALID_API_PROVIDER') || error.message.includes('API provider must be')) {
             userFriendlyMessage = `🔑 API 키 미설정: 우측 상단 'API 키 설정' 버튼을 클릭하여 Anthropic 또는 OpenAI API 키를 설정해주세요.`;
         } else if (error.message.includes('network') || error.message.includes('연결')) {

@@ -4626,6 +4626,36 @@ textarea:focus-visible {
     font-size: 14px;
 }
 
+/* 뉴스 선택 제한 안내 메시지 */
+.news-limit-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #856404;
+}
+
+.news-limit-notice i {
+    color: #f39c12;
+    font-size: 16px;
+}
+
+[data-theme="dark"] .news-limit-notice {
+    background: linear-gradient(135deg, #2c2417, #3d3421);
+    border-color: #d39e00;
+    color: #ffc107;
+}
+
+[data-theme="dark"] .news-limit-notice i {
+    color: #ffc107;
+}
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
     .content-header {
