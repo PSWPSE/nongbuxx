@@ -523,7 +523,11 @@ def batch_generate():
     try:
         data = request.get_json()
         
+        # 🔍 디버깅용 로그 추가
+        logger.info(f"[BATCH-GENERATE] 요청 데이터: {data}")
+        
         if not data or 'urls' not in data:
+            logger.error(f"[BATCH-GENERATE] URLs 누락 - 요청 데이터: {data}")
             return jsonify({
                 'success': False,
                 'error': 'URLs are required',
@@ -532,6 +536,7 @@ def batch_generate():
         
         # API 키 검증
         if 'api_provider' not in data or 'api_key' not in data:
+            logger.error(f"[BATCH-GENERATE] API 자격 증명 누락 - api_provider: {data.get('api_provider')}, api_key: {'설정됨' if data.get('api_key') else '없음'}")
             return jsonify({
                 'success': False,
                 'error': 'API provider and API key are required',
@@ -545,21 +550,24 @@ def batch_generate():
         content_type = data.get('content_type', 'standard')  # 기본값은 'standard'
         
         if not isinstance(urls, list) or len(urls) == 0:
+            logger.error(f"[BATCH-GENERATE] 잘못된 URLs 형식 - type: {type(urls)}, length: {len(urls) if isinstance(urls, list) else 'N/A'}")
             return jsonify({
                 'success': False,
                 'error': 'URLs must be a non-empty list',
                 'code': 'INVALID_URLS'
             }), 400
         
-        # 🚀 URL 개수 제한으로 타임아웃 방지
-        if len(urls) > 10:
+        # 🚀 URL 개수 제한으로 타임아웃 방지 (2배 증가)
+        if len(urls) > 20:
+            logger.error(f"[BATCH-GENERATE] URL 개수 초과 - 요청: {len(urls)}개, 최대: 20개")
             return jsonify({
                 'success': False,
-                'error': 'Maximum 10 URLs allowed per batch to prevent timeout',
+                'error': 'Maximum 20 URLs allowed per batch to prevent timeout',
                 'code': 'TOO_MANY_URLS'
             }), 400
         
         if api_provider not in ['anthropic', 'openai']:
+            logger.error(f"[BATCH-GENERATE] 잘못된 API 제공자 - 제공자: {api_provider}")
             return jsonify({
                 'success': False,
                 'error': 'API provider must be anthropic or openai',
@@ -568,11 +576,15 @@ def batch_generate():
         
         # 콘텐츠 타입 검증
         if content_type not in ['standard', 'blog', 'enhanced_blog']:
+            logger.error(f"[BATCH-GENERATE] 잘못된 콘텐츠 타입 - 타입: {content_type}")
             return jsonify({
                 'success': False,
                 'error': 'Content type must be standard, blog, or enhanced_blog',
                 'code': 'INVALID_CONTENT_TYPE'
             }), 400
+        
+        # 🔍 모든 검증 통과 시 로그
+        logger.info(f"[BATCH-GENERATE] 검증 통과 - URLs: {len(urls)}개, API: {api_provider}, 타입: {content_type}")
         
         # 배치 작업 ID 생성
         batch_job_id = str(uuid.uuid4())
@@ -1841,7 +1853,7 @@ if __name__ == '__main__':
                 'gunicorn',
                 '--bind', f'0.0.0.0:{port}',
                 '--workers', '2',
-                '--timeout', '300',
+                '--timeout', '600',
                 '--keep-alive', '10',
                 '--max-requests', '1000',
                 '--max-requests-jitter', '50',

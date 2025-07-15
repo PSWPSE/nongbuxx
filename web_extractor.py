@@ -103,7 +103,7 @@ class WebExtractor:
     def _extract_with_requests(self, url: str) -> Dict[str, Any]:
         """requests를 사용한 데이터 추출"""
         headers = {'User-Agent': self.ua.random}
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, timeout=60)
         response.raise_for_status()
         
         soup = BeautifulSoup(response.text, 'html.parser')

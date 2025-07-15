@@ -33,8 +33,8 @@ class OptimizedNewsExtractor:
             'Upgrade-Insecure-Requests': '1',
         })
         
-        # 요청 타임아웃 설정 (성능 최적화)
-        self.timeout = 10
+        # 요청 타임아웃 설정 (성능 최적화) - 2배 증가
+        self.timeout = 20
         
         # 잘못된 링크 패턴 (주식 ticker 등)
         self.invalid_patterns = [

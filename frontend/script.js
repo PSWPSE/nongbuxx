@@ -9,7 +9,7 @@ let selectedNewsUrls = [];
 let sessionContent = []; // 현재 세션에서 생성한 콘텐츠만 관리
 let currentTheme = 'auto';
 let urlInputCount = 1;
-const maxUrlInputs = 10;
+const maxUrlInputs = 20;
 const API_BASE_URL = window.ENV?.API_BASE_URL || 'http://localhost:8080';
 
 // 탭 상태 관리
@@ -698,11 +698,11 @@ async function generateContent(contentType = 'standard') {
         }
         
         // 프로그레스 시뮬레이션 시작 (완성형 블로그 콘텐츠는 가장 오래 걸림)
-        let duration = 30000; // 기본값
+        let duration = 60000; // 기본값 (2배 증가)
         if (contentType === 'blog') {
-            duration = 45000;
+            duration = 90000; // 2배 증가
         } else if (contentType === 'enhanced_blog') {
-            duration = 60000; // 완성형 블로그는 더 오래 걸림
+            duration = 120000; // 완성형 블로그는 더 오래 걸림 (2배 증가)
         }
         startProgressSimulation(duration);
             
@@ -735,7 +735,23 @@ async function generateContent(contentType = 'standard') {
     } catch (error) {
         console.error('Error:', error);
         stopProgressSimulation();
-        showErrorSection(error.message);
+        
+        // 🚀 개선된 에러 메시지
+        let userFriendlyMessage = error.message;
+        
+        if (error.message.includes('INVALID_API_PROVIDER') || error.message.includes('API provider must be')) {
+            userFriendlyMessage = `🔑 API 키 미설정: 우측 상단 'API 키 설정' 버튼을 클릭하여 Anthropic 또는 OpenAI API 키를 설정해주세요.`;
+        } else if (error.message.includes('network') || error.message.includes('연결')) {
+            userFriendlyMessage = `🌐 네트워크 오류: 인터넷 연결을 확인하고 다시 시도해주세요.`;
+        } else if (error.message.includes('API')) {
+            userFriendlyMessage = `🔑 API 오류: API 키를 확인하고 다시 시도해주세요.`;
+        } else if (error.message.includes('500')) {
+            userFriendlyMessage = `🔧 서버 오류: 서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.`;
+        } else if (error.message.includes('400')) {
+            userFriendlyMessage = `⚠️ 요청 오류: API 키 설정을 확인하고 다시 시도해주세요.`;
+        }
+        
+        showErrorSection(userFriendlyMessage);
     }
 }
 
@@ -1428,14 +1444,14 @@ async function generateSelectedNews(contentType = 'standard') {
         
         // 더 정확한 시간 예상 (병렬 처리 고려) - 타임아웃 2배 증가
         let estimatedTimePerBatch = 30; // 기본값
-        let timeoutDuration = 240000; // 4분 기본 타임아웃 (2배 증가)
+        let timeoutDuration = 480000; // 8분 기본 타임아웃 (2배 증가)
         
         if (contentType === 'blog') {
             estimatedTimePerBatch = 45;
-            timeoutDuration = 360000; // 6분 타임아웃 (2배 증가)
+            timeoutDuration = 720000; // 12분 타임아웃 (2배 증가)
         } else if (contentType === 'enhanced_blog') {
             estimatedTimePerBatch = 60; // 완성형 블로그는 더 오래 걸림
-            timeoutDuration = 600000; // 10분 타임아웃 (2배 증가)
+            timeoutDuration = 1200000; // 20분 타임아웃 (2배 증가)
         }
         
         const totalItems = selectedNewsUrls.length;
@@ -1554,12 +1570,16 @@ async function generateSelectedNews(contentType = 'standard') {
         
         if (error.message.includes('timeout') || error.message.includes('초과')) {
             userFriendlyMessage = `⏱️ 처리 시간 초과: 선택한 뉴스가 너무 많거나 서버가 바쁩니다. 뉴스 개수를 줄이고 다시 시도해주세요.`;
+        } else if (error.message.includes('INVALID_API_PROVIDER') || error.message.includes('API provider must be')) {
+            userFriendlyMessage = `🔑 API 키 미설정: 우측 상단 'API 키 설정' 버튼을 클릭하여 Anthropic 또는 OpenAI API 키를 설정해주세요.`;
         } else if (error.message.includes('network') || error.message.includes('연결')) {
             userFriendlyMessage = `🌐 네트워크 오류: 인터넷 연결을 확인하고 다시 시도해주세요.`;
         } else if (error.message.includes('API')) {
             userFriendlyMessage = `🔑 API 오류: API 키를 확인하고 다시 시도해주세요.`;
         } else if (error.message.includes('500')) {
             userFriendlyMessage = `🔧 서버 오류: 서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.`;
+        } else if (error.message.includes('400')) {
+            userFriendlyMessage = `⚠️ 요청 오류: API 키 설정을 확인하고 다시 시도해주세요.`;
         }
         
         showErrorSectionWithRetry(userFriendlyMessage, () => generateSelectedNews(contentType));
