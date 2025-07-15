@@ -6,7 +6,6 @@ import os
 import traceback
 import logging
 import time
-import threading
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -47,69 +46,7 @@ os.makedirs('generated_content', exist_ok=True)
 # Store active jobs in memory (for production, use Redis or database)
 active_jobs = {}
 
-# 자동 삭제 기능 설정 (성능 최적화: 15분 → 1시간)
-AUTO_DELETE_ENABLED = True  # 자동 삭제 활성화/비활성화
-AUTO_DELETE_INTERVAL = 3600  # 1시간 (초 단위) - 성능 개선
-AUTO_DELETE_AGE = 3600  # 1시간 후 삭제  # 15분 이상 된 파일 삭제 (초 단위)
 
-def cleanup_old_files():
-    """1시간 이상 된 생성된 콘텐츠 파일들을 삭제"""
-    try:
-        generated_content_path = Path('generated_content')
-        if not generated_content_path.exists():
-            return
-        
-        current_time = datetime.now()
-        deleted_count = 0
-        
-        # 파일명 패턴 매칭 (예: finance_yahoo_com_20250713_235810.md)
-        pattern = re.compile(r'.*_(\d{8})_(\d{6})\.md$')
-        
-        for file_path in generated_content_path.glob('*.md'):
-            try:
-                match = pattern.match(file_path.name)
-                if match:
-                    # 파일명에서 타임스탬프 추출
-                    date_str = match.group(1)  # 20250713
-                    time_str = match.group(2)  # 235810
-                    
-                    # 타임스탬프 파싱
-                    file_datetime = datetime.strptime(f"{date_str}_{time_str}", "%Y%m%d_%H%M%S")
-                    
-                    # 1시간 이상 된 파일인지 확인
-                    age_seconds = (current_time - file_datetime).total_seconds()
-                    if age_seconds > AUTO_DELETE_AGE:
-                        file_path.unlink()
-                        deleted_count += 1
-                        logger.info(f"🗑️ 자동 삭제: {file_path.name} (생성 후 {age_seconds/3600:.1f}시간 경과)")
-                        
-            except Exception as e:
-                logger.error(f"❌ 파일 삭제 중 오류 {file_path.name}: {e}")
-                continue
-        
-        if deleted_count > 0:
-            logger.info(f"✅ 자동 정리 완료: {deleted_count}개 파일 삭제")
-        # 삭제할 파일이 없을 때는 로그 생략 (성능 최적화)
-            
-    except Exception as e:
-        logger.error(f"❌ 자동 삭제 중 오류: {e}")
-
-def start_auto_cleanup():
-    """자동 삭제 스케줄러 시작"""
-    if AUTO_DELETE_ENABLED:
-        cleanup_old_files()  # 시작 시 한 번 실행
-        # 1시간 후 다시 실행하도록 스케줄링
-        timer = threading.Timer(AUTO_DELETE_INTERVAL, start_auto_cleanup)
-        timer.daemon = True  # 메인 프로세스가 종료되면 함께 종료
-        timer.start()
-        logger.info(f"🔄 자동 삭제 스케줄러 시작: {AUTO_DELETE_INTERVAL}초마다 실행")
-
-# 앱 시작 시 자동 삭제 스케줄러 활성화
-def init_auto_cleanup():
-    """앱 초기화 시 자동 삭제 기능 시작"""
-    if AUTO_DELETE_ENABLED:
-        logger.info("🚀 자동 삭제 기능 초기화 중...")
-        start_auto_cleanup()
 
 # 기본 라우트들
 
@@ -1098,103 +1035,7 @@ def delete_generated_content_file(filename):
             'code': 'FILE_DELETE_ERROR'
         }), 500
 
-# ============================================================================
-# 자동 삭제 관리 API
-# ============================================================================
 
-@app.route('/api/generated-content/cleanup', methods=['POST', 'OPTIONS'])
-def trigger_cleanup():
-    """수동으로 자동 삭제 기능 트리거"""
-    try:
-        if request.method == 'OPTIONS':
-            return jsonify({'success': True})
-        
-        # 현재 파일 개수 확인
-        generated_content_path = Path('generated_content')
-        total_files_before = len(list(generated_content_path.glob('*.md'))) if generated_content_path.exists() else 0
-        
-        # 자동 삭제 실행
-        cleanup_old_files()
-        
-        # 삭제 후 파일 개수 확인
-        total_files_after = len(list(generated_content_path.glob('*.md'))) if generated_content_path.exists() else 0
-        deleted_count = total_files_before - total_files_after
-        
-        return jsonify({
-            'success': True,
-            'message': f'정리 완료: {deleted_count}개 파일 삭제',
-            'details': {
-                'files_before': total_files_before,
-                'files_after': total_files_after,
-                'deleted_count': deleted_count,
-                'cleanup_age_hours': AUTO_DELETE_AGE / 3600
-            }
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Manual cleanup failed: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'정리 중 오류가 발생했습니다: {str(e)}',
-            'code': 'CLEANUP_ERROR'
-        }), 500
-
-@app.route('/api/generated-content/cleanup/status', methods=['GET'])
-def get_cleanup_status():
-    """자동 삭제 기능 상태 확인"""
-    try:
-        generated_content_path = Path('generated_content')
-        
-        if not generated_content_path.exists():
-            return jsonify({
-                'success': True,
-                'data': {
-                    'auto_delete_enabled': AUTO_DELETE_ENABLED,
-                    'cleanup_interval_hours': AUTO_DELETE_INTERVAL / 3600,
-                    'file_age_limit_hours': AUTO_DELETE_AGE / 3600,
-                    'total_files': 0,
-                    'old_files': 0
-                }
-            })
-        
-        # 파일 상태 분석
-        current_time = datetime.now()
-        total_files = 0
-        old_files = 0
-        pattern = re.compile(r'.*_(\d{8})_(\d{6})\.md$')
-        
-        for file_path in generated_content_path.glob('*.md'):
-            total_files += 1
-            match = pattern.match(file_path.name)
-            if match:
-                try:
-                    date_str = match.group(1)
-                    time_str = match.group(2)
-                    file_datetime = datetime.strptime(f"{date_str}_{time_str}", "%Y%m%d_%H%M%S")
-                    age_seconds = (current_time - file_datetime).total_seconds()
-                    if age_seconds > AUTO_DELETE_AGE:
-                        old_files += 1
-                except:
-                    pass
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'auto_delete_enabled': AUTO_DELETE_ENABLED,
-                'cleanup_interval_hours': AUTO_DELETE_INTERVAL / 3600,
-                'file_age_limit_hours': AUTO_DELETE_AGE / 3600,
-                'total_files': total_files,
-                'old_files': old_files
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Failed to get cleanup status: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'상태 확인 중 오류가 발생했습니다: {str(e)}',
-            'code': 'STATUS_ERROR'
-        }), 500
 
 # ============================================================================
 # 출처 관리 API
@@ -1830,8 +1671,7 @@ if __name__ == '__main__':
     logger.info(f"🌍 Environment: {os.getenv('FLASK_ENV', 'development')}")
     logger.info(f"🔑 API Keys - OpenAI: {'SET' if os.getenv('OPENAI_API_KEY') else 'NOT_SET'}, Anthropic: {'SET' if os.getenv('ANTHROPIC_API_KEY') else 'NOT_SET'}")
     
-    # 자동 삭제 기능 초기화
-    init_auto_cleanup()
+
     
     try:
         # Railway 환경에서는 gunicorn 사용

@@ -4665,59 +4665,7 @@ async function downloadContentForced(filename) {
     }
 }
 
-// ============================================================================
-// 자동 삭제 관리 기능
-// ============================================================================
 
-async function getCleanupStatus() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/generated-content/cleanup/status`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        return result.success ? result.data : null;
-    } catch (error) {
-        console.error('자동 삭제 상태 확인 오류:', error);
-        return null;
-    }
-}
-
-async function triggerCleanup() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/generated-content/cleanup`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        if (result.success) {
-            showToast(result.message, 'success');
-            
-            // 생성된 콘텐츠 목록 새로고침
-            if (tabState.current === 'generated-content') {
-                showSessionContent();
-            }
-            
-            return result.details;
-        } else {
-            throw new Error(result.error || '정리 실패');
-        }
-    } catch (error) {
-        console.error('자동 삭제 실행 오류:', error);
-        showToast('정리에 실패했습니다.', 'error');
-        return null;
-    }
-}
-
-console.log('✅ 자동 삭제 관리 기능이 로드되었습니다.');
 
 // ============================================================================
 // 간단한 세션 콘텐츠 관리 시스템
