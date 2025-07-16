@@ -51,7 +51,49 @@
           "updated_at": "2025-07-13T21:00:00.000000"
         }
       ]
+    },
+    {
+      "id": "source_a3c8cba5",
+      "name": "naver news",
+      "url": "https://news.naver.com/",
+      "is_parent": true,
+      "active": true,
+      "description": "네이버 뉴스",
+      "created_at": "2025-07-15T22:57:31.424372",
+      "updated_at": "2025-07-15T23:17:11.538095",
+      "subcategories": [
+        {
+          "id": "sub_1752587876842_p21jct28g",
+          "name": "ranking news",
+          "url": "/main/ranking/popularDay.naver",
+          "parser_type": "naver_news",
+          "active": true,
+          "description": "언론사별 랭킹뉴스",
+          "created_at": "2025-07-15T22:57:56.848587",
+          "updated_at": "2025-07-15T23:17:11.538107"
+        },
+        {
+          "id": "sub_1752588523578_n1h35d43n",
+          "name": "finance headline",
+          "url": "/section/101",
+          "parser_type": "naver_news",
+          "active": true,
+          "description": "경제 헤드라인",
+          "created_at": "2025-07-15T23:08:43.581923",
+          "updated_at": "2025-07-15T23:17:11.538112"
+        },
+        {
+          "id": "sub_1752588722122_t962zy4tp",
+          "name": "fact check",
+          "url": "/factcheck/main",
+          "parser_type": "naver_news",
+          "active": true,
+          "description": "네이버 팩트체크",
+          "created_at": "2025-07-15T23:12:02.125869",
+          "updated_at": "2025-07-15T23:17:11.538116"
+        }
+      ]
     }
   ],
-  "updated_at": "2025-07-14T14:44:19.252183"
+  "updated_at": "2025-07-15T23:17:11.538166"
 }

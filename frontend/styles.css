@@ -7225,7 +7225,7 @@ textarea:focus-visible {
     background-color: #f8f9fa;
 }
 
-.format-option input[type="checkbox"] {
+.format-option input[type="radio"] {
     margin-right: 10px;
     width: 18px;
     height: 18px;
@@ -7245,12 +7245,12 @@ textarea:focus-visible {
     color: #666;
 }
 
-.format-option input[type="checkbox"]:checked + .format-label {
+.format-option input[type="radio"]:checked + .format-label {
     color: #007bff;
     font-weight: 600;
 }
 
-.format-option input[type="checkbox"]:checked + .format-label i {
+.format-option input[type="radio"]:checked + .format-label i {
     color: #007bff;
 }
 

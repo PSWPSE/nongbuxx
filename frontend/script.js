@@ -428,6 +428,12 @@ function initEventListeners() {
         elements.downloadAllGeneratedBtn.addEventListener('click', downloadAllGeneratedContent);
     }
 
+    // 생성된 콘텐츠 탭 초기화 버튼 이벤트 리스너 추가
+    const resetGeneratedContentBtn = document.getElementById('resetGeneratedContentBtn');
+    if (resetGeneratedContentBtn) {
+        resetGeneratedContentBtn.addEventListener('click', resetGeneratedContent);
+    }
+
     if (elements.resetAllBtn) {
         elements.resetAllBtn.addEventListener('click', resetAllFeatures);
     }
@@ -737,6 +743,15 @@ async function generateContent(contentType = 'standard') {
         });
         
         if (!response.ok) {
+            if (response.status === 404) {
+                // 키워드가 있는 경우와 없는 경우 구분
+                if (keyword && keyword.trim() !== '') {
+                    showToast(`"${keyword}" 키워드와 관련된 뉴스를 찾을 수 없습니다.`, 'warning');
+                } else {
+                    showToast('선택한 출처에서 뉴스를 찾을 수 없습니다.', 'warning');
+                }
+                return;
+            }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
@@ -1053,7 +1068,12 @@ async function handleNewsExtraction() {
         
         if (!response.ok) {
             if (response.status === 404) {
-                showToast('해당 키워드로 뉴스를 찾을 수 없습니다.', 'warning');
+                // 키워드가 있는 경우와 없는 경우 구분
+                if (keyword && keyword.trim() !== '') {
+                    showToast(`"${keyword}" 키워드와 관련된 뉴스를 찾을 수 없습니다.`, 'warning');
+                } else {
+                    showToast('선택한 출처에서 뉴스를 찾을 수 없습니다.', 'warning');
+                }
                 return;
             }
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -1502,7 +1522,7 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
         }
         
         const totalItems = selectedNewsUrls.length;
-        const batchSize = Math.min(3, totalItems); // 최대 3개 병렬 처리
+        const batchSize = Math.min(8, totalItems); // 최대 8개 병렬 처리 (성능 최적화)
         const estimatedBatches = Math.ceil(totalItems / batchSize);
         const estimatedTime = estimatedBatches * estimatedTimePerBatch * 1000; // ms로 변환
         
@@ -1586,8 +1606,15 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                                     const contentTypeName = contentType === 'enhanced_blog' ? '완성형 블로그 ' : '';
                     const performanceInfo = `(평균 ${avgTimePerItem}초/개, 총 ${processingTime.toFixed(1)}초)`;
                     
+                    // 🎯 병렬처리 통계 표시
+                    let parallelInfo = '';
+                    if (result.data.parallel_stats) {
+                        const stats = result.data.parallel_stats;
+                        parallelInfo = ` | 병렬처리: ${stats.max_workers}개 스레드, 효율성: ${stats.parallel_efficiency}, 속도 향상: ${stats.speedup_factor}`;
+                    }
+                    
                     showToast(
-                        `🚀 병렬 일괄 ${contentTypeName}콘텐츠 생성 완료! 성공: ${successCount}/${totalCount} ${performanceInfo}`, 
+                        `🚀 병렬 일괄 ${contentTypeName}콘텐츠 생성 완료! 성공: ${successCount}/${totalCount} ${performanceInfo}${parallelInfo}`, 
                         'success'
                     );
                 }, 500);
@@ -2232,6 +2259,33 @@ function resetAllFeatures() {
     clearUserPreferences();
     
     showToast('모든 기능이 초기화되었습니다. 새로운 세션을 시작합니다.', 'info');
+}
+
+function resetGeneratedContent() {
+    // 🎯 생성된 콘텐츠만 초기화 (뉴스 추출 탭 기능과 동일)
+    console.log('🔄 생성된 콘텐츠 초기화 시작');
+    
+    // 생성된 콘텐츠 관련 상태 초기화
+    currentJobId = null;
+    currentData = null;
+    currentBatchJobId = null;
+    currentBatchData = null;
+    sessionContent = []; // 세션 콘텐츠 초기화
+    
+    // 생성된 콘텐츠 배지 초기화
+    updateTabBadge('generated-content', 0);
+    
+    // 생성된 콘텐츠 목록 초기화
+    updateGeneratedContentBadge();
+    
+    // 뉴스 추출 탭으로 이동 (뉴스 추출 탭 초기화 기능과 동일)
+    switchTab('news-extraction');
+    
+    // 뉴스 추출 섹션 표시
+    showNewsExtractorSection();
+    
+    console.log('✅ 생성된 콘텐츠 초기화 완료 - 뉴스 추출 탭으로 이동');
+    showToast('생성된 콘텐츠가 초기화되었습니다. 뉴스 추출 탭으로 이동합니다.', 'info');
 }
 
 // 파일 다운로드 및 복사 함수
@@ -2995,6 +3049,7 @@ function editSource(sourceId) {
                             <select class="subcategory-parser-type">
                                 <option value="universal" ${subcategory.parser_type === 'universal' ? 'selected' : ''}>Universal</option>
                                 <option value="yahoo_finance" ${subcategory.parser_type === 'yahoo_finance' ? 'selected' : ''}>Yahoo Finance</option>
+                                <option value="naver_news" ${subcategory.parser_type === 'naver_news' ? 'selected' : ''}>Naver News</option>
                                 <option value="generic" ${subcategory.parser_type === 'generic' ? 'selected' : ''}>일반</option>
                             </select>
                         </div>
@@ -3506,6 +3561,7 @@ function addSubcategoryForm() {
                     <select class="subcategory-parser-type">
                         <option value="universal">Universal</option>
                         <option value="yahoo_finance">Yahoo Finance</option>
+                        <option value="naver_news">Naver News</option>
                         <option value="generic">일반</option>
                     </select>
                 </div>
@@ -4139,8 +4195,12 @@ async function saveSubcategory() {
                 sub.id === currentEditingSubcategory.id ? { ...sub, ...subcategoryData } : sub
             );
         } else {
-            // 추가: 새 서브카테고리 추가
-            updatedSubcategories = [...existingSubcategories, subcategoryData];
+            // 추가: 새 서브카테고리 추가 (고유 ID 생성)
+            const newSubcategoryWithId = {
+                ...subcategoryData,
+                id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            };
+            updatedSubcategories = [...existingSubcategories, newSubcategoryWithId];
         }
         
         // 부모 출처 업데이트
@@ -4994,24 +5054,16 @@ function updateFormatSelectionVisibility() {
     }
 }
 
-// 선택된 파일 형식 가져오기
+// 선택된 파일 형식 가져오기 (라디오 버튼으로 변경)
 function getSelectedFormats() {
-    const formatCheckboxes = ['formatMd', 'formatNaver', 'formatTistory', 'formatWordpress'];
-    const selectedFormats = [];
+    const selectedRadio = document.querySelector('input[name="blogFormat"]:checked');
     
-    formatCheckboxes.forEach(checkboxId => {
-        const checkbox = document.getElementById(checkboxId);
-        if (checkbox && checkbox.checked) {
-            selectedFormats.push(checkbox.value);
-        }
-    });
-    
-    // 아무것도 선택되지 않았으면 기본값 (md)
-    if (selectedFormats.length === 0) {
-        selectedFormats.push('md');
+    if (selectedRadio) {
+        return [selectedRadio.value];
+    } else {
+        // 아무것도 선택되지 않았으면 기본값 (naver)
+        return ['naver'];
     }
-    
-    return selectedFormats;
 }
 
 // 완성형 블로그 생성 처리 (수정)
@@ -5026,7 +5078,45 @@ function isEnhancedBlogFile(filename) {
     return filename && filename.includes('_enhanced_blog');
 }
 
-// 완성형 블로그 파일들을 그룹핑
+// 🔧 실제 파일명 찾기 (새로운 패턴과 기존 패턴 모두 지원)
+async function findActualFilename(groupBaseName, selectedType) {
+    try {
+        // 생성된 콘텐츠 목록 가져오기
+        const response = await fetch(`${API_BASE_URL}/api/generated-content`);
+        const result = await response.json();
+        
+        if (!result.success || !result.data) {
+            return null;
+        }
+        
+        // 그룹에 속하는 모든 파일 찾기
+        const groupFiles = result.data.filter(file => {
+            if (!isEnhancedBlogFile(file.filename)) return false;
+            
+            // 파일명에서 그룹명 추출
+            let fileBaseName = file.filename.replace(/\.(md|html)$/, '').replace(/_(naver|tistory|wordpress)$/, '');
+            fileBaseName = fileBaseName.replace(/_\d{6}_\d{3}_enhanced_blog$/, '_enhanced_blog');
+            
+            return fileBaseName === groupBaseName;
+        });
+        
+        // 선택된 타입에 맞는 파일 찾기
+        const targetFile = groupFiles.find(file => {
+            if (selectedType === 'md') return file.filename.endsWith('.md');
+            if (selectedType === 'naver') return file.filename.endsWith('_naver.html');
+            if (selectedType === 'tistory') return file.filename.endsWith('_tistory.html');
+            if (selectedType === 'wordpress') return file.filename.endsWith('_wordpress.html');
+            return false;
+        });
+        
+        return targetFile ? targetFile.filename : null;
+    } catch (error) {
+        console.error('파일명 찾기 실패:', error);
+        return null;
+    }
+}
+
+// 완성형 블로그 파일들을 그룹핑 (새로운 파일명 패턴 지원)
 function groupEnhancedBlogFiles(files) {
     const groups = {};
     const regularFiles = [];
@@ -5034,7 +5124,15 @@ function groupEnhancedBlogFiles(files) {
     files.forEach(file => {
         if (isEnhancedBlogFile(file.filename)) {
             // enhanced_blog 파일의 기본명 추출 (확장자와 플랫폼명 제거)
-            const baseName = file.filename.replace(/\.(md|html)$/, '').replace(/_(naver|tistory|wordpress)$/, '');
+            let baseName = file.filename.replace(/\.(md|html)$/, '').replace(/_(naver|tistory|wordpress)$/, '');
+            
+            // 🔧 새로운 파일명 패턴 처리: 마이크로초와 인덱스 제거하여 그룹화
+            // 예: n_news_naver_com_20250715_233738_368046_000_enhanced_blog
+            //     -> n_news_naver_com_20250715_233738_enhanced_blog
+            baseName = baseName.replace(/_\d{6}_\d{3}_enhanced_blog$/, '_enhanced_blog');
+            
+            // 기존 파일명 패턴도 동일하게 처리
+            // 예: finance_yahoo_com_20250715_183840_enhanced_blog (변경 없음)
             
             if (!groups[baseName]) {
                 groups[baseName] = {
@@ -5055,6 +5153,15 @@ function groupEnhancedBlogFiles(files) {
                 ...file,
                 fileType
             });
+            
+            // 그룹의 최신 시간으로 업데이트 (가장 최근 파일 기준)
+            if (new Date(file.created_at) > new Date(groups[baseName].created_at)) {
+                groups[baseName].created_at = file.created_at;
+                // 콘텐츠도 최신 파일 기준으로 업데이트 (md 파일 우선)
+                if (fileType === 'md' || !groups[baseName].content) {
+                    groups[baseName].content = file.content || '';
+                }
+            }
         } else {
             regularFiles.push(file);
         }
@@ -5072,7 +5179,7 @@ function createFileTypeSelector(groupBaseName, files) {
             <div class="file-type-options">
                 ${availableTypes.map(type => {
                     const typeInfo = {
-                        md: { icon: 'fab fa-markdown', label: 'Markdown' },
+                        md: { icon: 'fab fa-x-twitter', label: 'X (트위터)' },
                         naver: { icon: 'fas fa-globe', label: '네이버 블로그' },
                         tistory: { icon: 'fas fa-blog', label: '티스토리' },
                         wordpress: { icon: 'fab fa-wordpress', label: '워드프레스' }
@@ -5129,20 +5236,20 @@ function toggleEnhancedBlogPreview(groupBaseName) {
     }
 }
 
-// 완성형 블로그 미리보기 업데이트
+// 완성형 블로그 미리보기 업데이트 (새로운 파일명 패턴 지원)
 async function updateEnhancedBlogPreview(groupBaseName, selectedType) {
     const previewDiv = document.getElementById(`preview-${groupBaseName}`);
     if (!previewDiv) return;
     
     try {
-        // 선택된 유형에 맞는 파일명 생성
-        let filename = `${groupBaseName}.md`;
-        if (selectedType === 'naver') filename = `${groupBaseName}_naver.html`;
-        else if (selectedType === 'tistory') filename = `${groupBaseName}_tistory.html`;
-        else if (selectedType === 'wordpress') filename = `${groupBaseName}_wordpress.html`;
+        // 🔧 실제 파일명 찾기 (새로운 패턴과 기존 패턴 모두 지원)
+        const actualFilename = await findActualFilename(groupBaseName, selectedType);
+        if (!actualFilename) {
+            throw new Error('파일을 찾을 수 없습니다.');
+        }
         
         // 파일 내용 가져오기
-        const response = await fetch(`${API_BASE_URL}/api/generated-content/${filename}`);
+        const response = await fetch(`${API_BASE_URL}/api/generated-content/${actualFilename}`);
         const result = await response.json();
         
         if (result.success && result.data) {
@@ -5194,7 +5301,7 @@ async function updateEnhancedBlogPreview(groupBaseName, selectedType) {
     }
 }
 
-// 완성형 블로그 콘텐츠 복사
+// 완성형 블로그 콘텐츠 복사 (새로운 파일명 패턴 지원)
 async function copyEnhancedBlogContent(groupBaseName) {
     try {
         // 현재 선택된 파일 유형 가져오기
@@ -5202,21 +5309,22 @@ async function copyEnhancedBlogContent(groupBaseName) {
         const activeBtn = selector ? selector.querySelector('.file-type-btn.active') : null;
         const selectedType = activeBtn ? activeBtn.dataset.type : 'md';
         
-        // 선택된 유형에 맞는 파일명 생성
-        let filename = `${groupBaseName}.md`;
-        if (selectedType === 'naver') filename = `${groupBaseName}_naver.html`;
-        else if (selectedType === 'tistory') filename = `${groupBaseName}_tistory.html`;
-        else if (selectedType === 'wordpress') filename = `${groupBaseName}_wordpress.html`;
+        // 🔧 실제 파일명 찾기 (새로운 패턴과 기존 패턴 모두 지원)
+        const actualFilename = await findActualFilename(groupBaseName, selectedType);
+        if (!actualFilename) {
+            showToast('파일을 찾을 수 없습니다.', 'error');
+            return;
+        }
         
         // 파일 내용 가져오기
-        const response = await fetch(`${API_BASE_URL}/api/generated-content/${filename}`);
+        const response = await fetch(`${API_BASE_URL}/api/generated-content/${actualFilename}`);
         const result = await response.json();
         
         if (result.success && result.data) {
             await navigator.clipboard.writeText(result.data.content);
             
             const platformNames = {
-                md: 'Markdown',
+                md: 'X (트위터)',
                 naver: '네이버 블로그',
                 tistory: '티스토리',
                 wordpress: '워드프레스'
@@ -5232,7 +5340,7 @@ async function copyEnhancedBlogContent(groupBaseName) {
     }
 }
 
-// 완성형 블로그 콘텐츠 다운로드
+// 완성형 블로그 콘텐츠 다운로드 (새로운 파일명 패턴 지원)
 async function downloadEnhancedBlogContent(groupBaseName) {
     try {
         // 현재 선택된 파일 유형 가져오기
@@ -5240,16 +5348,17 @@ async function downloadEnhancedBlogContent(groupBaseName) {
         const activeBtn = selector ? selector.querySelector('.file-type-btn.active') : null;
         const selectedType = activeBtn ? activeBtn.dataset.type : 'md';
         
-        // 선택된 유형에 맞는 파일명 생성
-        let filename = `${groupBaseName}.md`;
-        if (selectedType === 'naver') filename = `${groupBaseName}_naver.html`;
-        else if (selectedType === 'tistory') filename = `${groupBaseName}_tistory.html`;
-        else if (selectedType === 'wordpress') filename = `${groupBaseName}_wordpress.html`;
+        // 🔧 실제 파일명 찾기 (새로운 패턴과 기존 패턴 모두 지원)
+        const actualFilename = await findActualFilename(groupBaseName, selectedType);
+        if (!actualFilename) {
+            showToast('파일을 찾을 수 없습니다.', 'error');
+            return;
+        }
         
         // 파일 다운로드
         const link = document.createElement('a');
-        link.href = `${API_BASE_URL}/api/download/${filename}`;
-        link.download = filename;
+        link.href = `${API_BASE_URL}/api/download/${actualFilename}`;
+        link.download = actualFilename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

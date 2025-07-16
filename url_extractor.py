@@ -33,8 +33,8 @@ class OptimizedNewsExtractor:
             'Upgrade-Insecure-Requests': '1',
         })
         
-        # 요청 타임아웃 설정 (성능 최적화) - 2배 증가
-        self.timeout = 20
+        # 요청 타임아웃 설정 (성능 최적화) - 빠른 응답을 위한 단축
+        self.timeout = 12
         
         # 잘못된 링크 패턴 (주식 ticker 등)
         self.invalid_patterns = [
@@ -216,7 +216,7 @@ def extract_news_from_multiple_sources(sources: List[Dict[str, Any]],
                                      keyword: str = "", 
                                      count: int = 10, 
                                      max_workers: int = 3) -> List[Dict[str, Any]]:
-    """여러 출처에서 병렬로 뉴스 추출"""
+    """여러 출처에서 병렬로 뉴스 추출 (파서 타입별 분기 지원)"""
     
     print(f"병렬 뉴스 추출 시작: {len(sources)}개 출처")
     start_time = time.time()
@@ -232,11 +232,24 @@ def extract_news_from_multiple_sources(sources: List[Dict[str, Any]],
             # full_url이 있으면 사용, 없으면 url 사용
             base_url = source.get('full_url', source['url'])
             
-            extractor = OptimizedNewsExtractor(
-                base_url=base_url,
-                search_keywords=keyword if keyword else None,
-                max_news=count
-            )
+            # 🔧 파서 타입별 분기 처리 (기존 기능에 영향 없음)
+            parser_type = source.get('parser_type', 'universal')
+            
+            if parser_type == 'naver_news':
+                # 네이버 뉴스 전용 파서 사용
+                from naver_news_parser import NaverNewsExtractor
+                extractor = NaverNewsExtractor(
+                    base_url=base_url,
+                    search_keywords=keyword if keyword else None,
+                    max_news=count
+                )
+            else:
+                # 기존 범용 파서 사용 (Yahoo Finance 등)
+                extractor = OptimizedNewsExtractor(
+                    base_url=base_url,
+                    search_keywords=keyword if keyword else None,
+                    max_news=count
+                )
             
             future = executor.submit(extractor.extract_news)
             future_to_source[future] = source

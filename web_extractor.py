@@ -167,13 +167,37 @@ class WebExtractor:
     
     def _get_title(self, soup: BeautifulSoup) -> str:
         """제목 추출"""
-        # Try multiple title selectors
+        
+        # Yahoo Finance 특수 처리 (먼저 시도)
+        if 'finance.yahoo.com' in str(soup):
+            yahoo_selectors = [
+                '.cover-title',  # Yahoo Finance 실제 기사 제목
+                'title',         # Page title (정확함)
+            ]
+            
+            for selector in yahoo_selectors:
+                title = soup.select_one(selector)
+                if title and isinstance(title, Tag):
+                    text = title.get_text().strip()
+                    # Yahoo Finance 사이트 이름 제거
+                    if ' - Yahoo Finance' in text:
+                        text = text.replace(' - Yahoo Finance', '')
+                    elif ' | Yahoo Finance' in text:
+                        text = text.replace(' | Yahoo Finance', '')
+                    # 유효한 제목인지 확인
+                    if text and 10 <= len(text) <= 200:
+                        return text.strip()
+        
+        # 일반적인 제목 선택자들
         title_selectors = [
             'h1',
+            '#title_area h2',  # 네이버 뉴스
+            '.media_end_head_headline h2',  # 네이버 뉴스
+            '#articleTitle',  # 구 네이버 뉴스 
             '.headline',
             '.title',
             '[class*="title"]',
-            'title'
+            '[class*="headline"]',
         ]
         
         for selector in title_selectors:
@@ -183,7 +207,21 @@ class WebExtractor:
                 if text and len(text) > 5:
                     return text
         
-        return 'No Title'
+        # meta 태그에서 제목 추출
+        meta_title = soup.find('meta', property='og:title')
+        if meta_title and isinstance(meta_title, Tag):
+            content = meta_title.get('content', '')
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+        
+        # HTML title 태그 (fallback)
+        html_title = soup.find('title')
+        if html_title and isinstance(html_title, Tag):
+            text = html_title.get_text().strip()
+            if text:
+                return text
+        
+        return "제목 없음"
     
     def _get_metadata(self, soup: BeautifulSoup) -> Dict[str, str]:
         """메타데이터 추출"""

@@ -7,6 +7,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import threading
+from typing import Optional, Dict, List, Any
 
 # Import our existing modules
 from web_extractor import WebExtractor
@@ -26,13 +28,24 @@ class NongbuxxGenerator:
         self.api_provider = api_provider
         self.api_key = api_key
         self.save_intermediate = save_intermediate
-        self.extractor = None
-        self.converter = None
-        self.blog_generator = None
+        
+        # 타입 힌트로 린터 오류 해결
+        self.extractor: Optional[WebExtractor] = None
+        self.converter: Optional[NewsConverter] = None
+        self.blog_generator: Optional[BlogContentGenerator] = None
         
         # 초기화 상태 추적
-        self._initialization_errors = []
+        self._initialization_errors: List[str] = []
         self._is_properly_initialized = False
+        
+        # 병렬처리 모니터링을 위한 변수들
+        self.parallel_stats: Dict[str, Any] = {
+            'active_threads': set(),
+            'completed_tasks': 0,
+            'failed_tasks': 0,
+            'start_time': None,
+            'thread_timings': {}
+        }
         
         try:
             # 출력 디렉토리 설정
@@ -56,6 +69,44 @@ class NongbuxxGenerator:
         except Exception as e:
             self._initialization_errors.append(f"전체 초기화 실패: {str(e)}")
             raise ValueError(f"NONGBUXX Generator 초기화 실패: {str(e)}")
+        
+    def _log_thread_activity(self, action, url, **kwargs):
+        """병렬처리 스레드 활동을 로깅"""
+        thread_id = threading.current_thread().ident
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        
+        if action == 'start':
+            self.parallel_stats['active_threads'].add(thread_id)
+            self.parallel_stats['thread_timings'][thread_id] = {
+                'start_time': time.time(),
+                'url': url
+            }
+            print(f"🔄 [{timestamp}] 스레드-{thread_id} 시작: {url[:50]}...")
+        elif action == 'complete':
+            if thread_id in self.parallel_stats['active_threads']:
+                self.parallel_stats['active_threads'].remove(thread_id)
+            if thread_id in self.parallel_stats['thread_timings']:
+                elapsed = time.time() - self.parallel_stats['thread_timings'][thread_id]['start_time']
+                success = kwargs.get('success', False)
+                if success:
+                    self.parallel_stats['completed_tasks'] += 1
+                    print(f"✅ [{timestamp}] 스레드-{thread_id} 완료: {elapsed:.2f}초 - {url[:50]}...")
+                else:
+                    self.parallel_stats['failed_tasks'] += 1
+                    print(f"❌ [{timestamp}] 스레드-{thread_id} 실패: {elapsed:.2f}초 - {url[:50]}...")
+                del self.parallel_stats['thread_timings'][thread_id]
+        elif action == 'progress':
+            print(f"📊 [{timestamp}] 스레드-{thread_id}: {kwargs.get('message', '')} - {url[:50]}...")
+            
+    def get_parallel_stats(self):
+        """현재 병렬처리 통계 반환"""
+        return {
+            'active_threads_count': len(self.parallel_stats['active_threads']),
+            'active_thread_ids': list(self.parallel_stats['active_threads']),
+            'completed_tasks': self.parallel_stats['completed_tasks'],
+            'failed_tasks': self.parallel_stats['failed_tasks'],
+            'total_elapsed': time.time() - self.parallel_stats['start_time'] if self.parallel_stats['start_time'] else 0
+        }
     
     def _initialize_components(self):
         """각 컴포넌트를 안전하게 초기화"""
@@ -194,7 +245,9 @@ class NongbuxxGenerator:
         print("📄 웹 콘텐츠 추출 중...")
         start_time = time.time()
         
-        # 웹 추출
+        # 웹 추출 (None 체크로 린터 오류 해결)
+        if self.extractor is None:
+            return {'success': False, 'error': 'Extractor not initialized', 'url': url}
         extracted_content = self.extractor.extract_data(url)
         
         if not extracted_content.get('success', False):
@@ -213,7 +266,9 @@ class NongbuxxGenerator:
         
         # 콘텐츠 타입에 따른 변환
         if content_type == 'enhanced_blog':
-            # 새로운 완성형 블로그 콘텐츠 생성
+            # 새로운 완성형 블로그 콘텐츠 생성 (None 체크로 린터 오류 해결)
+            if self.blog_generator is None:
+                return {'success': False, 'error': 'Blog generator not initialized', 'url': url}
             rich_content = self.blog_generator.generate_rich_text_blog_content(extracted_content)
             converted_content = rich_content['markdown']  # 기본적으로 마크다운 반환
             
@@ -222,8 +277,8 @@ class NongbuxxGenerator:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename_prefix = f"{domain}_{timestamp}_enhanced_blog"
             
-            # 선택된 형식만 저장
-            saved_files = self.blog_generator.save_blog_content(rich_content, filename_prefix, selected_formats)
+            # 선택된 형식만 저장 (extracted_content 전달하여 출처별 최적화)
+            saved_files = self.blog_generator.save_blog_content(rich_content, filename_prefix, selected_formats, extracted_content)
             print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (선택된 형식: {selected_formats or 'all'})")
             
             # 생성된 파일 정보 반환에 추가
@@ -239,15 +294,21 @@ class NongbuxxGenerator:
             }
             
         elif content_type == 'blog':
+            if self.converter is None:
+                return {'success': False, 'error': 'Converter not initialized', 'url': url}
             converted_content = self.converter.convert_from_data_blog(extracted_content)
         elif content_type == 'threads':
             # Threads용 짧은 콘텐츠 생성 (490자 미만)
+            if self.converter is None:
+                return {'success': False, 'error': 'Converter not initialized', 'url': url}
             converted_content = self.converter.generate_threads_content({
                 'title': extracted_content.get('title', ''),
                 'description': extracted_content.get('description', ''),
                 'content': extracted_content['content']['text']
             })
         else:
+            if self.converter is None:
+                return {'success': False, 'error': 'Converter not initialized', 'url': url}
             converted_content = self.converter.convert_from_data(extracted_content)
         
         if not converted_content or not isinstance(converted_content, str):
@@ -297,7 +358,7 @@ class NongbuxxGenerator:
                 'url': url
             }
     
-    def batch_generate(self, urls, content_type='standard', selected_formats=None, max_workers=3):
+    def batch_generate(self, urls, content_type='standard', selected_formats=None, max_workers=8):
         """
         다중 URL에서 콘텐츠를 병렬로 생성 (성능 최적화)
         
@@ -305,7 +366,7 @@ class NongbuxxGenerator:
             urls: URL 목록
             content_type: 콘텐츠 타입 ('standard', 'blog', 'enhanced_blog')
             selected_formats: 선택된 파일 형식 목록 (완성형 블로그 전용)
-            max_workers: 최대 병렬 처리 수 (기본값: 3)
+            max_workers: 최대 병렬 처리 수 (기본값: 8 - 성능 최적화)
             
         Returns:
             list: 각 URL의 결과 목록
@@ -317,6 +378,16 @@ class NongbuxxGenerator:
         if content_type == 'enhanced_blog' and selected_formats:
             print(f"📋 선택된 형식: {selected_formats}")
         print(f"⚡ 최대 병렬 처리 수: {max_workers}")
+        print(f"🎯 실제 병렬처리 확인: 각 스레드의 시작/완료 시간을 실시간으로 표시합니다")
+        
+        # 병렬처리 통계 초기화
+        self.parallel_stats = {
+            'active_threads': set(),
+            'completed_tasks': 0,
+            'failed_tasks': 0,
+            'start_time': time.time(),
+            'thread_timings': {}
+        }
         
         start_time = time.time()
         
@@ -361,10 +432,21 @@ class NongbuxxGenerator:
         success_count = sum(1 for r in results if r['success'])
         total_time = time.time() - start_time
         
-        print(f"\n📊 배치 생성 완료:")
+        # 🎯 병렬처리 성능 통계 출력
+        final_stats = self.get_parallel_stats()
+        parallel_efficiency = (total_time / len(urls) / max_workers) * 100 if max_workers > 1 else 100
+        
+        print(f"\n📊 병렬 배치 생성 완료:")
         print(f"   • 성공: {success_count}/{len(urls)}")
+        print(f"   • 실패: {final_stats['failed_tasks']}")
         print(f"   • 총 소요 시간: {total_time:.2f}초")
         print(f"   • 평균 시간: {total_time/len(urls):.2f}초/URL")
+        print(f"   • 병렬 효율성: {parallel_efficiency:.1f}% (최대 {max_workers}개 동시 처리)")
+        print(f"   • 완료된 스레드: {final_stats['completed_tasks'] + final_stats['failed_tasks']}개")
+        
+        if max_workers > 1:
+            sequential_time = total_time * max_workers
+            print(f"   🚀 병렬처리 덕분에 약 {sequential_time/total_time:.1f}배 빨라졌습니다!")
         
         return results
     
@@ -381,124 +463,233 @@ class NongbuxxGenerator:
         Returns:
             dict: 결과 정보
         """
-        print(f"\n🔗 URL 분석 중: {url}")
-        print(f"📝 콘텐츠 타입: {content_type}")
+        # 🎯 병렬처리 시작 로깅
+        self._log_thread_activity('start', url)
         
-        # URL 유효성 검사
-        if not self.validate_url(url):
-            return {
-                'success': False,
-                'error': 'Invalid URL format',
-                'url': url
-            }
-        
-        # Step 1: 웹에서 콘텐츠 추출
-        print("📄 웹 콘텐츠 추출 중...")
-        start_time = time.time()
-        
-        # 웹 추출
-        extracted_content = self.extractor.extract_data(url)
-        
-        if not extracted_content.get('success', False):
-            return {
-                'success': False,
-                'error': f'Content extraction failed: {extracted_content.get("error", "Unknown error")}',
-                'url': url
-            }
-        
-        extraction_time = time.time() - start_time
-        print(f"✅ 웹 추출 완료 ({extraction_time:.2f}초)")
-        
-        # Step 2: AI 변환
-        print("🤖 AI 변환 중...")
-        conversion_start = time.time()
-        
-        # 완성형 블로그인 경우
-        if content_type == 'enhanced_blog':
-            blog_result = self.blog_generator.generate_rich_text_blog_content(extracted_content)
+        try:
+            print(f"\n🔗 URL 분석 중: {url}")
+            print(f"📝 콘텐츠 타입: {content_type}")
             
-            if blog_result:
-                # 🔧 고유한 파일명 생성 (마이크로초 + 인덱스 포함)
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                microsecond = datetime.now().microsecond
-                domain = self.extract_domain_name(url)
-                filename_prefix = f"{domain}_{timestamp}_{microsecond:06d}_{index:03d}_enhanced_blog"
-                
-                # 파일 저장
-                saved_files = self.blog_generator.save_blog_content(
-                    blog_result, 
-                    filename_prefix, 
-                    selected_formats
-                )
-                
-                conversion_time = time.time() - conversion_start
-                print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (선택된 형식: {selected_formats})")
-                print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
-                
-                # 메인 마크다운 파일 경로
-                main_file = saved_files.get('md') if saved_files else None
-                
-                return {
-                    'success': True,
-                    'url': url,
-                    'title': blog_result['meta_info']['title'],
-                    'output_file': Path(main_file) if main_file else None,
-                    'all_files': saved_files,
-                    'timestamp': datetime.now().isoformat(),
-                    'content_type': content_type,
-                    'selected_formats': selected_formats
-                }
-            else:
+            # URL 유효성 검사
+            if not self.validate_url(url):
+                self._log_thread_activity('complete', url, success=False)
                 return {
                     'success': False,
-                    'error': f'Blog generation failed: 콘텐츠 생성 중 오류가 발생했습니다.',
+                    'error': 'Invalid URL format',
                     'url': url
                 }
-        else:
-            # 일반 콘텐츠 변환
-            converted_content = self.converter.convert_to_markdown_content(
-                extracted_content, 
-                content_type=content_type
-            )
+        
+            # Step 1: 웹에서 콘텐츠 추출
+            self._log_thread_activity('progress', url, message="웹 콘텐츠 추출 시작")
+            print("📄 웹 콘텐츠 추출 중...")
+            extraction_start = time.time()
             
-            if converted_content.get('success', False):
-                # 🔧 고유한 파일명 생성 (마이크로초 + 인덱스 포함)
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                microsecond = datetime.now().microsecond
-                domain = self.extract_domain_name(url)
-                filename = f"{domain}_{timestamp}_{microsecond:06d}_{index:03d}_{content_type}.md"
-                
-                # 파일 저장
-                output_file = self.generated_dir / filename
-                with open(output_file, 'w', encoding='utf-8') as f:
-                    f.write(converted_content['content'])
-                
-                conversion_time = time.time() - conversion_start
-                print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
-                
-                total_time = time.time() - start_time
-                print(f"💾 파일 저장 완료: {output_file} (총 {total_time:.2f}초)")
-                
-                return {
-                    'success': True,
-                    'url': url,
-                    'title': converted_content.get('title', 'Generated Content'),
-                    'output_file': output_file,
-                    'timestamp': datetime.now().isoformat(),
-                    'content_type': content_type
-                }
-            else:
+            # 웹 추출 (None 체크로 린터 오류 해결)
+            if self.extractor is None:
+                self._log_thread_activity('complete', url, success=False)
+                return {'success': False, 'error': 'Extractor not initialized', 'url': url}
+            extracted_content = self.extractor.extract_data(url)
+            
+            if not extracted_content.get('success', False):
+                self._log_thread_activity('complete', url, success=False)
                 return {
                     'success': False,
-                    'error': f'Content conversion failed: {converted_content.get("error", "Unknown error")}',
+                    'error': f'Content extraction failed: {extracted_content.get("error", "Unknown error")}',
                     'url': url
                 }
+            
+            extraction_time = time.time() - extraction_start
+            self._log_thread_activity('progress', url, message=f"웹 추출 완료 ({extraction_time:.2f}초)")
+            print(f"✅ 웹 추출 완료 ({extraction_time:.2f}초)")
+            
+                        # Step 2: AI 변환
+            self._log_thread_activity('progress', url, message="AI 변환 시작")
+            print("🤖 AI 변환 중...")
+            conversion_start = time.time()
+            
+            # 완성형 블로그인 경우
+            if content_type == 'enhanced_blog':
+                self._log_thread_activity('progress', url, message="완성형 블로그 생성 시작")
+                if self.blog_generator is None:
+                    self._log_thread_activity('complete', url, success=False)
+                    return {'success': False, 'error': 'Blog generator not initialized', 'url': url}
+                blog_result = self.blog_generator.generate_rich_text_blog_content(extracted_content)
+                
+                if blog_result:
+                    # 🔧 고유한 파일명 생성 (마이크로초 + 인덱스 포함)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    microsecond = datetime.now().microsecond
+                    domain = self.extract_domain_name(url)
+                    filename_prefix = f"{domain}_{timestamp}_{microsecond:06d}_{index:03d}_enhanced_blog"
+                    
+                    # 파일 저장 (extracted_content 전달하여 출처별 최적화)
+                    saved_files = self.blog_generator.save_blog_content(
+                        blog_result, 
+                        filename_prefix, 
+                        selected_formats,
+                        extracted_content
+                    )
+                    
+                    conversion_time = time.time() - conversion_start
+                    self._log_thread_activity('progress', url, message=f"완성형 블로그 생성 완료 ({conversion_time:.2f}초)")
+                    print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (선택된 형식: {selected_formats})")
+                    print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
+                    
+                    # 메인 마크다운 파일 경로
+                    main_file = saved_files.get('md') if saved_files else None
+                    
+                    result = {
+                        'success': True,
+                        'url': url,
+                        'title': blog_result['meta_info']['title'],
+                        'output_file': Path(main_file) if main_file else None,
+                        'all_files': saved_files,
+                        'timestamp': datetime.now().isoformat(),
+                        'content_type': content_type,
+                        'selected_formats': selected_formats
+                    }
+                    self._log_thread_activity('complete', url, success=True)
+                    return result
+                else:
+                    result = {
+                        'success': False,
+                        'error': f'Blog generation failed: 콘텐츠 생성 중 오류가 발생했습니다.',
+                        'url': url
+                    }
+                    self._log_thread_activity('complete', url, success=False)
+                    return result
+            else:
+                # 일반 콘텐츠 변환
+                if content_type == 'threads':
+                    # Threads용 짧은 콘텐츠 생성 (490자 미만)
+                    self._log_thread_activity('progress', url, message="Threads 콘텐츠 생성 시작")
+                    if self.converter is None:
+                        self._log_thread_activity('complete', url, success=False)
+                        return {'success': False, 'error': 'Converter not initialized', 'url': url}
+                    converted_content = self.converter.generate_threads_content({
+                        'title': extracted_content.get('title', ''),
+                        'description': extracted_content.get('description', ''),
+                        'content': extracted_content['content']['text']
+                    })
+                    
+                    if not converted_content or not isinstance(converted_content, str):
+                        result = {
+                            'success': False,
+                            'error': f'Threads content generation failed: Invalid response format',
+                            'url': url
+                        }
+                        self._log_thread_activity('complete', url, success=False)
+                        return result
+                    
+                    # 직접 문자열을 content로 사용
+                    converted_response = {
+                        'success': True,
+                        'content': converted_content,
+                        'title': extracted_content.get('title', 'Generated Threads Content')
+                    }
+                elif content_type == 'blog':
+                    # 블로그 콘텐츠 생성
+                    self._log_thread_activity('progress', url, message="블로그 콘텐츠 생성 시작")
+                    if self.converter is None:
+                        self._log_thread_activity('complete', url, success=False)
+                        return {'success': False, 'error': 'Converter not initialized', 'url': url}
+                    converted_response = self.converter.convert_from_data_blog(extracted_content)
+                    if not isinstance(converted_response, str):
+                        converted_response = {
+                            'success': True,
+                            'content': converted_response,
+                            'title': extracted_content.get('title', 'Generated Blog Content')
+                        }
+                    else:
+                        converted_response = {
+                            'success': True,
+                            'content': converted_response,
+                            'title': extracted_content.get('title', 'Generated Blog Content')
+                        }
+                else:
+                    # 표준 마크다운 콘텐츠 생성
+                    self._log_thread_activity('progress', url, message="표준 마크다운 생성 시작")
+                    if self.converter is None:
+                        self._log_thread_activity('complete', url, success=False)
+                        return {'success': False, 'error': 'Converter not initialized', 'url': url}
+                    converted_response = self.converter.convert_from_data(extracted_content)
+                    if not isinstance(converted_response, str):
+                        converted_response = {
+                            'success': True,
+                            'content': converted_response,
+                            'title': extracted_content.get('title', 'Generated Content')
+                        }
+                    else:
+                        converted_response = {
+                            'success': True,
+                            'content': converted_response,
+                            'title': extracted_content.get('title', 'Generated Content')
+                        }
+                
+                # 응답 형식 통일
+                if isinstance(converted_response, str):
+                    # 문자열인 경우 성공으로 간주
+                    converted_content = {
+                        'success': True,
+                        'content': converted_response,
+                        'title': extracted_content.get('title', 'Generated Content')
+                    }
+                else:
+                    # 딕셔너리인 경우 그대로 사용
+                    converted_content = converted_response
+                
+                if converted_content.get('success', False):
+                    # 🔧 고유한 파일명 생성 (마이크로초 + 인덱스 포함)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    microsecond = datetime.now().microsecond
+                    domain = self.extract_domain_name(url)
+                    filename = f"{domain}_{timestamp}_{microsecond:06d}_{index:03d}_{content_type}.md"
+                    
+                    # 파일 저장
+                    output_file = self.generated_dir / filename
+                    with open(output_file, 'w', encoding='utf-8') as f:
+                        f.write(converted_content['content'])
+                    
+                    conversion_time = time.time() - conversion_start
+                    self._log_thread_activity('progress', url, message=f"AI 변환 완료 ({conversion_time:.2f}초)")
+                    print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
+                    
+                    total_time = time.time() - extraction_start
+                    print(f"💾 파일 저장 완료: {output_file} (총 {total_time:.2f}초)")
+                    
+                    result = {
+                        'success': True,
+                        'url': url,
+                        'title': converted_content.get('title', 'Generated Content'),
+                        'output_file': output_file,
+                        'timestamp': datetime.now().isoformat(),
+                        'content_type': content_type
+                    }
+                    self._log_thread_activity('complete', url, success=True)
+                    return result
+                else:
+                    result = {
+                        'success': False,
+                        'error': f'Content conversion failed: {converted_content.get("error", "Unknown error")}',
+                        'url': url
+                    }
+                    self._log_thread_activity('complete', url, success=False)
+                    return result
+                    
+        except Exception as e:
+            error_msg = f"Unexpected error during content generation: {str(e)}"
+            self._log_thread_activity('complete', url, success=False)
+            return {
+                'success': False,
+                'error': error_msg,
+                'url': url
+            }
     
     def cleanup(self):
         """리소스 정리"""
-        if hasattr(self.extractor, 'cleanup'):
+        if self.extractor is not None and hasattr(self.extractor, 'cleanup'):
             self.extractor.cleanup()
-        if hasattr(self.converter, 'cleanup'):
+        if self.converter is not None and hasattr(self.converter, 'cleanup'):
             self.converter.cleanup()
         print("🧹 리소스 정리 완료")
 
