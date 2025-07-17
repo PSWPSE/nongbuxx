@@ -702,7 +702,7 @@ class BlogContentGenerator:
         if filename_prefix is None:
             filename_prefix = f"blog_content_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
-        # 출처별 적절한 형식 자동 결정
+        # 출처별 적절한 형식 자동 결정 (selected_formats가 None인 경우에만)
         if selected_formats is None:
             if extracted_data:
                 source_info = self.detect_news_source(extracted_data)
@@ -712,15 +712,19 @@ class BlogContentGenerator:
                 # 추출 데이터가 없는 경우 기본값 사용
                 selected_formats = ['md', 'wordpress']
                 self.logger.info(f"기본 형식 사용: {selected_formats}")
+        else:
+            # selected_formats가 전달된 경우 그대로 사용
+            self.logger.info(f"사용자 선택 형식 사용: {selected_formats}")
         
         saved_files = {}
         
-        # 마크다운 파일 저장
+        # 마크다운 파일 저장 (selected_formats에 포함된 경우에만)
         if 'md' in selected_formats:
             markdown_file = self.output_dir / f"{filename_prefix}.md"
             with open(markdown_file, 'w', encoding='utf-8') as f:
                 f.write(content_data['markdown'])
             saved_files['md'] = str(markdown_file)
+            self.logger.info(f"마크다운 파일 저장: {markdown_file}")
         
         # 플랫폼별 파일 저장 (기본 HTML 제거)
         platform_mapping = {
