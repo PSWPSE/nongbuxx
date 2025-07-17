@@ -453,6 +453,19 @@ class BlogContentGenerator:
             # HTML 기반 워드프레스 콘텐츠
             wordpress_prompt = f"""워드프레스 블로그에 최적화된 HTML 콘텐츠를 작성해주세요.
 
+**중요: HTML 태그를 포함한 완전한 HTML 콘텐츠를 작성하세요. Gutenberg 블록 에디터에서 사용할 수 있는 형식입니다.**
+
+**HTML 구조 가이드:**
+- <h1>제목</h1> - 메인 제목
+- <h2>소제목</h2> - 주요 섹션
+- <h3>부제목</h3> - 세부 섹션
+- <p>본문 문단</p> - 각 문단
+- <strong>강조</strong> 또는 <em>이탤릭</em>
+- <ul><li>목록 항목</li></ul> - 순서 없는 목록
+- <ol><li>번호 목록</li></ol> - 순서 있는 목록
+- <blockquote>인용문</blockquote> - 인용 블록
+- <div class="wp-block-group">그룹화된 콘텐츠</div>
+
 **🚨 필수 지시사항 - 절대 지켜야 함:**
 - 제목은 100% 한국어로만 작성
 - 영어 제목이 입력되어도 반드시 한국어로 번역
@@ -516,7 +529,7 @@ class BlogContentGenerator:
 - 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함
 - 해시태그 앞에 "**태그:**"라는 제목을 붙임
 
-워드프레스에 바로 붙여넣을 수 있는 SEO 최적화된 HTML 콘텐츠를 작성해주세요. 제목은 반드시 매력적인 한국어로!"""
+워드프레스 Gutenberg 에디터에 바로 붙여넣을 수 있는 SEO 최적화된 HTML 콘텐츠를 작성해주세요. HTML 태그를 포함한 완전한 HTML 구조로 작성하세요. 제목은 반드시 매력적인 한국어로!"""
 
         wordpress_content = self.converter.call_api(wordpress_prompt, max_tokens=4000)
         
@@ -718,7 +731,16 @@ class BlogContentGenerator:
         
         for format_key, platform_key in platform_mapping.items():
             if format_key in selected_formats and platform_key in content_data['platform_optimized']:
-                platform_file = self.output_dir / f"{filename_prefix}_{platform_key}.html"
+                # 워드프레스는 선택된 형식에 따라 확장자 결정
+                if format_key == 'wordpress' and wordpress_type == 'html':
+                    extension = '.html'
+                elif format_key == 'wordpress' and wordpress_type == 'text':
+                    extension = '.txt'
+                else:
+                    # 네이버와 티스토리는 항상 HTML
+                    extension = '.html'
+                
+                platform_file = self.output_dir / f"{filename_prefix}_{platform_key}{extension}"
                 with open(platform_file, 'w', encoding='utf-8') as f:
                     f.write(content_data['platform_optimized'][platform_key])
                 saved_files[format_key] = str(platform_file)
