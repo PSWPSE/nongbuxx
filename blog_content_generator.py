@@ -739,7 +739,7 @@ class BlogContentGenerator:
                 if format_key == 'wordpress' and wordpress_type == 'html':
                     extension = '.html'
                 elif format_key == 'wordpress' and wordpress_type == 'text':
-                    extension = '.txt'
+                    extension = '.md'  # 텍스트 기반은 마크다운 파일로 저장
                 else:
                     # 네이버와 티스토리는 항상 HTML
                     extension = '.html'
