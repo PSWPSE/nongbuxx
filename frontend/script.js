@@ -325,6 +325,7 @@ function updateSelectedNewsSummary() {
         const typeNames = {
             'standard': '마크다운',
             'threads': 'Threads',
+            'x': 'X 콘텐츠',
             'enhanced_blog': '완성형 블로그'
         };
         
@@ -1364,6 +1365,7 @@ function updateGenerateButtonState() {
         const typeNames = {
             'standard': '마크다운',
             'threads': 'Threads',
+            'x': 'X 콘텐츠',
             'enhanced_blog': '완성형 블로그'
         };
         
@@ -1457,6 +1459,7 @@ function updateGenerateButtonText() {
         const typeNames = {
             'standard': '마크다운',
             'threads': 'Threads',
+            'x': 'X 콘텐츠',
             'enhanced_blog': '완성형 블로그'
         };
         
@@ -1493,6 +1496,11 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
     try {
         hideAllSections();
         showProgressSection();
+        
+        // 🆕 새로운 배치 생성 시작 - 기존 결과 초기화
+        sessionContent = []; // 기존 세션 콘텐츠 모두 초기화
+        updateGeneratedContentBadge(); // 배지 0으로 업데이트
+        console.log('🧹 새로운 배치 생성 시작 - 기존 콘텐츠 결과 초기화 완료');
         
         // 콘텐츠 타입에 따른 진행률 표시
         const progressTitle = document.getElementById('progressTitle');

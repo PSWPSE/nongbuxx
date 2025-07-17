@@ -306,6 +306,14 @@ class NongbuxxGenerator:
                 'description': extracted_content.get('description', ''),
                 'content': extracted_content['content']['text']
             })
+        elif content_type == 'x' or content_type == 'twitter':
+            # X(Twitter)용 콘텐츠 생성
+            if self.converter is None:
+                return {'success': False, 'error': 'Converter not initialized', 'url': url}
+            converted_content = self.converter.generate_x_content({
+                'title': extracted_content.get('title', ''),
+                'body': extracted_content['content']['text']
+            })
         else:
             if self.converter is None:
                 return {'success': False, 'error': 'Converter not initialized', 'url': url}
@@ -605,6 +613,28 @@ class NongbuxxGenerator:
                             'success': True,
                             'content': converted_response,
                             'title': extracted_content.get('title', 'Generated Blog Content')
+                        }
+                elif content_type == 'x' or content_type == 'twitter':
+                    # X(Twitter)용 콘텐츠 생성
+                    self._log_thread_activity('progress', url, message="X 콘텐츠 생성 시작")
+                    if self.converter is None:
+                        self._log_thread_activity('complete', url, success=False)
+                        return {'success': False, 'error': 'Converter not initialized', 'url': url}
+                    converted_response = self.converter.generate_x_content({
+                        'title': extracted_content.get('title', ''),
+                        'body': extracted_content['content']['text']
+                    })
+                    if not isinstance(converted_response, str):
+                        converted_response = {
+                            'success': True,
+                            'content': converted_response,
+                            'title': extracted_content.get('title', 'Generated X Content')
+                        }
+                    else:
+                        converted_response = {
+                            'success': True,
+                            'content': converted_response,
+                            'title': extracted_content.get('title', 'Generated X Content')
                         }
                 else:
                     # 표준 마크다운 콘텐츠 생성

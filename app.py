@@ -302,10 +302,10 @@ def generate_content():
             }), 400
         
         # 콘텐츠 타입 검증
-        if content_type not in ['standard', 'blog', 'enhanced_blog', 'threads']:
+        if content_type not in ['standard', 'blog', 'enhanced_blog', 'threads', 'x']:
             return jsonify({
                 'success': False,
-                'error': 'Content type must be standard, blog, enhanced_blog, or threads',
+                'error': 'Content type must be standard, blog, enhanced_blog, threads, or x',
                 'code': 'INVALID_CONTENT_TYPE'
             }), 400
         
@@ -574,10 +574,10 @@ def batch_generate():
             }), 400
         
         # 콘텐츠 타입 검증
-        if content_type not in ['standard', 'blog', 'enhanced_blog', 'threads']:
+        if content_type not in ['standard', 'blog', 'enhanced_blog', 'threads', 'x']:
             return jsonify({
                 'success': False,
-                'error': 'Content type must be standard, blog, enhanced_blog, or threads',
+                'error': 'Content type must be standard, blog, enhanced_blog, threads, or x',
                 'code': 'INVALID_CONTENT_TYPE'
             }), 400
         
