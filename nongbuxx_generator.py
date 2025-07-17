@@ -283,9 +283,23 @@ class NongbuxxGenerator:
             print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (선택된 형식: {selected_formats or 'all'})")
             
             # 생성된 파일 정보 반환에 추가
+            # 메인 파일 경로 결정
+            if saved_files:
+                main_file = saved_files.get('md')
+                if not main_file:
+                    # md 파일이 없으면 첫 번째 파일 사용
+                    main_file = list(saved_files.values())[0]
+            else:
+                # 파일이 없으면 에러 반환
+                return {
+                    'success': False,
+                    'error': 'No files were saved',
+                    'url': url
+                }
+            
             return {
                 'success': True,
-                'output_file': Path(saved_files.get('md', list(saved_files.values())[0])),  # 기본적으로 md 파일 경로
+                'output_file': Path(main_file),  # 메인 파일 경로
                 'saved_files': saved_files,  # 생성된 모든 파일 정보
                 'title': extracted_content.get('title', '제목 없음'),
                 'content_type': content_type,
@@ -547,8 +561,15 @@ class NongbuxxGenerator:
                     print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (선택된 형식: {selected_formats})")
                     print(f"✅ AI 변환 완료 ({conversion_time:.2f}초)")
                     
-                    # 메인 마크다운 파일 경로
-                    main_file = saved_files.get('md') if saved_files else None
+                    # 메인 마크다운 파일 경로 또는 첫 번째 파일
+                    if saved_files:
+                        # md 파일이 있으면 사용, 없으면 첫 번째 파일 사용
+                        main_file = saved_files.get('md')
+                        if not main_file and saved_files:
+                            # saved_files의 첫 번째 값 사용
+                            main_file = list(saved_files.values())[0]
+                    else:
+                        main_file = None
                     
                     result = {
                         'success': True,
