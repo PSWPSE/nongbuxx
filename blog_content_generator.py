@@ -719,7 +719,16 @@ class BlogContentGenerator:
         saved_files = {}
         
         # 마크다운 파일 저장 (selected_formats에 포함된 경우에만)
-        if 'md' in selected_formats:
+        # 워드프레스 HTML이 선택된 경우 md 파일 생성하지 않음
+        # 워드프레스가 유일한 형식이고 HTML 타입인 경우에도 md 파일 생성하지 않음
+        should_save_md = 'md' in selected_formats
+        if 'wordpress' in selected_formats and wordpress_type == 'html':
+            # 워드프레스 HTML이 선택된 경우 md 파일 생성하지 않음
+            should_save_md = False
+            # selected_formats에서 'md' 제거
+            selected_formats = [fmt for fmt in selected_formats if fmt != 'md']
+        
+        if should_save_md:
             markdown_file = self.output_dir / f"{filename_prefix}.md"
             with open(markdown_file, 'w', encoding='utf-8') as f:
                 f.write(content_data['markdown'])
