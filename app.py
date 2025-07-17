@@ -550,6 +550,8 @@ def batch_generate():
         api_key = data['api_key']
         save_intermediate = data.get('save_intermediate', False)  # 성능 최적화: 기본값 False
         content_type = data.get('content_type', 'standard')  # 기본값은 'standard'
+        selected_formats = data.get('selected_formats', None)  # 완성형 블로그 형식
+        wordpress_type = data.get('wordpress_type', 'text')  # 워드프레스 형식 (text/html)
         
         if not isinstance(urls, list) or len(urls) == 0:
             return jsonify({
@@ -627,8 +629,13 @@ def batch_generate():
             # 🧹 캐시 정리 (배치 처리 전)
             cleanup_expired_cache()
             
-            # 배치 처리 실행
-            results = generator.batch_generate(urls, content_type=content_type)
+            # 배치 처리 실행 (워드프레스 타입 포함)
+            results = generator.batch_generate(
+                urls, 
+                content_type=content_type,
+                selected_formats=selected_formats,
+                wordpress_type=wordpress_type
+            )
             
             # 🎯 병렬처리 통계 수집
             parallel_stats = generator.get_parallel_stats()

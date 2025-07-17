@@ -216,7 +216,7 @@ class NongbuxxGenerator:
         except:
             return 'article'
     
-    def generate_content(self, url, custom_filename=None, content_type='standard', selected_formats=None):
+    def generate_content(self, url, custom_filename=None, content_type='standard', selected_formats=None, wordpress_type='text'):
         """
         URL에서 콘텐츠를 추출하고 마크다운으로 변환 (최적화된 버전)
         
@@ -225,6 +225,7 @@ class NongbuxxGenerator:
             custom_filename: 사용자 지정 파일명 (선택사항)
             content_type: 콘텐츠 타입 ('standard', 'blog', 'enhanced_blog')
             selected_formats: 선택된 파일 형식 목록 (완성형 블로그 전용)
+            wordpress_type: 워드프레스 형식 ('text' 또는 'html')
             
         Returns:
             dict: 결과 정보 (성공 여부, 파일 경로 등)
@@ -269,7 +270,7 @@ class NongbuxxGenerator:
             # 새로운 완성형 블로그 콘텐츠 생성 (None 체크로 린터 오류 해결)
             if self.blog_generator is None:
                 return {'success': False, 'error': 'Blog generator not initialized', 'url': url}
-            rich_content = self.blog_generator.generate_rich_text_blog_content(extracted_content)
+            rich_content = self.blog_generator.generate_rich_text_blog_content(extracted_content, wordpress_type)
             converted_content = rich_content['markdown']  # 기본적으로 마크다운 반환
             
             # 추가 형식들도 파일로 저장 (선택된 형식만)
@@ -278,7 +279,7 @@ class NongbuxxGenerator:
             filename_prefix = f"{domain}_{timestamp}_enhanced_blog"
             
             # 선택된 형식만 저장 (extracted_content 전달하여 출처별 최적화)
-            saved_files = self.blog_generator.save_blog_content(rich_content, filename_prefix, selected_formats, extracted_content)
+            saved_files = self.blog_generator.save_blog_content(rich_content, filename_prefix, selected_formats, extracted_content, wordpress_type)
             print(f"✅ 완성형 블로그 콘텐츠 생성 완료 (선택된 형식: {selected_formats or 'all'})")
             
             # 생성된 파일 정보 반환에 추가
@@ -366,7 +367,7 @@ class NongbuxxGenerator:
                 'url': url
             }
     
-    def batch_generate(self, urls, content_type='standard', selected_formats=None, max_workers=8):
+    def batch_generate(self, urls, content_type='standard', selected_formats=None, max_workers=8, wordpress_type='text'):
         """
         다중 URL에서 콘텐츠를 병렬로 생성 (성능 최적화)
         
@@ -375,6 +376,7 @@ class NongbuxxGenerator:
             content_type: 콘텐츠 타입 ('standard', 'blog', 'enhanced_blog')
             selected_formats: 선택된 파일 형식 목록 (완성형 블로그 전용)
             max_workers: 최대 병렬 처리 수 (기본값: 8 - 성능 최적화)
+            wordpress_type: 워드프레스 형식 ('text' 또는 'html')
             
         Returns:
             list: 각 URL의 결과 목록
@@ -406,7 +408,7 @@ class NongbuxxGenerator:
             
             # 각 URL에 대한 future 생성 (인덱스와 함께)
             future_to_index_url = {
-                executor.submit(self._generate_with_index, index, url, content_type, selected_formats): (index, url)
+                executor.submit(self._generate_with_index, index, url, content_type, selected_formats, wordpress_type): (index, url)
                 for index, url in indexed_urls
             }
             
@@ -458,7 +460,7 @@ class NongbuxxGenerator:
         
         return results
     
-    def _generate_with_index(self, index, url, content_type='standard', selected_formats=None):
+    def _generate_with_index(self, index, url, content_type='standard', selected_formats=None, wordpress_type='text'):
         """
         인덱스가 포함된 콘텐츠 생성 (파일명 중복 방지)
         
@@ -467,6 +469,7 @@ class NongbuxxGenerator:
             url: 추출할 뉴스 기사 URL
             content_type: 콘텐츠 타입
             selected_formats: 선택된 파일 형식 목록
+            wordpress_type: 워드프레스 형식 ('text' 또는 'html')
             
         Returns:
             dict: 결과 정보
@@ -521,7 +524,7 @@ class NongbuxxGenerator:
                 if self.blog_generator is None:
                     self._log_thread_activity('complete', url, success=False)
                     return {'success': False, 'error': 'Blog generator not initialized', 'url': url}
-                blog_result = self.blog_generator.generate_rich_text_blog_content(extracted_content)
+                blog_result = self.blog_generator.generate_rich_text_blog_content(extracted_content, wordpress_type)
                 
                 if blog_result:
                     # 🔧 고유한 파일명 생성 (마이크로초 + 인덱스 포함)
@@ -535,7 +538,8 @@ class NongbuxxGenerator:
                         blog_result, 
                         filename_prefix, 
                         selected_formats,
-                        extracted_content
+                        extracted_content,
+                        wordpress_type
                     )
                     
                     conversion_time = time.time() - conversion_start

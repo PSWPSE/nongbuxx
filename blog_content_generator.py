@@ -335,12 +335,13 @@ class BlogContentGenerator:
         response = self.converter.call_api(prompt, max_tokens=4000)
         return self.converter.clean_response(response)
     
-    def generate_rich_text_blog_content(self, extracted_data):
+    def generate_rich_text_blog_content(self, extracted_data, wordpress_type='text'):
         """
         Rich Text 형식의 블로그 콘텐츠 생성 (다양한 블로그 플랫폼 지원)
         
         Args:
             extracted_data: 웹에서 추출된 데이터
+            wordpress_type: 워드프레스 형식 ('text' 또는 'html')
             
         Returns:
             dict: 다양한 형식의 블로그 콘텐츠
@@ -353,7 +354,7 @@ class BlogContentGenerator:
         html_content = self.generate_html_blog_content(extracted_data)
         
         # 플랫폼별 최적화된 콘텐츠 생성
-        platform_optimized = self.generate_platform_optimized_content(extracted_data)
+        platform_optimized = self.generate_platform_optimized_content(extracted_data, wordpress_type)
         
         return {
             'markdown': markdown_content,
@@ -367,19 +368,90 @@ class BlogContentGenerator:
             }
         }
     
-    def generate_platform_optimized_content(self, extracted_data):
+    def generate_platform_optimized_content(self, extracted_data, wordpress_type='text'):
         """
         다양한 블로그 플랫폼에 최적화된 콘텐츠 생성
         
         Args:
             extracted_data: 웹에서 추출된 데이터
+            wordpress_type: 워드프레스 형식 ('text' 또는 'html')
             
         Returns:
             dict: 플랫폼별 최적화된 콘텐츠
         """
         
-        # 워드프레스용 콘텐츠
-        wordpress_prompt = f"""워드프레스 블로그에 최적화된 HTML 콘텐츠를 작성해주세요.
+        # 워드프레스용 콘텐츠 (텍스트/HTML 선택)
+        if wordpress_type == 'text':
+            # 텍스트 기반 워드프레스 콘텐츠
+            wordpress_prompt = f"""워드프레스 블로그에 최적화된 텍스트 기반 콘텐츠를 작성해주세요.
+
+**🚨 필수 지시사항 - 절대 지켜야 함:**
+- 제목은 100% 한국어로만 작성
+- 영어 제목이 입력되어도 반드시 한국어로 번역
+- 네이버, 조선일보 등 한국 뉴스는 이미 한국어이므로 한국어 제목 유지
+
+**💡 매력적인 제목 생성 가이드라인 (핵심):**
+- 단순 번역이 아닌 독자의 관심을 끄는 매력적인 제목 작성
+- 호기심을 자극하고 클릭하고 싶게 만드는 임팩트 있는 제목
+- "왜?", "어떻게?", "무엇을?", "진짜?" 등 궁금증을 유발하는 요소 포함
+- 핵심 키워드와 감정적 어필을 결합한 제목
+- 예시: "Why the stock market..." → "트럼프 관세 폭탄에도 주식시장이 무덤덤한 놀라운 이유"
+
+**🔍 워드프레스 SEO 최적화 전략 (상세):**
+
+### 📋 메타 정보 최적화
+- **SEO 제목**: 주 키워드를 앞쪽에 배치한 60자 이내 제목
+- **메타 설명**: 핵심 키워드 포함 155자 이내 요약문
+- **포커스 키워드**: 글의 주요 키워드 1개 선정
+- **URL 슬러그**: 영문 키워드 3-5개로 구성된 SEO 친화적 URL
+
+### 🏷️ 헤딩 구조 최적화
+- **H1**: 제목에만 사용 (주 키워드 포함)
+- **H2**: 주요 섹션 제목 (관련 키워드 포함)
+- **H3**: 세부 소제목 (롱테일 키워드 포함)
+- **논리적 계층구조**: H1 → H2 → H3 순서 준수
+
+### 📝 콘텐츠 구조 최적화
+- **서론**: 첫 문단에 포커스 키워드 자연스럽게 포함
+- **본문**: 4000-5000자 이상의 충분한 분량
+- **키워드 밀도**: 전체 텍스트의 1-3% 내외
+- **관련 키워드**: LSI 키워드 및 동의어 활용
+- **내부 링크**: 관련 포스트 연결 제안
+- **외부 링크**: 신뢰할 수 있는 출처 링크
+
+### 🎯 사용자 경험 최적화
+- **읽기 쉬운 문단**: 3-4줄 이내 문단 구성
+- **불릿 포인트**: 핵심 정보 목록화
+- **이미지 alt 태그**: 키워드 포함 이미지 설명
+- **모바일 최적화**: 반응형 디자인 고려
+
+### 🔗 링크 최적화
+- **앵커 텍스트**: 키워드 포함 자연스러운 링크 텍스트
+- **관련 글 제안**: 내부 링크 3-5개 포함
+- **출처 링크**: 신뢰성 있는 외부 소스 연결
+
+**워드프레스 스타일 가이드:**
+- Gutenberg 블록 에디터 호환 HTML 구조
+- Yoast SEO 플러그인 호환성 고려
+- 반응형 디자인 최적화
+- 페이지 로딩 속도 최적화를 위한 깔끔한 코드
+
+**원문 정보:**
+제목: {extracted_data['title']}
+설명: {extracted_data.get('description', '')}
+본문: {extracted_data['content']['text']}
+
+**마무리 요구사항:**
+- **SEO 메타 정보 제안**: 포커스 키워드, 메타 설명, URL 슬러그 포함
+- 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가
+- 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
+- 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함
+- 해시태그 앞에 "**태그:**"라는 제목을 붙임
+
+워드프레스에 바로 붙여넣을 수 있는 텍스트 기반 콘텐츠를 작성해주세요. 제목은 반드시 매력적인 한국어로!"""
+        else:
+            # HTML 기반 워드프레스 콘텐츠
+            wordpress_prompt = f"""워드프레스 블로그에 최적화된 HTML 콘텐츠를 작성해주세요.
 
 **🚨 필수 지시사항 - 절대 지켜야 함:**
 - 제목은 100% 한국어로만 작성
@@ -599,7 +671,7 @@ class BlogContentGenerator:
             'naver': self.converter.clean_response(naver_content)
         }
     
-    def save_blog_content(self, content_data, filename_prefix=None, selected_formats=None, extracted_data=None):
+    def save_blog_content(self, content_data, filename_prefix=None, selected_formats=None, extracted_data=None, wordpress_type='text'):
         """
         생성된 블로그 콘텐츠를 선택된 형식으로 저장 (출처별 최적화)
         
@@ -608,6 +680,7 @@ class BlogContentGenerator:
             filename_prefix: 파일명 접두사
             selected_formats: 저장할 파일 형식 목록 (None이면 출처에 따라 자동 결정)
             extracted_data: 원본 뉴스 데이터 (출처 감지용)
+            wordpress_type: 워드프레스 형식 ('text' 또는 'html')
             
         Returns:
             dict: 저장된 파일 정보

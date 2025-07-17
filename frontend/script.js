@@ -417,6 +417,12 @@ function initEventListeners() {
         radio.addEventListener('change', handleContentTypeChange);
     });
     
+    // 형식 체크박스 변경 이벤트 리스너
+    const formatCheckboxes = document.querySelectorAll('#formatNaver, #formatTistory, #formatWordpress');
+    formatCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', handleFormatSelectionChange);
+    });
+    
     // 완성형 블로그 콘텐츠 생성 버튼 이벤트 리스너
     const generateEnhancedBlogBtn = document.getElementById('generateEnhancedBlogBtn');
     
@@ -1431,12 +1437,18 @@ async function handleGenerateSelectedNewsWithType() {
 function handleContentTypeChange() {
     const selectedType = getSelectedContentType();
     const formatContainer = document.getElementById('formatSelectionContainer');
+    const wordpressFormatOptions = document.getElementById('wordpressFormatOptions');
     
     if (formatContainer) {
         if (selectedType === 'enhanced_blog') {
             formatContainer.style.display = 'block';
+            // 워드프레스 선택 여부 확인
+            handleFormatSelectionChange();
         } else {
             formatContainer.style.display = 'none';
+            if (wordpressFormatOptions) {
+                wordpressFormatOptions.style.display = 'none';
+            }
         }
     }
     
@@ -1544,18 +1556,31 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
         const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
         
         try {
+            // 워드프레스 형식 정보 추가
+            let requestBody = {
+                urls: selectedNewsUrls,
+                api_provider: apiSettings.provider,
+                api_key: apiSettings.key,
+                content_type: contentType
+            };
+            
+            // 완성형 블로그인 경우
+            if (contentType === 'enhanced_blog' && selectedFormats) {
+                requestBody.selected_formats = selectedFormats;
+                
+                // 워드프레스가 선택된 경우 형식 정보 추가
+                if (selectedFormats.includes('wordpress')) {
+                    const wordpressFormat = document.querySelector('input[name="wordpressFormat"]:checked')?.value || 'text';
+                    requestBody.wordpress_type = wordpressFormat;
+                }
+            }
+            
             const response = await fetch(`${API_BASE_URL}/api/batch-generate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
-                    urls: selectedNewsUrls,
-                    api_provider: apiSettings.provider,
-                    api_key: apiSettings.key,
-                    content_type: contentType,
-                    ...(contentType === 'enhanced_blog' && selectedFormats && { selected_formats: selectedFormats })
-                }),
+                body: JSON.stringify(requestBody),
                 signal: controller.signal
             });
             
@@ -5375,5 +5400,19 @@ async function downloadEnhancedBlogContent(groupBaseName) {
     } catch (error) {
         console.error('다운로드 실패:', error);
         showToast('파일 다운로드 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+// 형식 선택 변경 핸들러
+function handleFormatSelectionChange() {
+    const wordpressCheckbox = document.getElementById('formatWordpress');
+    const wordpressFormatOptions = document.getElementById('wordpressFormatOptions');
+    
+    if (wordpressCheckbox && wordpressFormatOptions) {
+        if (wordpressCheckbox.checked) {
+            wordpressFormatOptions.style.display = 'block';
+        } else {
+            wordpressFormatOptions.style.display = 'none';
+        }
     }
 }
