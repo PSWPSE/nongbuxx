@@ -44,7 +44,8 @@ def validate_password_strength(password):
 def validate_email_format(email):
     """Validate email format"""
     try:
-        validated = validate_email(email)
+        # check_deliverability=False로 설정하여 도메인 검증을 건너뜀 (테스트 환경용)
+        validated = validate_email(email, check_deliverability=False)
         return True, validated.email
     except EmailNotValidError as e:
         return False, str(e)

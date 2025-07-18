@@ -8,6 +8,7 @@ NONGBUXX with Authentication
 from app import *
 from app_auth_config import init_auth, modify_existing_routes
 from auth_middleware import optional_auth, require_api_key, track_user_content
+from flask_jwt_extended import jwt_required, get_jwt_identity
 import logging
 
 # 로거 설정
