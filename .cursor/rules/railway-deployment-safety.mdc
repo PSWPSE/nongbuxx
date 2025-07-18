@@ -1,0 +1,100 @@
+---
+alwaysApply: true
+description: "Railway 백엔드 배포 안전 가이드라인 - 배포 실패 재발 방지"
+---
+
+# 🚂 Railway 백엔드 배포 안전 가이드라인
+
+## 🚨 **필수 규칙: Railway 배포 시 반드시 따라야 할 사항**
+
+### 📋 **배포 전 체크리스트**
+- [ ] 로컬에서 모든 기능 테스트 완료 (`python3 app.py`)
+- [ ] Git 상태 확인 (`git status`)
+- [ ] Railway 프로젝트 연결 상태 확인 (`railway status`)
+
+### 🛡️ **안전한 배포 방법 (권장)**
+
+#### 방법 1: 자동화된 안전 배포 스크립트 사용
+```bash
+# 배포와 검증을 한 번에 처리
+./deploy-backend-safe.sh "feat: 기능 설명"
+```
+
+#### 방법 2: 수동 단계별 배포
+```bash
+# 1. Git 푸시
+git add . && git commit -m "feat: 기능" && git push
+
+# 2. 2-3분 대기 (Railway 자동 배포)
+
+# 3. 배포 상태 확인
+./railway-deploy-monitor.sh
+
+# 4. 문제 발생 시 강제 재배포
+railway up --force
+```
+
+### ⚠️ **배포 실패 시 즉시 대응**
+
+1. **자동 배포 실패**: 
+   ```bash
+   railway up --detach  # 수동 배포
+   ```
+
+2. **코드 미반영**:
+   ```bash
+   railway up --force  # 강제 재배포
+   ```
+
+3. **긴급 롤백**:
+   ```bash
+   git revert HEAD && git push  # 이전 버전으로 복구
+   ```
+
+### 📊 **배포 후 필수 확인**
+
+```bash
+# 1. 헬스체크
+curl https://nongbuxxbackend-production.up.railway.app/api/health
+
+# 2. 기능 테스트 (예: X 타입)
+curl -X POST https://nongbuxxbackend-production.up.railway.app/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"url":"test","api_provider":"anthropic","api_key":"sk-ant-test","content_type":"x"}'
+
+# 3. 실시간 로그 확인
+railway logs -f
+```
+
+### 🔧 **사용 가능한 도구**
+
+- [deploy-backend-safe.sh](mdc:deploy-backend-safe.sh) - 안전한 자동 배포 스크립트
+- [railway-deploy-monitor.sh](mdc:railway-deploy-monitor.sh) - 배포 상태 모니터링
+- [RAILWAY_DEPLOYMENT_CHECKLIST.md](mdc:RAILWAY_DEPLOYMENT_CHECKLIST.md) - 상세 체크리스트
+
+### ❌ **절대 하지 말아야 할 것**
+
+1. Git push 후 확인 없이 방치
+2. 배포 실패 징후 무시
+3. 로컬 테스트 없이 배포
+4. 배포 로그 확인 생략
+
+### 💡 **핵심 명령어 참조**
+
+| 명령어 | 설명 | 사용 시기 |
+|--------|------|----------|
+| `./deploy-backend-safe.sh "메시지"` | 안전한 자동 배포 | 일반적인 배포 시 |
+| `railway up --force` | 강제 재배포 | 코드 미반영 시 |
+| `railway logs -f` | 실시간 로그 | 문제 진단 시 |
+| `./railway-deploy-monitor.sh` | 배포 상태 확인 | 배포 후 검증 |
+
+### 🎯 **Railway 배포 골든 룰**
+
+> **"Push → Wait → Check → Fix"**
+> 
+> 1. **Push**: Git에 코드 푸시
+> 2. **Wait**: 2-3분 대기 (자동 배포)
+> 3. **Check**: 배포 상태 확인
+> 4. **Fix**: 문제 발생 시 즉시 대응
+
+**기억하세요**: Railway 배포는 간헐적으로 실패할 수 있으므로, 항상 배포 후 확인이 필수입니다!
