@@ -442,7 +442,6 @@ class BlogContentGenerator:
 본문: {extracted_data['content']['text']}
 
 **마무리 요구사항:**
-- **SEO 메타 정보 제안**: 포커스 키워드, 메타 설명, URL 슬러그 포함
 - 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가
 - 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
 - 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함
@@ -455,15 +454,25 @@ class BlogContentGenerator:
 
 **중요: HTML 태그를 포함한 완전한 HTML 콘텐츠를 작성하세요. Gutenberg 블록 에디터에서 사용할 수 있는 형식입니다.**
 
+**📱 시각적 개선 및 가독성 향상 가이드:**
+- **문단 간격**: 각 <p> 태그에 style="margin-bottom: 1.5em; line-height: 1.8;" 적용
+- **제목 스타일**: 
+  - <h1 style="font-size: 2.5em; margin-bottom: 0.8em; font-weight: 700; color: #1a1a1a;">
+  - <h2 style="font-size: 2em; margin-top: 2em; margin-bottom: 1em; font-weight: 600; color: #2c2c2c;">
+  - <h3 style="font-size: 1.5em; margin-top: 1.5em; margin-bottom: 0.8em; font-weight: 500; color: #3a3a3a;">
+- **목록 스타일**: <ul style="margin: 1.5em 0; padding-left: 2em; line-height: 1.8;">
+- **인용문 스타일**: <blockquote style="border-left: 4px solid #0066cc; padding-left: 1.5em; margin: 2em 0; font-style: italic; color: #555;">
+- **컨테이너**: <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+
 **HTML 구조 가이드:**
-- <h1>제목</h1> - 메인 제목
-- <h2>소제목</h2> - 주요 섹션
-- <h3>부제목</h3> - 세부 섹션
-- <p>본문 문단</p> - 각 문단
+- <h1>제목</h1> - 메인 제목 (위 스타일 적용)
+- <h2>소제목</h2> - 주요 섹션 (위 스타일 적용)
+- <h3>부제목</h3> - 세부 섹션 (위 스타일 적용)
+- <p>본문 문단</p> - 각 문단 (위 스타일 적용)
 - <strong>강조</strong> 또는 <em>이탤릭</em>
-- <ul><li>목록 항목</li></ul> - 순서 없는 목록
+- <ul><li>목록 항목</li></ul> - 순서 없는 목록 (위 스타일 적용)
 - <ol><li>번호 목록</li></ol> - 순서 있는 목록
-- <blockquote>인용문</blockquote> - 인용 블록
+- <blockquote>인용문</blockquote> - 인용 블록 (위 스타일 적용)
 - <div class="wp-block-group">그룹화된 콘텐츠</div>
 
 **🚨 필수 지시사항 - 절대 지켜야 함:**
@@ -522,14 +531,19 @@ class BlogContentGenerator:
 설명: {extracted_data.get('description', '')}
 본문: {extracted_data['content']['text']}
 
-**마무리 요구사항:**
-- **SEO 메타 정보 제안**: 포커스 키워드, 메타 설명, URL 슬러그 포함
-- 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가
-- 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
-- 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함
-- 해시태그 앞에 "**태그:**"라는 제목을 붙임
+**시각적 품질 향상 요구사항:**
+- **적절한 여백**: 섹션 간, 문단 간 충분한 여백으로 숨 쉬는 레이아웃
+- **강조 효과**: 중요한 내용은 <mark style="background-color: #ffeb3b; padding: 2px 5px;">하이라이트</mark> 처리
+- **박스 디자인**: 핵심 정보는 <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 2em 0;">박스</div>로 강조
+- **구분선**: 섹션 구분이 필요한 경우 <hr style="margin: 3em 0; border: none; border-top: 1px solid #e0e0e0;">
+- **읽기 편안함**: 적절한 폰트 크기와 줄 간격으로 눈의 피로도 최소화
 
-워드프레스 Gutenberg 에디터에 바로 붙여넣을 수 있는 SEO 최적화된 HTML 콘텐츠를 작성해주세요. HTML 태그를 포함한 완전한 HTML 구조로 작성하세요. 제목은 반드시 매력적인 한국어로!"""
+**마무리 요구사항:**
+- 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가
+- 해시태그는 <div style="margin-top: 3em; padding-top: 2em; border-top: 1px solid #e0e0e0;"><p style="font-weight: 600;">태그:</p><p style="color: #0066cc;">#키워드1 #키워드2 #키워드3 #키워드4 #키워드5</p></div> 형식으로 작성
+- 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함
+
+워드프레스 Gutenberg 에디터에 바로 붙여넣을 수 있는 시각적으로 완성도 높은 HTML 콘텐츠를 작성해주세요. HTML 태그를 포함한 완전한 HTML 구조로 작성하세요. 제목은 반드시 매력적인 한국어로!"""
 
         wordpress_content = self.converter.call_api(wordpress_prompt, max_tokens=4000)
         
@@ -592,13 +606,12 @@ class BlogContentGenerator:
 본문: {extracted_data['content']['text']}
 
 **마무리 요구사항:**
-- **티스토리 SEO 정보**: 카테고리, 태그, 요약 제안 포함
 - 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가
 - 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
 - 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함
 - 해시태그 앞에 "**태그:**"라는 제목을 붙임
 
-티스토리에 바로 붙여넣을 수 있는 SEO 최적화된 HTML 콘텐츠를 작성해주세요. 제목은 반드시 매력적인 한국어로!"""
+티스토리에 바로 붙여넣을 수 있는 HTML 콘텐츠를 작성해주세요. 제목은 반드시 매력적인 한국어로!"""
 
         tistory_content = self.converter.call_api(tistory_prompt, max_tokens=4000)
         
@@ -668,13 +681,12 @@ class BlogContentGenerator:
 본문: {extracted_data['content']['text']}
 
 **마무리 요구사항:**
-- **네이버 SEO 정보**: 카테고리, 태그, 요약, 연관 키워드 제안 포함
 - 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가
 - 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
 - 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함
 - 해시태그 앞에 "**태그:**"라는 제목을 붙임
 
-네이버 블로그에 바로 붙여넣을 수 있는 SEO 최적화된 콘텐츠를 작성해주세요. 제목은 반드시 매력적인 한국어로!"""
+네이버 블로그에 바로 붙여넣을 수 있는 콘텐츠를 작성해주세요. 제목은 반드시 매력적인 한국어로!"""
 
         naver_content = self.converter.call_api(naver_prompt, max_tokens=4000)
         
