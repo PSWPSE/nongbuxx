@@ -1,192 +1,174 @@
-# 🚂 Railway 백엔드 배포 체크리스트 & 재발 방지 가이드
+# 🚂 Railway 배포 체크리스트
 
-## 📋 배포 전 체크리스트
+## 📋 배포 전 필수 확인사항
 
-### 1. 로컬 테스트 ✅
+### 1️⃣ Railway 환경 변수 설정
+
+Railway 대시보드 → nongbuxxbackend → Variables 탭에서 다음 변수들 추가:
+
 ```bash
-# 백엔드 서버 시작
-source venv/bin/activate
-python3 app.py
+# 이미 생성된 키들 (RAILWAY_ENV_VARS.txt 참조)
+SECRET_KEY=TiAnYueCfjXCIPcz8P7LPi8XDpC1LCpR1E5glf13wN4
+JWT_SECRET_KEY=MD1mIiR5pCnhpjhTNXklCY34gbgiPiv0mKsP6DHz_CU
+ENCRYPTION_KEY=gtUN9kBcHB1fBHJLxdgvqNF0xIcQOnZE
+FLASK_ENV=production
 
-# 새 기능 테스트 (예: X 타입)
-curl -X POST http://localhost:8080/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com","api_provider":"anthropic","api_key":"your-key","content_type":"x"}'
+# DATABASE_URL은 PostgreSQL 추가 시 자동 설정됨
 ```
 
-### 2. Git 커밋 & 푸시 ✅
+**⚠️ 중요: 각 변수 추가 후 "Add" 버튼 클릭!**
+
+### 2️⃣ Procfile 수정 여부 결정
+
+**옵션 A: 기존 유지 (하위 호환성 우선)**
+```procfile
+web: gunicorn app:app
+```
+- 장점: 안정적, 기존 사용자 영향 없음
+- 단점: 로그인 기능 사용 불가
+
+**옵션 B: 인증 버전 사용 (권장)**
+```procfile
+web: gunicorn app_with_auth:app
+```
+- 장점: 로그인 기능 활성화
+- 단점: 철저한 테스트 필요
+
+### 3️⃣ 코드 배포
+
 ```bash
-# 상태 확인
-git status
+# 1. 모든 변경사항 커밋
+git add -A
+git commit -m "feat: 로그인 시스템 통합"
 
-# 커밋
-git add .
-git commit -m "feat: 기능 설명"
+# 2. main 브랜치로 머지
+git checkout main
+git merge feature/login-system
 
-# 푸시
+# 3. Railway로 푸시
 git push origin main
 ```
 
-### 3. Railway 연동 확인 ✅
+### 4️⃣ 배포 모니터링
+
 ```bash
-# Railway 프로젝트 상태
-railway status
-
-# GitHub 연동 확인
-railway whoami
-```
-
-## 🚀 배포 프로세스
-
-### 자동 배포 (기본)
-1. `git push origin main` 실행
-2. GitHub 웹훅이 Railway에 알림
-3. Railway가 자동으로 빌드 및 배포
-4. 약 2-5분 후 배포 완료
-
-### 수동 배포 (자동 배포 실패 시)
-```bash
-# 옵션 1: CLI로 직접 배포
-railway up --detach
-
-# 옵션 2: 강제 재배포
-railway up --force
-
-# 옵션 3: 서비스 재시작
-railway restart
-```
-
-## 📊 배포 후 확인사항
-
-### 1. 배포 모니터링 스크립트 실행
-```bash
-chmod +x railway-deploy-monitor.sh
+# 배포 상태 실시간 확인
 ./railway-deploy-monitor.sh
+
+# 또는 Railway CLI로 직접 확인
+railway logs -f
 ```
 
-### 2. 수동 검증
-```bash
-# 헬스체크
-curl https://nongbuxxbackend-production.up.railway.app/api/health
+## 🧪 배포 후 테스트
 
-# 새 기능 테스트
+### 1. 헬스체크
+```bash
+curl https://nongbuxxbackend-production.up.railway.app/api/health
+```
+
+### 2. 기존 API 테스트
+```bash
 curl -X POST https://nongbuxxbackend-production.up.railway.app/api/generate \
   -H "Content-Type: application/json" \
-  -d '{"url":"test","api_provider":"anthropic","api_key":"sk-ant-test","content_type":"x"}'
+  -d '{
+    "url": "https://example.com",
+    "content_type": "standard",
+    "api_provider": "anthropic",
+    "api_key": "YOUR-API-KEY"
+  }'
 ```
 
-### 3. 로그 확인
+### 3. 인증 API 테스트
 ```bash
-# 실시간 로그
-railway logs -f
-
-# 최근 100줄
-railway logs -n 100
-
-# 에러만 필터링
-railway logs | grep -E "(ERROR|Error|error)"
+# 회원가입
+curl -X POST https://nongbuxxbackend-production.up.railway.app/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "production@test.com",
+    "password": "ProdPassword123!"
+  }'
 ```
 
-## 🔧 문제 해결 가이드
-
-### 문제 1: 자동 배포가 트리거되지 않음
-**증상**: Git push 후에도 Railway가 재배포하지 않음
-
-**해결책**:
-1. Railway 대시보드에서 GitHub 연동 재설정
-2. Settings → GitHub → Disconnect & Reconnect
-3. 또는 수동 배포: `railway up --detach`
-
-### 문제 2: 빌드는 성공했지만 코드가 반영되지 않음
-**증상**: 배포 완료 메시지는 나왔지만 새 기능이 작동하지 않음
-
-**해결책**:
+### 4. 데이터베이스 연결 확인
 ```bash
-# 빌드 캐시 무시하고 재배포
-railway up --force
+# Railway CLI로 데이터베이스 접속
+railway run psql $DATABASE_URL
 
-# Railway 환경 변수 재설정
-railway variables --set "PYTHONDONTWRITEBYTECODE=1"
-railway up
+# 테이블 확인
+\dt
+
+# 사용자 수 확인
+SELECT COUNT(*) FROM users;
 ```
 
-### 문제 3: "Content type must be..." 에러
-**증상**: 새로 추가한 콘텐츠 타입이 인식되지 않음
+## ⚠️ 롤백 계획
 
-**해결책**:
-1. `app.py`의 콘텐츠 타입 검증 로직 확인
-2. 로컬에서 정상 작동 확인
-3. `railway up --force`로 강제 재배포
+문제 발생 시:
 
-## 🛡️ 재발 방지 대책
-
-### 1. 배포 자동화 개선
+### 옵션 1: 빠른 롤백
 ```bash
-# deploy-backend.sh 스크립트 생성
-#!/bin/bash
-git add .
-git commit -m "$1"
+# Procfile을 원래대로 되돌리기
+echo "web: gunicorn app:app" > Procfile
+git add Procfile
+git commit -m "rollback: 기존 app.py 사용"
 git push origin main
-
-echo "⏳ 배포 대기 중 (2분)..."
-sleep 120
-
-# 자동 검증
-./railway-deploy-monitor.sh
 ```
 
-### 2. GitHub Actions 활용 (선택사항)
-`.github/workflows/railway-deploy.yml`:
-```yaml
-name: Railway Deploy Check
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Wait for Railway Deploy
-        run: sleep 180
-      - name: Check Deployment
-        run: |
-          curl -f https://nongbuxxbackend-production.up.railway.app/api/health
-```
-
-### 3. 배포 상태 대시보드
-Railway 대시보드에서 실시간 모니터링:
-- https://railway.app/project/[your-project-id]
-- Deployments 탭에서 상태 확인
-- Logs 탭에서 실시간 로그 확인
-
-## 📌 Quick Reference
-
-| 명령어 | 설명 |
-|--------|------|
-| `railway up` | 수동 배포 |
-| `railway logs` | 로그 확인 |
-| `railway status` | 프로젝트 상태 |
-| `railway restart` | 서비스 재시작 |
-| `railway variables` | 환경 변수 관리 |
-
-## ⚡ 긴급 대응 매뉴얼
-
-배포 실패 시 30초 내 복구:
+### 옵션 2: 이전 커밋으로 롤백
 ```bash
-# 1. 강제 재배포
-railway up --force
-
-# 2. 실패 시 이전 버전으로 롤백
-git revert HEAD
-git push origin main
-
-# 3. Railway 대시보드에서 수동 롤백
-# Deployments → 이전 성공 배포 → Redeploy
+# 백업 태그로 롤백
+git checkout v1.0.0-before-auth
+git checkout -b hotfix/rollback
+git push origin hotfix/rollback:main --force
 ```
+
+## 📊 성공 지표
+
+- [ ] 모든 기존 API 정상 작동
+- [ ] 인증 API 응답 정상
+- [ ] 데이터베이스 연결 성공
+- [ ] 에러 로그 없음
+- [ ] 응답 시간 < 2초
+
+## 🎯 점진적 마이그레이션 전략
+
+### Phase 1: 소프트 런치 (현재)
+- app_with_auth.py 배포
+- 기존 사용자는 영향 없음
+- 새 사용자만 로그인 사용
+
+### Phase 2: 프론트엔드 통합
+- 로그인 UI 추가
+- 선택적 로그인 제공
+- A/B 테스트
+
+### Phase 3: 완전 전환
+- 모든 사용자 로그인 필수
+- 기존 API 단계적 폐기
+- 완전한 인증 시스템
+
+## 📝 배포 체크리스트
+
+**배포 전:**
+- [ ] 로컬 테스트 완료
+- [ ] 환경 변수 설정
+- [ ] Procfile 결정
+- [ ] 롤백 계획 준비
+
+**배포 중:**
+- [ ] git push 성공
+- [ ] Railway 빌드 성공
+- [ ] 배포 로그 모니터링
+
+**배포 후:**
+- [ ] 헬스체크 통과
+- [ ] API 테스트 통과
+- [ ] DB 연결 확인
+- [ ] 에러 모니터링
 
 ---
 
-**💡 핵심**: Git push 후 2-3분 기다리고, `./railway-deploy-monitor.sh`로 확인! 
+**⚡ 빠른 참조:**
+- Railway 대시보드: https://railway.app/project/[YOUR-PROJECT-ID]
+- 프로덕션 URL: https://nongbuxxbackend-production.up.railway.app
+- 환경 변수: RAILWAY_ENV_VARS.txt 
