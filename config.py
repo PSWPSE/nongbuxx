@@ -13,6 +13,9 @@ class Config:
     JWT_COOKIE_CSRF_PROTECT = False  # API 사용을 위해 CSRF 보호 비활성화
     JWT_CSRF_CHECK_FORM = False
     JWT_CSRF_IN_COOKIES = False
+    JWT_TOKEN_LOCATION = ['headers']  # 헤더에서만 토큰 확인
+    JWT_HEADER_NAME = 'Authorization'
+    JWT_HEADER_TYPE = 'Bearer'
     
     # Database Configuration
     DATABASE_URL = os.getenv('DATABASE_URL')

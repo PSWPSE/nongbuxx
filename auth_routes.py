@@ -161,8 +161,8 @@ def login():
                 'code': 'ACCOUNT_INACTIVE'
             }), 403
         
-        # JWT 토큰 생성
-        access_token = create_access_token(identity=user.id)
+        # JWT 토큰 생성 (CSRF 없이)
+        access_token = create_access_token(identity=user.id, fresh=False)
         refresh_token = create_refresh_token(identity=user.id)
         
         # 마지막 로그인 시간 업데이트
@@ -225,7 +225,7 @@ def refresh():
     """
     try:
         current_user_id = get_jwt_identity()
-        new_access_token = create_access_token(identity=current_user_id)
+        new_access_token = create_access_token(identity=current_user_id, fresh=False)
         
         return jsonify({
             'success': True,
