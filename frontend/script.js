@@ -2419,6 +2419,17 @@ function deleteApiSettings() {
 
 function updateApiStatus(provider, isConfigured) {
     if (elements.apiStatus) {
+        // 로그인한 사용자의 경우
+        if (window.authManager && window.authManager.isAuthenticated()) {
+            elements.apiStatus.classList.add('configured');
+            const statusText = elements.apiStatus.querySelector('.status-text');
+            if (statusText) {
+                statusText.textContent = '로그인됨';
+            }
+            return;
+        }
+        
+        // 로그인하지 않은 사용자의 경우
         elements.apiStatus.classList.toggle('configured', isConfigured);
         const statusText = elements.apiStatus.querySelector('.status-text');
         if (statusText) {
@@ -2428,6 +2439,13 @@ function updateApiStatus(provider, isConfigured) {
 }
 
 function showApiSettingsModal() {
+    // 로그인한 사용자는 새로운 API 키 관리 모달로 이동
+    if (window.authManager && window.authManager.isAuthenticated()) {
+        showApiKeysModal();
+        return;
+    }
+    
+    // 로그인하지 않은 사용자는 기존 모달 사용
     hideAllSections();
     if (elements.apiSettingsModalSection) {
         elements.apiSettingsModalSection.style.display = 'block';
@@ -5758,6 +5776,11 @@ window.onclick = function(event) {
 // 페이지 로드 시 인증 상태 확인
 document.addEventListener('DOMContentLoaded', function() {
     updateAuthUI(authManager.isAuthenticated());
+    
+    // 로그인한 경우 API 상태 업데이트
+    if (authManager.isAuthenticated()) {
+        updateApiStatus('', true);
+    }
 });
 
 // 기존 콘텐츠 생성 함수 수정 (로그인 사용자용)
