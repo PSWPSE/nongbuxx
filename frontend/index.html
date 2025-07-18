@@ -217,7 +217,6 @@
                                         <span class="wp-format-label">
                                             <i class="fas fa-align-left"></i>
                                             <span>텍스트 기반</span>
-                                            <small>순수 텍스트 형식 (마크다운 스타일)</small>
                                         </span>
                                     </label>
                                     <label class="wp-format-type">
@@ -225,7 +224,6 @@
                                         <span class="wp-format-label">
                                             <i class="fas fa-code"></i>
                                             <span>HTML 코드</span>
-                                            <small>서식이 포함된 HTML 형식</small>
                                         </span>
                                     </label>
                                 </div>
@@ -239,11 +237,17 @@
                                 </div>
                                 <div class="content-type-options">
                                     <label class="content-type-option">
-                                        <input type="radio" name="contentType" value="standard" checked>
+                                        <input type="radio" name="contentType" value="x" checked>
                                         <span class="content-type-label">
-                                            <i class="fas fa-magic"></i>
-                                            <span>Markdown (.md)</span>
-                                            <small>표준 마크다운 형식</small>
+                                            <i class="fab fa-x-twitter"></i>
+                                            <span>X (Twitter) Short Form</span>
+                                        </span>
+                                    </label>
+                                    <label class="content-type-option">
+                                        <input type="radio" name="contentType" value="standard">
+                                        <span class="content-type-label">
+                                            <i class="fab fa-x-twitter"></i>
+                                            <span>X (Twitter) Normal Form</span>
                                         </span>
                                     </label>
                                     <label class="content-type-option">
@@ -251,23 +255,13 @@
                                         <span class="content-type-label">
                                             <i class="fas fa-comment-dots"></i>
                                             <span>Threads</span>
-                                            <small>490자 미만 짧은 콘텐츠</small>
                                         </span>
                                     </label>
                                     <label class="content-type-option">
                                         <input type="radio" name="contentType" value="enhanced_blog">
                                         <span class="content-type-label">
                                             <i class="fas fa-star"></i>
-                                            <span>완성형 블로그</span>
-                                            <small>플랫폼별 다중 형식 지원</small>
-                                        </span>
-                                    </label>
-                                    <label class="content-type-option">
-                                        <input type="radio" name="contentType" value="x">
-                                        <span class="content-type-label">
-                                            <i class="fab fa-x-twitter"></i>
-                                            <span>X (Twitter)</span>
-                                            <small>간결한 뉴스 요약 콘텐츠</small>
+                                            <span>Blog</span>
                                         </span>
                                     </label>
                                 </div>
@@ -277,6 +271,10 @@
                                 <button type="button" id="generateSelectedBtn2" class="btn btn-primary" disabled>
                                     <i class="fas fa-magic"></i>
                                     선택된 뉴스 생성
+                                </button>
+                                <button type="button" id="showGuidelineBtn" class="btn btn-secondary" style="display: none;">
+                                    <i class="fas fa-book"></i>
+                                    <span id="guidelineButtonText">가이드라인 보기</span>
                                 </button>
                             </div>
                         </div>
@@ -766,5 +764,25 @@
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="./config.js"></script>
     <script src="./script.js"></script>
+
+    <!-- 가이드라인 팝업 모달 -->
+    <div id="guidelineModal" class="modal" style="display: none;">
+        <div class="modal-content guideline-modal">
+            <div class="modal-header">
+                <h2 id="guidelineModalTitle">
+                    <i class="fas fa-book"></i>
+                    콘텐츠 생성 가이드라인
+                </h2>
+                <button class="modal-close" onclick="closeGuidelineModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="guidelineContent" class="guideline-content">
+                    <!-- 가이드라인 내용이 여기에 동적으로 로드됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 

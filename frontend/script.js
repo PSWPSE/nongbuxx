@@ -323,10 +323,10 @@ function updateSelectedNewsSummary() {
         // 선택된 콘텐츠 타입에 따라 버튼 텍스트 업데이트
         const selectedType = getSelectedContentType();
         const typeNames = {
-            'standard': '마크다운',
+            'standard': 'X(Twitter) Normal Form',
             'threads': 'Threads',
-            'x': 'X 콘텐츠',
-            'enhanced_blog': '완성형 블로그'
+            'x': 'X(Twitter) Short Form',
+            'enhanced_blog': 'Blog'
         };
         
         const typeName = typeNames[selectedType] || '콘텐츠';
@@ -423,7 +423,7 @@ function initEventListeners() {
         checkbox.addEventListener('change', handleFormatSelectionChange);
     });
     
-    // 완성형 블로그 콘텐츠 생성 버튼 이벤트 리스너
+    // Blog 콘텐츠 생성 버튼 이벤트 리스너
     const generateEnhancedBlogBtn = document.getElementById('generateEnhancedBlogBtn');
     
     if (generateEnhancedBlogBtn) {
@@ -688,7 +688,7 @@ async function handleFormSubmit(e) {
     await generateContent(contentType);
 }
 
-// 완성형 블로그 콘텐츠 생성 처리
+// Blog 콘텐츠 생성 처리
 async function handleEnhancedBlogGeneration() {
     await generateContent('enhanced_blog');
 }
@@ -723,16 +723,16 @@ async function generateContent(contentType = 'standard') {
         const progressTitle = document.getElementById('progressTitle');
         if (progressTitle) {
             if (contentType === 'enhanced_blog') {
-                progressTitle.textContent = '완성형 블로그 콘텐츠 생성 중...';
+                progressTitle.textContent = 'Blog 콘텐츠 생성 중...';
             } else {
                 progressTitle.textContent = '콘텐츠 생성 중...';
             }
         }
         
-        // 프로그레스 시뮬레이션 시작 (완성형 블로그 콘텐츠는 가장 오래 걸림)
+        // 프로그레스 시뮬레이션 시작 (Blog 콘텐츠는 가장 오래 걸림)
         let duration = 60000; // 기본값 (2배 증가)
         if (contentType === 'enhanced_blog') {
-            duration = 120000; // 완성형 블로그는 더 오래 걸림 (2배 증가)
+            duration = 120000; // Blog는 더 오래 걸림 (2배 증가)
         }
         startProgressSimulation(duration);
             
@@ -1369,10 +1369,10 @@ function updateGenerateButtonState() {
         // 선택된 콘텐츠 타입에 따라 버튼 텍스트 업데이트
         const selectedType = getSelectedContentType();
         const typeNames = {
-            'standard': '마크다운',
+            'standard': 'X(Twitter) Normal Form',
             'threads': 'Threads',
-            'x': 'X 콘텐츠',
-            'enhanced_blog': '완성형 블로그'
+            'x': 'X(Twitter) Short Form',
+            'enhanced_blog': 'Blog'
         };
         
         const typeName = typeNames[selectedType] || '콘텐츠';
@@ -1454,6 +1454,9 @@ function handleContentTypeChange() {
     
     // 버튼 텍스트 업데이트
     updateGenerateButtonText();
+    
+    // 가이드라인 버튼 표시/숨김 및 텍스트 업데이트
+    updateGuidelineButton();
 }
 
 // 선택된 콘텐츠 타입 가져오기
@@ -1469,10 +1472,10 @@ function updateGenerateButtonText() {
     
     if (generateBtn) {
         const typeNames = {
-            'standard': '마크다운',
+            'standard': 'X(Twitter) Normal Form',
             'threads': 'Threads',
-            'x': 'X 콘텐츠',
-            'enhanced_blog': '완성형 블로그'
+            'x': 'X(Twitter) Short Form',
+            'enhanced_blog': 'Blog'
         };
         
         const typeName = typeNames[selectedType] || '콘텐츠';
@@ -1522,7 +1525,7 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
             if (contentType === 'blog') {
                 progressTitle.textContent = '블로그 콘텐츠 일괄 생성 중...';
             } else if (contentType === 'enhanced_blog') {
-                progressTitle.textContent = '완성형 블로그 콘텐츠 일괄 생성 중...';
+                progressTitle.textContent = 'Blog 콘텐츠 일괄 생성 중...';
             } else {
                 progressTitle.textContent = '일괄 콘텐츠 생성 중...';
             }
@@ -1537,7 +1540,7 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
         let timeoutDuration = 480000; // 8분 기본 타임아웃 (2배 증가)
         
         if (contentType === 'enhanced_blog') {
-            estimatedTimePerBatch = 60; // 완성형 블로그는 더 오래 걸림
+            estimatedTimePerBatch = 60; // Blog는 더 오래 걸림
             timeoutDuration = 1200000; // 20분 타임아웃 (2배 증가)
         }
         
@@ -1564,7 +1567,7 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                 content_type: contentType
             };
             
-            // 완성형 블로그인 경우
+            // Blog인 경우
             if (contentType === 'enhanced_blog' && selectedFormats) {
                 requestBody.selected_formats = selectedFormats;
                 
@@ -1636,7 +1639,7 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                     // 생성된 콘텐츠 탭으로 자동 전환
                     switchTab('generated-content');
                     
-                                    const contentTypeName = contentType === 'enhanced_blog' ? '완성형 블로그 ' : '';
+                                    const contentTypeName = contentType === 'enhanced_blog' ? 'Blog ' : '';
                     const performanceInfo = `(평균 ${avgTimePerItem}초/개, 총 ${processingTime.toFixed(1)}초)`;
                     
                     // 🎯 병렬처리 통계 표시
@@ -4474,7 +4477,7 @@ async function loadGeneratedContentListForced() {
                     // 파일을 최신 순으로 정렬
                     files.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                     
-                    // 완성형 블로그 파일들 그룹핑
+                    // Blog 파일들 그룹핑
                     const { groups, regularFiles } = groupEnhancedBlogFiles(files);
                     
                     // 모든 파일들 (그룹 + 일반 파일) 통합하여 최신 순 정렬
@@ -4485,7 +4488,7 @@ async function loadGeneratedContentListForced() {
                     
                     contentListElement.innerHTML = allItems.map((item, index) => {
                         if (item.isGroup) {
-                            // 완성형 블로그 그룹 처리
+                            // Blog 그룹 처리
                             const group = item;
                             let contentPreview = '';
                             if (group.content) {
@@ -4509,7 +4512,7 @@ async function loadGeneratedContentListForced() {
                                     <div class="content-item-header">
                                         <span class="enhanced-blog-badge">
                                             <i class="fas fa-star"></i>
-                                            완성형 블로그
+                                            Blog
                                         </span>
                                         <span class="file-count">${group.files.length}개 파일</span>
                                     </div>
@@ -5081,7 +5084,7 @@ function updateFormatSelectionVisibility() {
     const enhancedBlogBtn = document.getElementById('generateSelectedEnhancedBlogBtn2');
     
     if (formatSelectionContainer && enhancedBlogBtn) {
-        // 완성형 블로그 생성 버튼이 활성화되어 있을 때만 토글 표시
+        // Blog 생성 버튼이 활성화되어 있을 때만 토글 표시
         const shouldShow = selectedNewsUrls.length > 0;
         formatSelectionContainer.style.display = shouldShow ? 'block' : 'none';
     }
@@ -5099,14 +5102,14 @@ function getSelectedFormats() {
     }
 }
 
-// 완성형 블로그 생성 처리 (수정)
+// Blog 생성 처리 (수정)
 async function handleGenerateSelectedEnhancedBlogNews() {
     const selectedFormats = getSelectedFormats();
     console.log('선택된 형식:', selectedFormats);
     await generateSelectedNews('enhanced_blog', selectedFormats);
 }
 
-// 완성형 블로그 파일인지 확인
+// Blog 파일인지 확인
 function isEnhancedBlogFile(filename) {
     return filename && filename.includes('_enhanced_blog');
 }
@@ -5149,7 +5152,7 @@ async function findActualFilename(groupBaseName, selectedType) {
     }
 }
 
-// 완성형 블로그 파일들을 그룹핑 (새로운 파일명 패턴 지원)
+// Blog 파일들을 그룹핑 (새로운 파일명 패턴 지원)
 function groupEnhancedBlogFiles(files) {
     const groups = {};
     const regularFiles = [];
@@ -5203,7 +5206,7 @@ function groupEnhancedBlogFiles(files) {
     return { groups: Object.values(groups), regularFiles };
 }
 
-// 완성형 블로그 파일 유형 선택기 HTML 생성
+// Blog 파일 유형 선택기 HTML 생성
 function createFileTypeSelector(groupBaseName, files) {
     const availableTypes = files.map(f => f.fileType);
     
@@ -5251,7 +5254,7 @@ function switchFileType(groupBaseName, selectedType) {
     updateEnhancedBlogPreview(groupBaseName, selectedType);
 }
 
-// 완성형 블로그 미리보기 토글
+// Blog 미리보기 토글
 function toggleEnhancedBlogPreview(groupBaseName) {
     const previewDiv = document.getElementById(`preview-${groupBaseName}`);
     if (!previewDiv) return;
@@ -5269,7 +5272,7 @@ function toggleEnhancedBlogPreview(groupBaseName) {
     }
 }
 
-// 완성형 블로그 미리보기 업데이트 (새로운 파일명 패턴 지원)
+// Blog 미리보기 업데이트 (새로운 파일명 패턴 지원)
 async function updateEnhancedBlogPreview(groupBaseName, selectedType) {
     const previewDiv = document.getElementById(`preview-${groupBaseName}`);
     if (!previewDiv) return;
@@ -5334,7 +5337,7 @@ async function updateEnhancedBlogPreview(groupBaseName, selectedType) {
     }
 }
 
-// 완성형 블로그 콘텐츠 복사 (새로운 파일명 패턴 지원)
+// Blog 콘텐츠 복사 (새로운 파일명 패턴 지원)
 async function copyEnhancedBlogContent(groupBaseName) {
     try {
         // 현재 선택된 파일 유형 가져오기
@@ -5373,7 +5376,7 @@ async function copyEnhancedBlogContent(groupBaseName) {
     }
 }
 
-// 완성형 블로그 콘텐츠 다운로드 (새로운 파일명 패턴 지원)
+// Blog 콘텐츠 다운로드 (새로운 파일명 패턴 지원)
 async function downloadEnhancedBlogContent(groupBaseName) {
     try {
         // 현재 선택된 파일 유형 가져오기
@@ -5416,3 +5419,134 @@ function handleFormatSelectionChange() {
         }
     }
 }
+
+// ============================================================================
+// 가이드라인 관련 기능
+// ============================================================================
+
+// 가이드라인 버튼 업데이트
+function updateGuidelineButton() {
+    const guidelineBtn = document.getElementById('showGuidelineBtn');
+    const guidelineBtnText = document.getElementById('guidelineButtonText');
+    const selectedType = getSelectedContentType();
+    
+    if (guidelineBtn && guidelineBtnText) {
+        // 가이드라인 버튼 표시
+        guidelineBtn.style.display = 'inline-block';
+        
+        // 콘텐츠 타입별 버튼 텍스트 설정
+        const guidelineNames = {
+            'x': 'X(Twitter) Short Form 가이드라인',
+            'standard': 'X(Twitter) Normal Form 가이드라인',
+            'threads': 'Threads 가이드라인',
+            'enhanced_blog': 'Blog 가이드라인'
+        };
+        
+        guidelineBtnText.textContent = guidelineNames[selectedType] || '가이드라인 보기';
+    }
+}
+
+// 가이드라인 보기 버튼 클릭 핸들러
+function showGuideline() {
+    const selectedType = getSelectedContentType();
+    const modal = document.getElementById('guidelineModal');
+    const modalTitle = document.getElementById('guidelineModalTitle');
+    const guidelineContent = document.getElementById('guidelineContent');
+    
+    if (!modal || !modalTitle || !guidelineContent) return;
+    
+    // 파일명 매핑
+    const guidelineFiles = {
+        'x': 'x-twitter-short-form.md',
+        'standard': 'x-twitter-normal-form.md',
+        'threads': 'threads.md',
+        'enhanced_blog': 'blog.md'
+    };
+    
+    const guidelineTitles = {
+        'x': 'X(Twitter) Short Form 콘텐츠 생성 가이드라인',
+        'standard': 'X(Twitter) Normal Form 콘텐츠 생성 가이드라인',
+        'threads': 'Threads 콘텐츠 생성 가이드라인',
+        'enhanced_blog': 'Blog 콘텐츠 생성 가이드라인'
+    };
+    
+    const filename = guidelineFiles[selectedType];
+    const title = guidelineTitles[selectedType];
+    
+    if (!filename) {
+        showToast('가이드라인을 찾을 수 없습니다.', 'error');
+        return;
+    }
+    
+    // 제목 설정
+    modalTitle.innerHTML = `<i class="fas fa-book"></i> ${title}`;
+    
+    // 로딩 표시
+    guidelineContent.innerHTML = '<div class="loading-message"><i class="fas fa-spinner fa-spin"></i> 가이드라인 로드 중...</div>';
+    
+    // 모달 표시
+    modal.style.display = 'flex';
+    
+    // 가이드라인 파일 로드
+    fetch(`./guidelines/${filename}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('가이드라인 파일을 찾을 수 없습니다.');
+            }
+            return response.text();
+        })
+        .then(markdown => {
+            // Markdown을 HTML로 변환 (marked.js 사용)
+            if (typeof marked !== 'undefined') {
+                const html = marked.parse(markdown);
+                guidelineContent.innerHTML = html;
+            } else {
+                // marked.js가 없으면 그대로 표시
+                guidelineContent.innerHTML = `<pre>${markdown}</pre>`;
+            }
+        })
+        .catch(error => {
+            console.error('가이드라인 로드 실패:', error);
+            guidelineContent.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>가이드라인을 불러올 수 없습니다.</p>
+                    <small>${error.message}</small>
+                </div>
+            `;
+        });
+}
+
+// 가이드라인 모달 닫기
+function closeGuidelineModal() {
+    const modal = document.getElementById('guidelineModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// ESC 키로 모달 닫기
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeGuidelineModal();
+    }
+});
+
+// 모달 외부 클릭으로 닫기
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('guidelineModal');
+    if (event.target === modal) {
+        closeGuidelineModal();
+    }
+});
+
+// 가이드라인 버튼 이벤트 리스너 설정
+document.addEventListener('DOMContentLoaded', function() {
+    const guidelineBtn = document.getElementById('showGuidelineBtn');
+    if (guidelineBtn) {
+        guidelineBtn.addEventListener('click', showGuideline);
+    }
+    
+    // 초기 상태에서 가이드라인 버튼 업데이트
+    updateGuidelineButton();
+});
