@@ -65,7 +65,7 @@ class GeneratedContent(db.Model):
     url = Column(Text, nullable=False)
     content_type = Column(String(50))  # 'standard', 'blog', 'x', 'threads'
     file_path = Column(Text)
-    metadata = Column(Text)  # JSON string for additional data
+    meta_data = Column(Text)  # JSON string for additional data (renamed from metadata)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     def to_dict(self):
