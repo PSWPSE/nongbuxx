@@ -19,14 +19,6 @@ print("🔐 인증 시스템 초기화 중...")
 app = init_auth(app)
 print("✅ 인증 시스템 초기화 완료")
 
-# 디버그 엔드포인트 추가 (임시)
-try:
-    from debug_endpoint import debug_bp
-    app.register_blueprint(debug_bp)
-    print("🔍 디버그 엔드포인트 활성화")
-except ImportError:
-    pass
-
 # 기존 라우트에 선택적 인증 추가
 modify_existing_routes(app)
 
