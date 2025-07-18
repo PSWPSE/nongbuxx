@@ -17,6 +17,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./auth-styles.css">
+    <script src="./auth.js"></script>
 </head>
 <body>
     <div class="container">
@@ -28,11 +30,40 @@
 
         <!-- Header -->
         <header class="header">
-            <div class="logo">
-                <i class="fas fa-newspaper"></i>
-                <h1>NONGBUXX</h1>
+            <div class="header-content">
+                <div class="logo-area">
+                    <div class="logo">
+                        <i class="fas fa-newspaper"></i>
+                        <h1>NONGBUXX</h1>
+                    </div>
+                    <p class="subtitle">뉴스를 SNS 콘텐츠로 변환해 드려요.</p>
+                </div>
+                <div class="auth-area">
+                    <button class="auth-button" id="authButton" onclick="showAuthModal()">
+                        <i class="fas fa-user"></i>
+                        <span>로그인</span>
+                    </button>
+                    <div class="user-menu" id="userMenu" style="display: none;">
+                        <button class="user-menu-button" id="userMenuButton">
+                            <i class="fas fa-user-circle"></i>
+                            <span id="userDisplayName">사용자</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="user-dropdown" id="userDropdown" style="display: none;">
+                            <a href="#" onclick="showProfileModal()">
+                                <i class="fas fa-user-cog"></i> 프로필 설정
+                            </a>
+                            <a href="#" onclick="showApiKeysModal()">
+                                <i class="fas fa-key"></i> API 키 관리
+                            </a>
+                            <hr>
+                            <a href="#" onclick="authManager.logout()">
+                                <i class="fas fa-sign-out-alt"></i> 로그아웃
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="subtitle">뉴스를 SNS 콘텐츠로 변환해 드려요.</p>
         </header>
 
         <!-- 탭 네비게이션 -->
@@ -753,6 +784,134 @@
             </div>
         </div>
     </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal" style="display: none;">
+        <div class="modal-content auth-modal">
+            <span class="close" onclick="closeAuthModal()">&times;</span>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab-btn active" data-tab="login">로그인</button>
+                <button class="auth-tab-btn" data-tab="register">회원가입</button>
+            </div>
+            
+            <!-- Login Tab -->
+            <div id="loginTab" class="auth-tab-content active">
+                <h2>로그인</h2>
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="loginEmail">이메일</label>
+                        <input type="email" id="loginEmail" required placeholder="example@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">비밀번호</label>
+                        <input type="password" id="loginPassword" required placeholder="비밀번호를 입력하세요">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fas fa-sign-in-alt"></i> 로그인
+                    </button>
+                    <div id="loginError" class="error-message"></div>
+                </form>
+            </div>
+            
+            <!-- Register Tab -->
+            <div id="registerTab" class="auth-tab-content">
+                <h2>회원가입</h2>
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label for="registerEmail">이메일</label>
+                        <input type="email" id="registerEmail" required placeholder="example@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerUsername">사용자명 (선택)</label>
+                        <input type="text" id="registerUsername" placeholder="사용자명">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">비밀번호</label>
+                        <input type="password" id="registerPassword" required placeholder="8자 이상, 대소문자/숫자/특수문자 포함">
+                        <div class="password-requirements">
+                            <small>• 최소 8자 이상</small><br>
+                            <small>• 대문자, 소문자, 숫자, 특수문자 포함</small>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fas fa-user-plus"></i> 가입하기
+                    </button>
+                    <div id="registerError" class="error-message"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Keys Modal -->
+    <div id="apiKeysModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeApiKeysModal()">&times;</span>
+            <h2>API 키 관리</h2>
+            
+            <div class="api-key-section">
+                <h3>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="OpenAI" style="width: 20px; height: 20px; vertical-align: middle;">
+                    OpenAI API Key
+                </h3>
+                <div class="form-group">
+                    <input type="password" id="openaiKey" placeholder="sk-...">
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="saveApiKey('openai')">
+                            <i class="fas fa-save"></i> 저장
+                        </button>
+                        <button class="btn btn-secondary" onclick="testApiKey('openai')">
+                            <i class="fas fa-check"></i> 테스트
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="api-key-section">
+                <h3>
+                    <img src="https://www.anthropic.com/favicon.ico" alt="Anthropic" style="width: 20px; height: 20px; vertical-align: middle;">
+                    Anthropic API Key
+                </h3>
+                <div class="form-group">
+                    <input type="password" id="anthropicKey" placeholder="sk-ant-api03-...">
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="saveApiKey('anthropic')">
+                            <i class="fas fa-save"></i> 저장
+                        </button>
+                        <button class="btn btn-secondary" onclick="testApiKey('anthropic')">
+                            <i class="fas fa-check"></i> 테스트
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="apiKeyMessage" class="message"></div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeProfileModal()">&times;</span>
+            <h2>프로필 설정</h2>
+            
+            <form id="profileForm" onsubmit="handleUpdateProfile(event)">
+                <div class="form-group">
+                    <label for="profileEmail">이메일</label>
+                    <input type="email" id="profileEmail" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="profileUsername">사용자명</label>
+                    <input type="text" id="profileUsername" placeholder="사용자명">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> 저장
+                </button>
+                <div id="profileMessage" class="message"></div>
+            </form>
+        </div>
+    </div>
+
 </body>
 </html>
 <!-- Deployment timestamp: 2025-07-18 22:00 KST --> 
