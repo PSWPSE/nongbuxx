@@ -10,6 +10,9 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_ALGORITHM = 'HS256'
+    JWT_COOKIE_CSRF_PROTECT = False  # API 사용을 위해 CSRF 보호 비활성화
+    JWT_CSRF_CHECK_FORM = False
+    JWT_CSRF_IN_COOKIES = False
     
     # Database Configuration
     DATABASE_URL = os.getenv('DATABASE_URL')
