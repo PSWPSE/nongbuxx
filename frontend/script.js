@@ -416,12 +416,7 @@ function initEventListeners() {
     contentTypeRadios.forEach(radio => {
         radio.addEventListener('change', handleContentTypeChange);
     });
-    
-    // 형식 체크박스 변경 이벤트 리스너
-    const formatCheckboxes = document.querySelectorAll('#formatNaver, #formatTistory, #formatWordpress');
-    formatCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', handleFormatSelectionChange);
-    });
+
     
     // Blog 콘텐츠 생성 버튼 이벤트 리스너
     const generateEnhancedBlogBtn = document.getElementById('generateEnhancedBlogBtn');
@@ -1436,19 +1431,14 @@ async function handleGenerateSelectedNewsWithType() {
 // 콘텐츠 타입 변경 핸들러
 function handleContentTypeChange() {
     const selectedType = getSelectedContentType();
-    const formatContainer = document.getElementById('formatSelectionContainer');
     const wordpressFormatOptions = document.getElementById('wordpressFormatOptions');
     
-    if (formatContainer) {
+    if (wordpressFormatOptions) {
         if (selectedType === 'enhanced_blog') {
-            formatContainer.style.display = 'block';
-            // 워드프레스 선택 여부 확인
-            handleFormatSelectionChange();
+            // Blog 선택 시 바로 블로그 콘텐츠 파일 형식 옵션 표시
+            wordpressFormatOptions.style.display = 'block';
         } else {
-            formatContainer.style.display = 'none';
-            if (wordpressFormatOptions) {
-                wordpressFormatOptions.style.display = 'none';
-            }
+            wordpressFormatOptions.style.display = 'none';
         }
     }
     
@@ -5078,28 +5068,15 @@ function getTimeAgo(date) {
     return date.toLocaleDateString('ko-KR');
 }
 
-// 파일 유형 선택 토글 관리
+// 파일 유형 선택 토글 관리 (더 이상 사용되지 않음)
 function updateFormatSelectionVisibility() {
-    const formatSelectionContainer = document.getElementById('formatSelectionContainer');
-    const enhancedBlogBtn = document.getElementById('generateSelectedEnhancedBlogBtn2');
-    
-    if (formatSelectionContainer && enhancedBlogBtn) {
-        // Blog 생성 버튼이 활성화되어 있을 때만 토글 표시
-        const shouldShow = selectedNewsUrls.length > 0;
-        formatSelectionContainer.style.display = shouldShow ? 'block' : 'none';
-    }
+    // 이 함수는 더 이상 필요하지 않지만, 호출하는 곳이 있을 수 있으므로 빈 함수로 유지
 }
 
-// 선택된 파일 형식 가져오기 (라디오 버튼으로 변경)
+// 선택된 파일 형식 가져오기 (워드프레스만 지원)
 function getSelectedFormats() {
-    const selectedRadio = document.querySelector('input[name="blogFormat"]:checked');
-    
-    if (selectedRadio) {
-        return [selectedRadio.value];
-    } else {
-        // 아무것도 선택되지 않았으면 기본값 (naver)
-        return ['naver'];
-    }
+    // Blog 선택 시 항상 워드프레스만 반환
+    return ['wordpress'];
 }
 
 // Blog 생성 처리 (수정)
@@ -5406,19 +5383,7 @@ async function downloadEnhancedBlogContent(groupBaseName) {
     }
 }
 
-// 형식 선택 변경 핸들러
-function handleFormatSelectionChange() {
-    const wordpressCheckbox = document.getElementById('formatWordpress');
-    const wordpressFormatOptions = document.getElementById('wordpressFormatOptions');
-    
-    if (wordpressCheckbox && wordpressFormatOptions) {
-        if (wordpressCheckbox.checked) {
-            wordpressFormatOptions.style.display = 'block';
-        } else {
-            wordpressFormatOptions.style.display = 'none';
-        }
-    }
-}
+
 
 // ============================================================================
 // 가이드라인 관련 기능
