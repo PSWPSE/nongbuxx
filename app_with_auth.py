@@ -173,6 +173,27 @@ def auth_status():
             'user': None
         }), 200
 
+# 임시 디버그 엔드포인트 (운영 환경에서는 제거해야 함)
+@app.route('/debug/jwt', methods=['GET'])
+def debug_jwt():
+    """JWT 환경변수 확인 (디버깅용)"""
+    import os
+    jwt_key = os.getenv('JWT_SECRET_KEY', 'NOT_SET')
+    
+    # 보안을 위해 일부만 표시
+    if jwt_key != 'NOT_SET':
+        masked_key = f"{jwt_key[:10]}...{jwt_key[-10:]}"
+    else:
+        masked_key = "NOT_SET"
+    
+    return jsonify({
+        'jwt_secret_key_set': jwt_key != 'NOT_SET',
+        'jwt_secret_key_preview': masked_key,
+        'config_jwt_key': app.config.get('JWT_SECRET_KEY', 'NOT_SET')[:20] + '...',
+        'env_vars_count': len(os.environ),
+        'railway_env': os.getenv('RAILWAY_ENVIRONMENT_NAME', 'NOT_SET')
+    }), 200
+
 if __name__ == '__main__':
     # 환경 변수 확인
     port = int(os.getenv('PORT', 8080))
