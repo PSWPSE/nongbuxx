@@ -15,7 +15,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 # 인증 시스템 초기화
-print("🔐 인증 시스템 초기화 중...")
+print("�� 인증 시스템 초기화 중...")
+
+# JWT 초기화 전 환경변수 확인
+import os
+jwt_from_env = os.getenv('JWT_SECRET_KEY', 'NOT_SET')
+print(f"📊 환경변수 JWT_SECRET_KEY: {jwt_from_env[:10]}...{jwt_from_env[-10:] if jwt_from_env != 'NOT_SET' else 'NOT_SET'}")
+
+# Flask 앱 설정 확인
+print(f"📊 Flask 환경: {app.config.get('ENV', 'NOT_SET')}")
+print(f"📊 Flask 디버그: {app.config.get('DEBUG', False)}")
+
 app = init_auth(app)
 
 # JWT 설정 확인 (디버깅용)
