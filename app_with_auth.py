@@ -17,6 +17,15 @@ logger = logging.getLogger(__name__)
 # 인증 시스템 초기화
 print("🔐 인증 시스템 초기화 중...")
 app = init_auth(app)
+
+# JWT 설정 확인 (디버깅용)
+jwt_key = app.config.get('JWT_SECRET_KEY', 'NOT_SET')
+if jwt_key != 'NOT_SET':
+    masked_key = f"{jwt_key[:10]}...{jwt_key[-10:]}" if len(jwt_key) > 20 else jwt_key
+    print(f"📌 JWT Secret Key 설정됨: {masked_key}")
+else:
+    print("❌ JWT Secret Key가 설정되지 않았습니다!")
+
 print("✅ 인증 시스템 초기화 완료")
 
 # 기존 라우트에 선택적 인증 추가

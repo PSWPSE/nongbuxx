@@ -7,7 +7,14 @@ class Config:
     
     # JWT Configuration
     # Railway 환경변수에서 읽도록 수정
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'nongbuxx-jwt-secret-key-2025-fixed-for-production')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+    # 개발 환경에서만 기본값 사용
+    if not JWT_SECRET_KEY and os.getenv('FLASK_ENV') != 'production':
+        JWT_SECRET_KEY = 'dev-jwt-secret-key-for-local-only'
+    elif not JWT_SECRET_KEY:
+        # 프로덕션에서는 반드시 환경변수가 필요
+        print("WARNING: JWT_SECRET_KEY not set in production!")
+    
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_ALGORITHM = 'HS256'
