@@ -6,7 +6,7 @@ NONGBUXX with Authentication
 
 # 기존 app.py의 모든 import와 설정을 가져옴
 from app import *
-from fix_jwt_init import fix_jwt_initialization
+# from fix_jwt_init import fix_jwt_initialization  # 제거됨
 from app_auth_config import init_auth, modify_existing_routes
 from auth_middleware import optional_auth, require_api_key, track_user_content
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -27,8 +27,10 @@ print(f"📊 환경변수 JWT_SECRET_KEY: {jwt_from_env[:10]}...{jwt_from_env[-1
 print(f"📊 Flask 환경: {app.config.get('ENV', 'NOT_SET')}")
 print(f"📊 Flask 디버그: {app.config.get('DEBUG', False)}")
 
-# JWT 문제 해결
-app = fix_jwt_initialization(app)
+# JWT 키를 명시적으로 설정
+if jwt_from_env != 'NOT_SET':
+    app.config['JWT_SECRET_KEY'] = jwt_from_env
+    print(f"✅ JWT_SECRET_KEY를 환경변수로 설정")
 
 # 인증 시스템 초기화
 app = init_auth(app)
