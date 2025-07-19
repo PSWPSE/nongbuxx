@@ -6,7 +6,8 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     
     # JWT Configuration
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
+    # 임시 해결책: 고정된 JWT 키 사용 (나중에 환경변수로 변경)
+    JWT_SECRET_KEY = 'nongbuxx-jwt-secret-key-2025-fixed-for-production'
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_ALGORITHM = 'HS256'
