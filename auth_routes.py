@@ -95,8 +95,8 @@ def register():
         db.session.commit()
         
         # JWT 토큰 생성
-        access_token = create_access_token(identity=new_user.id)
-        refresh_token = create_refresh_token(identity=new_user.id)
+        access_token = create_access_token(identity=str(new_user.id))
+        refresh_token = create_refresh_token(identity=str(new_user.id))
         
         logger.info(f"New user registered: {validated_email}")
         
@@ -162,8 +162,8 @@ def login():
             }), 403
         
         # JWT 토큰 생성 (CSRF 없이)
-        access_token = create_access_token(identity=user.id, fresh=False)
-        refresh_token = create_refresh_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id), fresh=False)
+        refresh_token = create_refresh_token(identity=str(user.id))
         
         # 마지막 로그인 시간 업데이트
         user.updated_at = datetime.utcnow()
@@ -225,7 +225,7 @@ def refresh():
     """
     try:
         current_user_id = get_jwt_identity()
-        new_access_token = create_access_token(identity=current_user_id, fresh=False)
+        new_access_token = create_access_token(identity=str(current_user_id), fresh=False)
         
         return jsonify({
             'success': True,
@@ -248,7 +248,7 @@ def get_current_user():
     """
     try:
         current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
+        user = User.query.get(int(current_user_id))
         
         if not user:
             return jsonify({

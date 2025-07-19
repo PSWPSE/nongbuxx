@@ -9,8 +9,8 @@ from email_validator import validate_email, EmailNotValidError
 def generate_tokens(user_id):
     """Generate access and refresh tokens for a user"""
     # Fresh login = False to avoid CSRF issues
-    access_token = create_access_token(identity=user_id, fresh=False)
-    refresh_token = create_refresh_token(identity=user_id)
+    access_token = create_access_token(identity=str(user_id), fresh=False)
+    refresh_token = create_refresh_token(identity=str(user_id))
     return {
         'access_token': access_token,
         'refresh_token': refresh_token
