@@ -44,15 +44,12 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Backups
-backups/
-
 # Environment variables
 .env
 .env.local
-.env.production
-.env.*
-RAILWAY_ENV_VARS.txt
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Logs
 *.log

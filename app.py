@@ -15,7 +15,6 @@ from dotenv import load_dotenv
 
 # Load environment variables from env.local file
 load_dotenv('env.local')
-load_dotenv('.env')  # .env 파일도 로드
 
 from url_extractor import OptimizedNewsExtractor
 from nongbuxx_generator import NongbuxxGenerator
