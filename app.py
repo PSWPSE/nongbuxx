@@ -1133,7 +1133,8 @@ def delete_generated_content_file(filename):
 
 def load_sources():
     """출처 정보를 JSON 파일에서 로드 (계층적 구조 지원)"""
-    sources_file = Path('data/sources.json')
+    # Railway에서도 작동하도록 절대 경로 사용
+    sources_file = Path(__file__).parent / 'data' / 'sources.json'
     try:
         if sources_file.exists():
             with open(sources_file, 'r', encoding='utf-8') as f:
@@ -1159,7 +1160,8 @@ def load_sources():
 
 def save_sources(sources):
     """출처 정보를 JSON 파일에 저장"""
-    sources_file = Path('data/sources.json')
+    # Railway에서도 작동하도록 절대 경로 사용
+    sources_file = Path(__file__).parent / 'data' / 'sources.json'
     try:
         # data 디렉토리 생성
         sources_file.parent.mkdir(exist_ok=True)
