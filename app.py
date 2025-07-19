@@ -1135,6 +1135,12 @@ def load_sources():
     """출처 정보를 JSON 파일에서 로드 (계층적 구조 지원)"""
     # Railway에서도 작동하도록 절대 경로 사용
     sources_file = Path(__file__).parent / 'data' / 'sources.json'
+    
+    # 디버깅을 위한 로그
+    logger.info(f"Loading sources from: {sources_file}")
+    logger.info(f"File exists: {sources_file.exists()}")
+    logger.info(f"Current directory: {Path.cwd()}")
+    
     try:
         if sources_file.exists():
             with open(sources_file, 'r', encoding='utf-8') as f:
@@ -1142,6 +1148,7 @@ def load_sources():
                 return data.get('sources', [])
         else:
             # 기본 출처 데이터로 파일 생성
+            logger.warning(f"Sources file not found, creating default sources")
             default_sources = [{
                 "id": "yahoo_finance",
                 "name": "Yahoo Finance",
