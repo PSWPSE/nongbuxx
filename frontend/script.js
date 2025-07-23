@@ -773,8 +773,8 @@ async function generateContent(contentType = 'standard') {
         // 🚀 개선된 에러 메시지
         let userFriendlyMessage = error.message;
         
-        if (error.message.includes('Maximum 20 URLs allowed') || error.message.includes('20 URLs')) {
-            userFriendlyMessage = `⚠️ 뉴스 개수 제한: 최대 20개의 뉴스만 선택할 수 있습니다. 안정성을 위한 제한입니다.`;
+        if (error.message.includes('Maximum 50 URLs allowed') || error.message.includes('50 URLs')) {
+            userFriendlyMessage = `⚠️ 뉴스 개수 제한: 최대 50개의 뉴스만 선택할 수 있습니다. 안정성을 위한 제한입니다.`;
         } else if (error.message.includes('INVALID_API_PROVIDER') || error.message.includes('API provider must be')) {
             userFriendlyMessage = `🔑 API 키 미설정: 우측 상단 'API 키 설정' 버튼을 클릭하여 Anthropic 또는 OpenAI API 키를 설정해주세요.`;
         } else if (error.message.includes('network') || error.message.includes('연결')) {

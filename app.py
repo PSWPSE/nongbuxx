@@ -561,10 +561,10 @@ def batch_generate():
             }), 400
         
         # URL 개수 제한으로 타임아웃 방지
-        if len(urls) > 20:
+        if len(urls) > 50:
             return jsonify({
                 'success': False,
-                'error': 'Maximum 20 URLs allowed per batch to prevent timeout',
+                'error': 'Maximum 50 URLs allowed per batch to prevent timeout',
                 'code': 'TOO_MANY_URLS'
             }), 400
         
