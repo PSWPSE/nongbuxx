@@ -63,3 +63,4 @@ converted_articles/
 # Temporary files
 *.tmp
 *.temp env.local
+.vercel
