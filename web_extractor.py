@@ -136,7 +136,8 @@ class WebExtractor:
             'metadata': self._get_metadata(soup),
             'content': self._get_content(article),
             'author': self._get_author(soup),
-            'publish_date': self._get_publish_date(soup)
+            'publish_date': self._get_publish_date(soup),
+            'publisher': self._get_publisher(soup, url)
         }
     
     def _find_article(self, soup: BeautifulSoup) -> Optional[Tag]:
@@ -325,13 +326,85 @@ class WebExtractor:
         
         return ''
     
-    def _error_response(self, url: str, error: str) -> Dict[str, Any]:
+    def _get_publisher(self, soup: BeautifulSoup, url: str) -> str:
+        """출처/발행사 정보 추출"""
+        # 1. Meta 태그에서 publisher 정보 찾기
+        publisher_meta = (
+            soup.find('meta', {'property': 'og:site_name'}) or
+            soup.find('meta', {'name': 'publisher'}) or
+            soup.find('meta', {'property': 'article:publisher'})
+        )
+        if publisher_meta and isinstance(publisher_meta, Tag):
+            content = publisher_meta.get('content', '')
+            if isinstance(content, str) and content:
+                return content.strip()
+        
+        # 2. 도메인별 하드코딩된 출처 매핑
+        domain_to_publisher = {
+            'bloomberg.com': 'Bloomberg',
+            'wsj.com': 'WSJ',
+            'reuters.com': 'Reuters',
+            'ft.com': 'Financial Times',
+            'cnbc.com': 'CNBC',
+            'finance.yahoo.com': 'Yahoo Finance',
+            'naver.com': '네이버뉴스',
+            'news.naver.com': '네이버뉴스',
+            'yna.co.kr': '연합뉴스',
+            'bbc.com': 'BBC',
+            'cnn.com': 'CNN',
+            'forbes.com': 'Forbes',
+            'economist.com': 'The Economist',
+            'techcrunch.com': 'TechCrunch',
+            'theverge.com': 'The Verge'
+        }
+        
+        # URL에서 도메인 추출
+        from urllib.parse import urlparse
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc.lower()
+        
+        # www. 제거
+        if domain.startswith('www.'):
+            domain = domain[4:]
+        
+        # 도메인 매핑에서 찾기
+        for key, value in domain_to_publisher.items():
+            if key in domain:
+                return value
+        
+        # 3. HTML에서 publisher 정보 찾기
+        publisher_selectors = [
+            '.publisher',
+            '.source',
+            '[class*="publisher"]',
+            '[class*="source"]',
+            '.media_end_head_top_logo img',  # 네이버 뉴스 언론사 로고
+            '.press_logo img'  # 네이버 뉴스 언론사 로고 (구버전)
+        ]
+        
+        for selector in publisher_selectors:
+            publisher = soup.select_one(selector)
+            if publisher and isinstance(publisher, Tag):
+                # 이미지인 경우 alt 텍스트 확인
+                if publisher.name == 'img':
+                    alt_text = publisher.get('alt', '')
+                    if isinstance(alt_text, str) and alt_text:
+                        return alt_text.strip()
+                else:
+                    text = publisher.get_text().strip()
+                    if text and len(text) < 50:
+                        return text
+        
+        # 4. 도메인명을 출처로 사용 (fallback)
+        return domain.split('.')[0].title()
+    
+    def _error_response(self, url: str, error_message: str) -> Dict[str, Any]:
         """에러 응답 생성"""
         return {
             'success': False,
             'url': url,
             'timestamp': datetime.now().isoformat(),
-            'error': error
+            'error': error_message
         }
     
     def _save_to_file(self, data: Dict[str, Any]) -> None:

@@ -81,6 +81,19 @@ class NewsConverter:
             text = text[3:-3].strip()
         # Remove any remaining backticks at the start or end
         text = text.strip('`')
+        
+        # Remove 'markdown' word at the beginning if it exists
+        lines = text.split('\n')
+        if lines and lines[0].strip().lower() == 'markdown':
+            lines = lines[1:]
+            text = '\n'.join(lines)
+        
+        # Also remove if it's at the beginning with other characters
+        if text.lower().startswith('markdown\n'):
+            text = text[9:]  # Remove 'markdown\n'
+        elif text.lower().startswith('markdown '):
+            text = text[9:]  # Remove 'markdown '
+        
         return text.strip()
 
     def call_api(self, prompt, max_tokens=2000, temperature=0):
@@ -156,10 +169,19 @@ Article: {content}"""
         
         # 네이버 뉴스인지 확인
         is_naver_news = 'news.naver.com' in content.get('url', '') or 'naver' in content.get('source', '').lower()
+        publisher = content.get('publisher', '')
+        publisher_line = f"(출처: {publisher})\n\n" if publisher else ""
         
         if is_naver_news:
             # 네이버 뉴스는 원본 한국어 제목 그대로 사용
             prompt = f"""네이버 뉴스를 한국어 마크다운으로 변환하세요:
+
+**🚨🚨🚨 최우선 필수 규칙 - 출처 표기 🚨🚨🚨**
+✅ **제목 다음 줄에 반드시 출처 표기**
+   - 형식: (출처: 언론사명)
+   - 예시: 
+     🎮 소니, 게임 부문 호조로 실적 개선 - 투자 기회 분석
+     (출처: Bloomberg)
 
 **🚨🚨🚨 최우선 필수 규칙 - 주식 심볼 표기 (기업명당 1회만) 🚨🚨🚨**
 ✅ **기업명 첫 등장 시에만 심볼 추가** (제목+본문 통틀어 1회)
@@ -178,6 +200,7 @@ Article: {content}"""
 - 제목은 원본 그대로 사용 (번역하지 말 것)
 - 제목 앞에 적절한 이모지 1개 추가
 - 네이버 뉴스는 이미 한국어이므로 제목 번역 금지
+- 생성된 콘텐츠 최상단에 'markdown' 등의 메타 정보 절대 포함 금지
 
 **📝 문체 가이드라인 (중요):**
 - **간결한 뉴스 스타일**: 명확하고 임팩트 있는 표현
@@ -271,8 +294,10 @@ Article: {content}"""
 8. 해시태그는 정확히 5개
 
 입력:
-제목: {content.get('title', '')}
-내용: {content.get('body', '')}
+제목: {content['title']}
+설명: {content['description']}
+본문: {content['content']}
+출처: {publisher}
 
 위의 형식을 참고하되, 원문의 고유한 내용과 흐름에 맞게 유연하게 작성하세요. 정해진 틀에 억지로 맞추지 말고, 원문을 가장 잘 전달할 수 있는 구성을 선택하세요.
 
@@ -280,6 +305,13 @@ Article: {content}"""
         else:
             # 해외 뉴스는 기존 번역 로직 적용
             prompt = f"""뉴스를 한국어 마크다운으로 변환하세요:
+
+**🚨🚨🚨 최우선 필수 규칙 - 출처 표기 🚨🚨🚨**
+✅ **제목 다음 줄에 반드시 출처 표기**
+   - 형식: (출처: 언론사명)
+   - 예시: 
+     🚨 트럼프 관세 위협에도 주식시장이 꿈쩍 않는 이유
+     (출처: Bloomberg)
 
 **🚨🚨🚨 최우선 필수 규칙 - 주식 심볼 표기 (기업명당 1회만) 🚨🚨🚨**
 ✅ **기업명 첫 등장 시에만 심볼 추가** (제목+본문 통틀어 1회)
@@ -387,9 +419,9 @@ Article: {content}"""
 
 **참고 예시 (원문 내용에 따라 섹션명과 구성이 달라짐):**
 
-💰 마이크로스트레티지, 비트코인 투자 확대로 논란 - 월 배당 전략의 함정
+💰 마이크로스트레티지, 비트코인 투자 확대로 논란 - 월 배당 전란의 함정
 
-▶ 세일러의 공격적 비트코인 매수 전략:
+▶ 세일러의 공격적 비트코인 매수 전란:
 • 추가 주식 공모로 27억 달러 조달 계획 발표함
 • 현재 보유 비트코인 387,000개, 시가 360억 달러 규모임
 • 월 배당 지급 약속으로 개인 투자자 유치 중
@@ -435,8 +467,9 @@ Article: {content}"""
 8. 해시태그는 정확히 5개
 
 입력:
-제목: {content.get('title', '')}
-내용: {content.get('body', '')}
+제목: {content['title']}
+설명: {content['description']}
+본문: {content['content']}
 
 위의 형식을 참고하되, 원문의 고유한 내용과 흐름에 맞게 유연하게 작성하세요. 정해진 틀에 억지로 맞추지 말고, 원문을 가장 잘 전달할 수 있는 구성을 선택하세요.
 
@@ -563,7 +596,18 @@ Article: {content}"""
 
     def generate_threads_content(self, content):
         """Generate Threads-style content using selected API (490자 미만)"""
+        publisher = content.get('publisher', '')
+        publisher_line = f"(출처: {publisher})\n" if publisher else ""
+        
         prompt = f"""뉴스를 Threads용 짧은 콘텐츠로 작성하세요:
+
+**🚨🚨🚨 최우선 필수 규칙 - 출처 표기 🚨🚨🚨**
+✅ **제목 다음 줄에 반드시 출처 표기**
+   - 형식: (출처: 언론사명)
+   - 예시: 
+     🔥 트럼프 관세 위협에도 주식시장이 꿈쩍 않는 이유
+     (출처: Bloomberg)
+   - 490자 제한에 출처 정보도 포함됨
 
 **🚨🚨🚨 최우선 필수 규칙 - 주식 심볼 표기 (기업명당 1회만) 🚨🚨🚨**
 ✅ **기업명 첫 등장 시에만 심볼 추가** (전체 콘텐츠에서 1회)
@@ -580,6 +624,7 @@ Article: {content}"""
 - 제목은 100% 한국어로만 작성
 - 영어 제목이 입력되어도 반드시 한국어로 번역
 - 네이버, 조선일보 등 한국 뉴스는 이미 한국어이므로 한국어 제목 유지
+- 생성된 콘텐츠 최상단에 'markdown' 등의 메타 정보 절대 포함 금지
 
 **💡 매력적인 제목 생성 가이드라인:**
 - 단순 번역이 아닌 독자의 관심을 끄는 매력적인 제목 작성
@@ -636,6 +681,7 @@ Article: {content}"""
 
 **자연스러운 반말 형식 예시:**
 🔥 [매력적인 한국어 제목]
+(출처: [언론사명])
 
 ▶ 상황 정리:
 • 이 회사가 큰 계약을 체결했다
@@ -645,14 +691,13 @@ Article: {content}"""
 • 이게 중요한 이유는 이거다
 • 앞으로 이런 영향을 줄 것 같다
 
-**🔥 핵심: 자연스러운 반말로 차근차근 설명하되, 오버하지 않게!**
-
 입력:
 제목: {content['title']}
 설명: {content['description']}
 본문: {content['content']}
+출처: {publisher}
 
-490자 미만으로 핵심 내용을 자연스러운 반말로 차근차근 정리해서 작성해. 오버하지 않되 친근한 톤으로!"""
+490자 미만으로 핵심을 압축하여 자연스럽게 설명하세요. 글자수 정보는 절대 포함하지 마세요."""
         
         response = self.call_api(prompt, max_tokens=800)
         cleaned_response = self.clean_response(response)
@@ -679,7 +724,17 @@ Article: {content}"""
 
     def generate_x_content(self, content):
         """Generate X(Twitter)-style content using selected API (280자 내외)"""
+        publisher = content.get('publisher', '')
+        publisher_line = f"(출처: {publisher})\n" if publisher else ""
+        
         prompt = f"""뉴스를 X(Twitter)용 간결한 콘텐츠로 작성하세요:
+
+**🚨🚨🚨 최우선 필수 규칙 - 출처 표기 🚨🚨🚨**
+✅ **제목 다음 줄에 반드시 출처 표기**
+   - 형식: (출처: 언론사명)
+   - 예시: 
+     🚨 트럼프 관세 위협에도 주식시장이 꿈쩍 않는 이유
+     (출처: Bloomberg)
 
 **🚨🚨🚨 최우선 필수 규칙 - 주식 심볼 표기 (기업명당 1회만) 🚨🚨🚨**
 ✅ **기업명 첫 등장 시에만 심볼 추가** (전체 콘텐츠에서 1회)
@@ -689,13 +744,14 @@ Article: {content}"""
    - "삼성전자가 추가로..." (심볼 없음)
 ✅ **심볼 규칙**:
    - 한국: 삼성전자 $005930.KS, SK하이닉스 $000660.KS
-   - 미국: 애플 $AAPL, 아마존 $AMZN, 테슬라 $TSLA
+   - 미국: 애플 $AAPL, 아마존 $AMZN, 구글 $GOOGL, 마이크로소프트 $MSFT, 테슬라 $TSLA
    - **X 전용**: $심볼 앞뒤로 반드시 한 칸의 공백 확보
 
 **🚨 필수 지시사항 - 절대 지켜야 함:**
 - 제목은 100% 한국어로만 작성
 - 영어 제목이 입력되어도 반드시 한국어로 번역
 - 네이버, 조선일보 등 한국 뉴스는 이미 한국어이므로 한국어 제목 유지
+- 생성된 콘텐츠 최상단에 'markdown' 등의 메타 정보 절대 포함 금지
 
 **💡 X(Twitter) 스타일 가이드라인:**
 - **280자 내외**: 간결하고 임팩트 있게
@@ -721,6 +777,7 @@ Article: {content}"""
 
 **형식 예시:**
 🚨 [핵심 뉴스 제목]
+(출처: [언론사명])
 
 • [첫 번째 핵심 정보 문장]
 • [두 번째 핵심 정보 문장]
@@ -737,6 +794,7 @@ Article: {content}"""
 입력:
 제목: {content['title']}
 본문: {content['body']}
+출처: {publisher}
 
 280자 내외로 핵심을 압축하여 작성하세요. 각 문장은 불렛 포인트(•)로 시작하고 줄바꿈으로 구분하세요."""
         
@@ -782,12 +840,15 @@ Article: {content}"""
         # 제목과 설명 추출
         title = extracted_data['title']
         description = extracted_data.get('description', '')
+        publisher = extracted_data.get('publisher', '')
         
         # 변환용 데이터 구조 생성
         data = {
             'title': title,
             'description': description,
-            'content': content_text
+            'content': content_text,
+            'publisher': publisher,
+            'url': extracted_data.get('url', '')
         }
         
         # 마크다운 생성 (이미 해시태그 포함)

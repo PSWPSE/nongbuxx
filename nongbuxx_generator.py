@@ -319,7 +319,8 @@ class NongbuxxGenerator:
             converted_content = self.converter.generate_threads_content({
                 'title': extracted_content.get('title', ''),
                 'description': extracted_content.get('description', ''),
-                'content': extracted_content['content']['text']
+                'content': extracted_content['content']['text'],
+                'publisher': extracted_content.get('publisher', '')
             })
         elif content_type == 'x' or content_type == 'twitter':
             # X(Twitter)용 콘텐츠 생성
@@ -327,7 +328,8 @@ class NongbuxxGenerator:
                 return {'success': False, 'error': 'Converter not initialized', 'url': url}
             converted_content = self.converter.generate_x_content({
                 'title': extracted_content.get('title', ''),
-                'body': extracted_content['content']['text']
+                'body': extracted_content['content']['text'],
+                'publisher': extracted_content.get('publisher', '')
             })
         else:
             if self.converter is None:
@@ -602,7 +604,8 @@ class NongbuxxGenerator:
                     converted_content = self.converter.generate_threads_content({
                         'title': extracted_content.get('title', ''),
                         'description': extracted_content.get('description', ''),
-                        'content': extracted_content['content']['text']
+                        'content': extracted_content['content']['text'],
+                        'publisher': extracted_content.get('publisher', '')
                     })
                     
                     if not converted_content or not isinstance(converted_content, str):
@@ -647,7 +650,8 @@ class NongbuxxGenerator:
                         return {'success': False, 'error': 'Converter not initialized', 'url': url}
                     converted_response = self.converter.generate_x_content({
                         'title': extracted_content.get('title', ''),
-                        'body': extracted_content['content']['text']
+                        'body': extracted_content['content']['text'],
+                        'publisher': extracted_content.get('publisher', '')
                     })
                     if not isinstance(converted_response, str):
                         converted_response = {
