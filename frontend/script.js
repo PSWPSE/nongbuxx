@@ -4305,7 +4305,7 @@ async function deleteSubcategory(subcategoryId) {
 // 🚨 강제 콘텐츠 로드 함수 (복잡한 로직 우회)
 // 🎯 현재 세션 콘텐츠 표시 (과거 누적 데이터 없이)
 function showCurrentSessionContent() {
-    console.log('📋 현재 세션 콘텐츠 표시', { count: currentSessionContent.length });
+    console.log('📋 현재 세션 콘텐츠 표시', { count: sessionContent.length });
     
     // 섹션 표시
     hideAllSections();
@@ -4326,7 +4326,7 @@ function displayCurrentSessionContent() {
         return;
     }
     
-    if (currentSessionContent.length === 0) {
+    if (sessionContent.length === 0) {
         contentListElement.innerHTML = `
             <div class="empty-content-message">
                 <i class="fas fa-file-alt"></i>
@@ -4338,7 +4338,7 @@ function displayCurrentSessionContent() {
     }
     
     // 최신 순으로 정렬
-    const sortedContent = [...currentSessionContent].sort((a, b) => 
+    const sortedContent = [...sessionContent].sort((a, b) => 
         new Date(b.created_at) - new Date(a.created_at)
     );
     
@@ -4391,7 +4391,7 @@ function displayCurrentSessionContent() {
         `;
     }).join('');
     
-    console.log(`✅ 현재 세션 콘텐츠 ${currentSessionContent.length}개 렌더링 완료`);
+    console.log(`✅ 현재 세션 콘텐츠 ${sessionContent.length}개 렌더링 완료`);
 }
 
 // 세션 콘텐츠 미리보기 토글
@@ -4399,7 +4399,7 @@ function displayCurrentSessionContent() {
 
 // 세션 콘텐츠 복사
 async function copySessionContent(index) {
-    const item = currentSessionContent[index];
+    const item = sessionContent[index];
     if (!item || !item.content) {
         showToast('복사할 콘텐츠가 없습니다.', 'error');
         return;
@@ -4416,7 +4416,7 @@ async function copySessionContent(index) {
 
 // 세션 콘텐츠 다운로드
 async function downloadSessionContent(index) {
-    const item = currentSessionContent[index];
+    const item = sessionContent[index];
     if (!item || !item.content) {
         showToast('다운로드할 콘텐츠가 없습니다.', 'error');
         return;

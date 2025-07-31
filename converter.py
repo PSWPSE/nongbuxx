@@ -82,9 +82,9 @@ class NewsConverter:
         # Remove any remaining backticks at the start or end
         text = text.strip('`')
         
-        # Remove 'markdown' word at the beginning if it exists
+        # Remove 'markdown' or 'html' word at the beginning if it exists
         lines = text.split('\n')
-        if lines and lines[0].strip().lower() == 'markdown':
+        if lines and lines[0].strip().lower() in ['markdown', 'html']:
             lines = lines[1:]
             text = '\n'.join(lines)
         
@@ -93,6 +93,17 @@ class NewsConverter:
             text = text[9:]  # Remove 'markdown\n'
         elif text.lower().startswith('markdown '):
             text = text[9:]  # Remove 'markdown '
+        elif text.lower().startswith('html\n'):
+            text = text[5:]  # Remove 'html\n'
+        elif text.lower().startswith('html '):
+            text = text[5:]  # Remove 'html '
+        
+        # Additional check for 'html' at the very beginning
+        if text.strip().lower().startswith('html'):
+            # Find the first line break or HTML tag
+            first_tag_index = text.find('<')
+            if first_tag_index > 0 and first_tag_index < 10:
+                text = text[first_tag_index:]
         
         return text.strip()
 
