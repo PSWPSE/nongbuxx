@@ -23,8 +23,8 @@ from nongbuxx_generator import NongbuxxGenerator
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app with frontend as static folder
-app = Flask(__name__, static_folder='frontend', static_url_path='/static')
+# Initialize Flask app (API only - no static file serving)
+app = Flask(__name__)
 
 # CORS configuration for production deployment
 CORS(app, origins=[
@@ -97,12 +97,7 @@ def cleanup_expired_cache():
 
 # 기본 라우트들
 
-@app.route('/')
-def index():
-    """메인 페이지"""
-    return send_from_directory('frontend', 'index.html')
-
-# 정적 파일은 Flask가 자동으로 처리합니다 (static_folder 설정)
+# API 서버만 제공 - 프론트엔드는 Vercel에서 서빙
 
 @app.route('/favicon.ico')
 def favicon():
