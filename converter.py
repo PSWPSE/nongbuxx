@@ -984,4 +984,4 @@ def main():
         sys.exit(1)
 
 if __name__ == '__main__':
-    main() 
+    main() // 강제 업데이트 트리거
