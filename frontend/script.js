@@ -5389,25 +5389,11 @@ async function downloadEnhancedBlogContent(groupBaseName) {
 // 가이드라인 관련 기능
 // ============================================================================
 
-// 가이드라인 버튼 업데이트
+// 가이드라인 버튼 업데이트 - 완전 제거
 function updateGuidelineButton() {
     const guidelineBtn = document.getElementById('showGuidelineBtn');
-    const guidelineBtnText = document.getElementById('guidelineButtonText');
-    const selectedType = getSelectedContentType();
-    
-    if (guidelineBtn && guidelineBtnText) {
-        // 가이드라인 버튼 표시
-        guidelineBtn.style.display = 'inline-block';
-        
-        // 콘텐츠 타입별 버튼 텍스트 설정
-        const guidelineNames = {
-            'x': 'X(Twitter) Short Form 가이드라인',
-            'standard': 'X(Twitter) Normal Form 가이드라인',
-            'threads': 'Threads 가이드라인',
-            'enhanced_blog': 'Blog 가이드라인'
-        };
-        
-        guidelineBtnText.textContent = guidelineNames[selectedType] || '가이드라인 보기';
+    if (guidelineBtn) {
+        guidelineBtn.style.display = 'none';
     }
 }
 
