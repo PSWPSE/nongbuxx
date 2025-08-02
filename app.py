@@ -1835,4 +1835,4 @@ if __name__ == '__main__':
         logger.error(f"❌ Failed to start server: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        raise 
+        raise # 강제 재배포 트리거 - Sat Aug  2 17:12:50 KST 2025
