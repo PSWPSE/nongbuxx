@@ -1445,8 +1445,7 @@ function handleContentTypeChange() {
     // 버튼 텍스트 업데이트
     updateGenerateButtonText();
     
-    // 가이드라인 버튼 표시/숨김 및 텍스트 업데이트
-    updateGuidelineButton();
+
 }
 
 // 선택된 콘텐츠 타입 가져오기
@@ -5385,119 +5384,5 @@ async function downloadEnhancedBlogContent(groupBaseName) {
 
 
 
-// ============================================================================
-// 가이드라인 관련 기능
-// ============================================================================
 
-// 가이드라인 버튼 업데이트 - 완전 제거
-function updateGuidelineButton() {
-    const guidelineBtn = document.getElementById('showGuidelineBtn');
-    if (guidelineBtn) {
-        guidelineBtn.style.display = 'none';
-    }
-}
-
-// 가이드라인 보기 버튼 클릭 핸들러
-function showGuideline() {
-    const selectedType = getSelectedContentType();
-    const modal = document.getElementById('guidelineModal');
-    const modalTitle = document.getElementById('guidelineModalTitle');
-    const guidelineContent = document.getElementById('guidelineContent');
-    
-    if (!modal || !modalTitle || !guidelineContent) return;
-    
-    // 파일명 매핑
-    const guidelineFiles = {
-        'x': 'x-twitter-short-form.md',
-        'standard': 'x-twitter-normal-form.md',
-        'threads': 'threads.md',
-        'enhanced_blog': 'blog.md'
-    };
-    
-    const guidelineTitles = {
-        'x': 'X(Twitter) Short Form 콘텐츠 생성 가이드라인',
-        'standard': 'X(Twitter) Normal Form 콘텐츠 생성 가이드라인',
-        'threads': 'Threads 콘텐츠 생성 가이드라인',
-        'enhanced_blog': 'Blog 콘텐츠 생성 가이드라인'
-    };
-    
-    const filename = guidelineFiles[selectedType];
-    const title = guidelineTitles[selectedType];
-    
-    if (!filename) {
-        showToast('가이드라인을 찾을 수 없습니다.', 'error');
-        return;
-    }
-    
-    // 제목 설정
-    modalTitle.innerHTML = `<i class="fas fa-book"></i> ${title}`;
-    
-    // 로딩 표시
-    guidelineContent.innerHTML = '<div class="loading-message"><i class="fas fa-spinner fa-spin"></i> 가이드라인 로드 중...</div>';
-    
-    // 모달 표시
-    modal.style.display = 'flex';
-    
-    // 가이드라인 파일 로드
-    fetch(`./guidelines/${filename}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('가이드라인 파일을 찾을 수 없습니다.');
-            }
-            return response.text();
-        })
-        .then(markdown => {
-            // Markdown을 HTML로 변환 (marked.js 사용)
-            if (typeof marked !== 'undefined') {
-                const html = marked.parse(markdown);
-                guidelineContent.innerHTML = html;
-            } else {
-                // marked.js가 없으면 그대로 표시
-                guidelineContent.innerHTML = `<pre>${markdown}</pre>`;
-            }
-        })
-        .catch(error => {
-            console.error('가이드라인 로드 실패:', error);
-            guidelineContent.innerHTML = `
-                <div class="error-message">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>가이드라인을 불러올 수 없습니다.</p>
-                    <small>${error.message}</small>
-                </div>
-            `;
-        });
-}
-
-// 가이드라인 모달 닫기
-function closeGuidelineModal() {
-    const modal = document.getElementById('guidelineModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-// ESC 키로 모달 닫기
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeGuidelineModal();
-    }
-});
-
-// 모달 외부 클릭으로 닫기
-document.addEventListener('click', function(event) {
-    const modal = document.getElementById('guidelineModal');
-    if (event.target === modal) {
-        closeGuidelineModal();
-    }
-});
-
-// 가이드라인 버튼 이벤트 리스너 설정
-document.addEventListener('DOMContentLoaded', function() {
-    const guidelineBtn = document.getElementById('showGuidelineBtn');
-    if (guidelineBtn) {
-        guidelineBtn.addEventListener('click', showGuideline);
-    }
-    
-    // 초기 상태에서 가이드라인 버튼 업데이트
-    updateGuidelineButton();
 });
