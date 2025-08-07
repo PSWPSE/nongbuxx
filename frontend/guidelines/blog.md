@@ -123,29 +123,126 @@ A: [전문적이면서도 이해하기 쉬운 답변]
 - **신뢰성 유지**: 과도한 강조보다는 객관적이고 정확한 표현 선호
 - **적절한 임팩트**: 호기심을 자극하되 신뢰할 수 있는 수준으로 유지
 
-### 워드프레스 HTML 스타일 가이드
-- **최상위 컨테이너**: `<div style="max-width: 800px; margin: 0 auto; padding: 40px 20px; font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">`
-- **제목**: `<h1 style="font-size: 2.4em; margin-bottom: 60px; color: #1a1a1a; font-weight: 700; line-height: 1.4; letter-spacing: -0.02em;">`
-- **소제목**: `<h2 style="font-size: 1.7em; margin: 80px 0 40px; color: #2d2d2d; font-weight: 600; line-height: 1.5;">`
-- **본문**: `<p style="line-height: 1.9; margin-bottom: 50px; font-size: 1.1em; color: #333; letter-spacing: -0.01em;">`
-- **강조**: `<strong style="color: #0066cc; font-weight: 600;">` 또는 `<em style="background: linear-gradient(to bottom, transparent 60%, #ffe066 60%); padding: 0 2px;">`
-- **목록**: `<ul style="line-height: 2.4; padding-left: 24px; margin: 50px 0; color: #333;">`
-- **인용**: `<blockquote style="border-left: 3px solid #0066cc; padding: 32px 40px; margin: 60px 0; color: #555; font-style: italic; background: linear-gradient(to right, rgba(0,102,204,0.03) 0%, transparent 100%);">`
+### 워드프레스 HTML 스타일 가이드 (향상된 버전)
 
-## 📐 섹션 구성 가이드
+#### 📱 반응형 최상위 컨테이너
+```html
+<div style="max-width: 800px; margin: 0 auto; padding: 40px 20px; font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6;">
+```
+
+#### 🎯 개선된 제목 스타일
+```html
+<h1 style="font-size: 2.5em; margin-bottom: 40px; color: #1a1a1a; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 20px;">
+```
+
+#### 📋 향상된 소제목
+```html
+<h2 style="font-size: 1.8em; margin: 60px 0 30px; color: #2d2d2d; font-weight: 600; line-height: 1.4; position: relative; padding-left: 20px; border-left: 4px solid #0066cc;">
+```
+
+#### 📝 개선된 본문
+```html
+<p style="line-height: 1.8; margin-bottom: 30px; font-size: 1.1em; color: #333; letter-spacing: -0.01em; text-align: justify;">
+```
+
+#### 💡 향상된 Q&A 섹션
+```html
+<div style="background: linear-gradient(135deg, #f8fafb 0%, #f3f6f8 100%); padding: 40px; border-radius: 12px; margin: 40px 0; border: 1px solid rgba(0,102,204,0.1); box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+```
+
+#### 🔍 중요 통계 강조
+```html
+<div style="background: #0066cc; color: white; padding: 30px; border-radius: 8px; margin: 30px 0; text-align: center;">
+  <span style="font-size: 2em; font-weight: 700;">25%</span>
+  <p style="margin: 10px 0 0; font-size: 1.1em;">성장률</p>
+</div>
+```
+
+#### 📊 데이터 비교 박스
+```html
+<div style="display: flex; gap: 20px; margin: 30px 0; flex-wrap: wrap;">
+  <div style="flex: 1; min-width: 200px; background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #e9ecef;">
+    <div style="font-size: 2em; font-weight: 700; color: #0066cc;">75%</div>
+    <div style="font-size: 1.1em; color: #666;">긍정적 반응</div>
+  </div>
+  <div style="flex: 1; min-width: 200px; background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #e9ecef;">
+    <div style="font-size: 2em; font-weight: 700; color: #dc3545;">25%</div>
+    <div style="font-size: 1.1em; color: #666;">부정적 반응</div>
+  </div>
+</div>
+```
+
+#### 💬 개선된 인용문
+```html
+<blockquote style="border-left: 4px solid #0066cc; padding: 30px 40px; margin: 40px 0; background: linear-gradient(to right, rgba(0,102,204,0.05) 0%, transparent 100%); font-style: italic; color: #555; font-size: 1.1em;">
+```
+
+#### 📋 향상된 목록
+```html
+<ul style="line-height: 2; padding-left: 20px; margin: 30px 0; color: #333; font-size: 1em;">
+<li style="margin-bottom: 16px; position: relative; padding-left: 10px;">
+<li style="margin-bottom: 16px; position: relative; padding-left: 10px;">
+<li style="margin-bottom: 16px; position: relative; padding-left: 10px;">
+</ul>
+```
+
+#### 🎨 핵심 포인트 박스
+```html
+<div style="background: #f8f9fa; padding: 30px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0066cc;">
+  <h3 style="color: #0066cc; margin-bottom: 15px; font-size: 1.3em;">🔍 핵심 포인트</h3>
+  <ul style="margin: 0; padding-left: 20px;">
+    <li style="margin-bottom: 10px;">포인트 1</li>
+    <li style="margin-bottom: 10px;">포인트 2</li>
+    <li style="margin-bottom: 10px;">포인트 3</li>
+  </ul>
+</div>
+```
+
+#### 📱 터치 친화적 버튼
+```html
+<div style="background: #0066cc; color: white; padding: 15px 30px; border-radius: 25px; display: inline-block; margin: 20px 0; text-align: center; min-height: 44px; line-height: 1.2; cursor: pointer; transition: all 0.3s ease;">
+```
+
+#### 🔗 섹션 구분
+```html
+<div style="margin: 60px 0; padding: 40px 0; border-top: 1px solid #e9ecef; border-bottom: 1px solid #e9ecef;">
+```
+
+#### 📊 강조 표현
+```html
+<strong style="color: #0066cc; font-weight: 600;"> 또는 <em style="background: linear-gradient(to bottom, transparent 60%, #ffe066 60%); padding: 0 2px;">
+```
+
+#### 📝 부제목
+```html
+<h3 style="font-size: 1.3em; margin: 40px 0 20px; color: #333; font-weight: 600;">
+```
+
+#### 📄 캡션/부가설명
+```html
+<p style="font-size: 0.95em; color: #666; line-height: 1.7; margin-top: -20px; margin-bottom: 30px; font-style: italic;">
+```
+
+## 📐 섹션 구성 가이드 (향상된 버전)
 - **논리적 흐름**: 원문 내용에 따라 자연스럽게 구성
 - **객관적 분석**: 다양한 관점과 데이터를 활용한 균형잡힌 분석
 - **적절한 분량**: 각 섹션은 800-1200자 정도로 균형있게
 - **시각적 구분**: 이모지와 소제목으로 명확한 구분
+- **사용자 경험**: 스크롤 피로도 최소화, 정보 계층구조 명확화
+- **모바일 최적화**: 터치 친화적 요소와 반응형 디자인 고려
+- **접근성**: 색상 대비와 시맨틱 HTML 구조 활용
 
-## ⚠️ 주의사항
+## ⚠️ 주의사항 (향상된 버전)
 - **최소 8000자 이상** 작성 (풍부하고 깊이 있는 내용)
 - **표절 금지**: 원문을 그대로 번역하지 말고 완전히 재구성
 - **객관적 사실 중심**: 정확하고 신뢰할 수 있는 정보 제공
 - **전문용어 설명**: 복잡한 개념은 명확하게 설명
 - **정확한 사실 확인**: 숫자, 날짜, 인용 등 팩트 체크
+- **시각적 품질**: HTML 구조와 스타일링의 일관성 유지
+- **성능 최적화**: 불필요한 중첩 제거, CSS 인라인 스타일 최적화
+- **호환성**: 다양한 브라우저와 워드프레스 테마 호환성 고려
 
-## 🎯 품질 체크리스트
+## 🎯 품질 체크리스트 (향상된 버전)
 - [ ] 제목이 호기심과 관심을 유발하는가?
 - [ ] 8000자 이상의 충실한 내용인가?
 - [ ] 객관적 사실에 기반한 내용인가?
@@ -153,6 +250,11 @@ A: [전문적이면서도 이해하기 쉬운 답변]
 - [ ] 전문용어를 명확하게 설명했는가?
 - [ ] 섹션 구성이 논리적이고 흥미로운가?
 - [ ] 5개의 관련 해시태그가 포함되었는가?
+- [ ] HTML 구조가 시맨틱하고 접근성이 좋은가?
+- [ ] 모바일 반응형 디자인이 적용되었는가?
+- [ ] 시각적 요소(통계, 비교 박스 등)가 적절히 활용되었는가?
+- [ ] 사용자 경험이 최적화되었는가? (스크롤 피로도, 가독성)
+- [ ] 워드프레스 테마와 호환성이 좋은가?
 
 ## 📊 주식 심볼 규칙
 - **한국 기업**: 종목명 $한국코드 (예: 삼성전자 $005930.KS, SK하이닉스 $000660.KS)

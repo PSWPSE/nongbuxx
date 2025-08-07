@@ -338,54 +338,115 @@ class BlogContentGenerator:
 - "실천 가능한 조언", "중요 정보", "핵심 포인트" 같은 제목을 그대로 사용하지 마세요. 실제 내용에 맞는 구체적인 제목을 사용하세요.
 - <hr> 태그나 구분선은 절대 사용하지 마세요. 섹션 간 구분은 충분한 여백으로만 처리하세요.**
 
-**HTML 스타일 가이드:**
-- 최상위 컨테이너: <div style="max-width: 800px; margin: 0 auto; padding: 40px 20px; font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
-- 제목: <h1 style="font-size: 2.4em; margin-bottom: 60px; color: #1a1a1a; font-weight: 700; line-height: 1.4; letter-spacing: -0.02em;">
-- 소제목: <h2 style="font-size: 1.7em; margin: 80px 0 40px; color: #2d2d2d; font-weight: 600; line-height: 1.5;">
-- 본문: <p style="line-height: 1.9; margin-bottom: 50px; font-size: 1.1em; color: #333; letter-spacing: -0.01em;">
-- Q&A 섹션: <div style="background: linear-gradient(135deg, #f8fafb 0%, #f3f6f8 100%); padding: 48px; border-radius: 16px; margin: 80px 0; border: 1px solid rgba(0,0,0,0.06);">
-- 강조: <strong style="color: #0066cc; font-weight: 600;"> 또는 <em style="background: linear-gradient(to bottom, transparent 60%, #ffe066 60%); padding: 0 2px;">
-- 목록: <ul style="line-height: 2.4; padding-left: 24px; margin: 50px 0; color: #333;"> 또는 <ol style="line-height: 2.4; padding-left: 24px; margin: 50px 0; color: #333;">
-- 인용: <blockquote style="border-left: 3px solid #0066cc; padding: 32px 40px 32px 40px; margin: 60px 0; color: #555; font-style: italic; background: linear-gradient(to right, rgba(0,102,204,0.03) 0%, transparent 100%);">
-- 중요 정보: <div style="background: #f0f7ff; padding: 48px; border-radius: 12px; margin: 70px 0; border: 1px solid #e1ecf4; position: relative;">
-- 실천 사항: <div style="background: #f6fef9; padding: 48px; border-radius: 12px; margin: 70px 0; border: 1px solid #d3f4e3;">
+**HTML 스타일 가이드 (향상된 버전):**
 
-**모던 스타일 추가 가이드:**
-- 리스트 아이템: <li style="margin-bottom: 16px;">
-- 핵심 포인트 박스: <div style="background: #fafafa; border-left: 4px solid #0066cc; padding: 24px 32px; margin: 60px 0; border-radius: 0 8px 8px 0;">
-- 숫자/통계 강조: <span style="font-size: 1.3em; font-weight: 700; color: #0066cc;">
-- 부제목: <h3 style="font-size: 1.3em; margin: 60px 0 30px; color: #333; font-weight: 600;">
-- 캡션/부가설명: <p style="font-size: 0.95em; color: #666; line-height: 1.7; margin-top: -30px; margin-bottom: 50px;">
+**📱 반응형 최상위 컨테이너:**
+<div style="max-width: 800px; margin: 0 auto; padding: 40px 20px; font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6;">
 
-**디자인 원칙:**
-- 원색 배경 대신 그라데이션과 연한 색상 사용
-- 과도한 색상 사용 자제, 주로 흑백과 블루 계열 포인트 컬러
-- 충분한 여백으로 콘텐츠 숨통 트이게
-- 모던한 border-radius와 subtle shadow 효과
-- 깔끔한 타이포그래피와 적절한 letter-spacing
+**🎯 개선된 제목 스타일:**
+<h1 style="font-size: 2.5em; margin-bottom: 40px; color: #1a1a1a; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 20px;">
 
-**콘텐츠 요구사항:**
-- 8000자 이상의 깊이 있고 풍부한 완성형 블로그 포스트
-- 쉽고 친근한 말투로 일반 대중이 이해하기 쉽게 ("~에요", "~해요" 사용)
-- 실생활과의 연관성을 강조하여 독자가 "나와 관련있다"고 느끼도록
+**📋 향상된 소제목:**
+<h2 style="font-size: 1.8em; margin: 60px 0 30px; color: #2d2d2d; font-weight: 600; line-height: 1.4; position: relative; padding-left: 20px; border-left: 4px solid #0066cc;">
 
-**콘텐츠 작성 시 주의사항:**
-- 박스나 섹션의 제목은 실제 내용을 반영한 구체적인 제목 사용
+**📝 개선된 본문:**
+<p style="line-height: 1.8; margin-bottom: 30px; font-size: 1.1em; color: #333; letter-spacing: -0.01em; text-align: justify;">
+
+**💡 향상된 Q&A 섹션:**
+<div style="background: linear-gradient(135deg, #f8fafb 0%, #f3f6f8 100%); padding: 40px; border-radius: 12px; margin: 40px 0; border: 1px solid rgba(0,102,204,0.1); box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+
+**🔍 중요 통계 강조:**
+<div style="background: #0066cc; color: white; padding: 30px; border-radius: 8px; margin: 30px 0; text-align: center;">
+  <span style="font-size: 2em; font-weight: 700;">25%</span>
+  <p style="margin: 10px 0 0; font-size: 1.1em;">성장률</p>
+</div>
+
+**📊 데이터 비교 박스:**
+<div style="display: flex; gap: 20px; margin: 30px 0; flex-wrap: wrap;">
+  <div style="flex: 1; min-width: 200px; background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #e9ecef;">
+    <div style="font-size: 2em; font-weight: 700; color: #0066cc;">75%</div>
+    <div style="font-size: 1.1em; color: #666;">긍정적 반응</div>
+  </div>
+  <div style="flex: 1; min-width: 200px; background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #e9ecef;">
+    <div style="font-size: 2em; font-weight: 700; color: #dc3545;">25%</div>
+    <div style="font-size: 1.1em; color: #666;">부정적 반응</div>
+  </div>
+</div>
+
+**💬 개선된 인용문:**
+<blockquote style="border-left: 4px solid #0066cc; padding: 30px 40px; margin: 40px 0; background: linear-gradient(to right, rgba(0,102,204,0.05) 0%, transparent 100%); font-style: italic; color: #555; font-size: 1.1em;">
+
+**📋 향상된 목록:**
+<ul style="line-height: 2; padding-left: 20px; margin: 30px 0; color: #333; font-size: 1em;">
+<li style="margin-bottom: 16px; position: relative; padding-left: 10px;">
+<li style="margin-bottom: 16px; position: relative; padding-left: 10px;">
+<li style="margin-bottom: 16px; position: relative; padding-left: 10px;">
+</ul>
+
+**🎨 핵심 포인트 박스:**
+<div style="background: #f8f9fa; padding: 30px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0066cc;">
+  <h3 style="color: #0066cc; margin-bottom: 15px; font-size: 1.3em;">🔍 핵심 포인트</h3>
+  <ul style="margin: 0; padding-left: 20px;">
+    <li style="margin-bottom: 10px;">포인트 1</li>
+    <li style="margin-bottom: 10px;">포인트 2</li>
+    <li style="margin-bottom: 10px;">포인트 3</li>
+  </ul>
+</div>
+
+**📱 터치 친화적 버튼:**
+<div style="background: #0066cc; color: white; padding: 15px 30px; border-radius: 25px; display: inline-block; margin: 20px 0; text-align: center; min-height: 44px; line-height: 1.2; cursor: pointer; transition: all 0.3s ease;">
+
+**🔗 섹션 구분:**
+<div style="margin: 60px 0; padding: 40px 0; border-top: 1px solid #e9ecef; border-bottom: 1px solid #e9ecef;">
+
+**📊 강조 표현:**
+<strong style="color: #0066cc; font-weight: 600;"> 또는 <em style="background: linear-gradient(to bottom, transparent 60%, #ffe066 60%); padding: 0 2px;">
+
+**📝 부제목:**
+<h3 style="font-size: 1.3em; margin: 40px 0 20px; color: #333; font-weight: 600;">
+
+**📄 캡션/부가설명:**
+<p style="font-size: 0.95em; color: #666; line-height: 1.7; margin-top: -20px; margin-bottom: 30px; font-style: italic;">
+
+**디자인 원칙 (향상된 버전):**
+- **반응형 디자인**: 모바일과 데스크톱 모두 최적화
+- **시각적 계층구조**: 명확한 제목-소제목-본문 구조
+- **색상 조화**: 원색 배경 대신 그라데이션과 연한 색상 사용
+- **과도한 색상 자제**: 주로 흑백과 블루 계열 포인트 컬러
+- **충분한 여백**: 콘텐츠 숨통 트이게 하여 가독성 향상
+- **모던한 효과**: border-radius와 subtle shadow 효과
+- **깔끔한 타이포그래피**: 적절한 letter-spacing과 line-height
+- **접근성 고려**: 색상 대비와 터치 친화적 요소
+- **SEO 최적화**: 시맨틱 HTML 구조 활용
+
+**콘텐츠 요구사항 (향상된 버전):**
+- **8000자 이상**: 깊이 있고 풍부한 완성형 블로그 포스트
+- **객관적 사실 전달**: 정확하고 신뢰할 수 있는 정보 중심
+- **호기심과 관심 유발**: 제목과 소제목으로 독자의 관심을 끄는 구성
+- **시각적 요소 활용**: 데이터, 통계, 비교 분석 등 다양한 시각적 요소 포함
+- **논리적 구조**: 명확한 인과관계와 논리적 흐름 유지
+- **사용자 경험**: 스크롤 피로도 최소화, 정보 계층구조 명확화
+
+**콘텐츠 작성 시 주의사항 (향상된 버전):**
+- **구체적 제목 사용**: 박스나 섹션의 제목은 실제 내용을 반영한 구체적인 제목 사용
   예) ❌ "실천 가능한 조언" → ✅ "조선업 투자 시 확인해야 할 3가지"
   예) ❌ "중요 정보" → ✅ "2분기 실적 발표 핵심 수치"
-- 모든 박스 콘텐츠는 균형있는 내용으로 채워서 시각적 균형 유지
-- 리스트는 최소 3개 이상의 항목으로 구성
-- 박스 안에 들어가는 내용은 충분히 작성하여 빈 공간이 없도록
-- 필수 포함 섹션:
-  * 공감형 도입부 (독자의 일상적 고민으로 시작)
-  * 현황 분석 (쉬운 비유와 예시)
-  * 실생활 영향 (개인 재정, 일자리, 생활비 등)
-  * Q&A 섹션 1-2개 (실용적 질문과 답변)
-  * 리스크와 주의사항
-  * 실천 가능한 조언
-- 각 섹션은 800-1200자로 균형있게 구성
-- 문단 간격과 스타일 요소로 가독성 극대화
-- 다양한 HTML 요소로 지루하지 않은 구성
+- **시각적 균형**: 모든 박스 콘텐츠는 균형있는 내용으로 채워서 시각적 균형 유지
+- **리스트 구성**: 리스트는 최소 3개 이상의 항목으로 구성
+- **충분한 내용**: 박스 안에 들어가는 내용은 충분히 작성하여 빈 공간이 없도록
+- **필수 포함 섹션 (향상된 버전)**:
+  * 도입부 (주제의 중요성과 배경 설명)
+  * 현황 분석 (객관적 데이터와 통계를 활용한 현황 설명)
+  * 핵심 이슈 심층 분석 (주요 이슈의 원인과 배경, 전문가 의견)
+  * Q&A 섹션 1-2개 (핵심 질문과 객관적 답변)
+  * 주의사항과 리스크 (관련 리스크와 대응 방안)
+  * 전문가들의 분석과 의견 (업계 전문가들의 전망)
+  * 향후 전망과 시나리오 (미래 전망과 가능한 시나리오)
+- **섹션 균형**: 각 섹션은 800-1200자로 균형있게 구성
+- **가독성 극대화**: 문단 간격과 스타일 요소로 가독성 극대화
+- **다양한 HTML 요소**: 지루하지 않은 구성으로 사용자 경험 향상
+- **모바일 최적화**: 터치 친화적 요소와 반응형 디자인 고려
+- **접근성**: 색상 대비와 시맨틱 HTML 구조 활용
 
 **🔥 다시 한번 강조: 제목은 무조건 매력적인 한국어로만 작성하세요!**
 
