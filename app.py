@@ -886,14 +886,21 @@ def extract_news_links():
                 sum(1 for kw in x.get('keywords', []) if keyword_lower in kw.lower())
             ), reverse=True)
         
-        logger.info(f"Multi-source news extraction completed: {len(unique_news)} unique articles from {len(selected_sources)} sources")
+        # 🚨 홍보성 필터링 통계 계산
+        total_extracted = len(all_news_items)
+        filtered_count = len(unique_news)
+        promotional_filtered = total_extracted - filtered_count
+        
+        logger.info(f"Multi-source news extraction completed: {len(unique_news)} unique articles from {len(selected_sources)} sources (홍보성 뉴스 {promotional_filtered}개 제외)")
         
         return jsonify({
             'success': True,
             'data': {
                 'keyword': keyword,
                 'count': len(unique_news),
-                'total_extracted': len(all_news_items),
+                'total_extracted': total_extracted,
+                'filtered_count': filtered_count,
+                'promotional_filtered': promotional_filtered,
                 'unique_count': len(unique_news),
                 'news_items': unique_news,
                 'source_results': source_results

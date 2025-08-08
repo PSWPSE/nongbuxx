@@ -51,6 +51,70 @@ class OptimizedNewsExtractor:
             r'/author/',              # 저자 페이지
             r'/topic/[^/]+/$',        # 토픽 메인 페이지 (뉴스 아님)
         ]
+        
+        # 🚨 강화된 홍보성 뉴스 필터링 시스템
+        self.promotional_patterns = {
+            # 제목 기반 홍보성 키워드
+            'title_keywords': [
+                # 한국어 홍보성 키워드
+                '광고', '프로모션', '홍보', '선전', '어필', '추천', '소개',
+                '바로가기', '더보기', '전체보기', '구독', '팔로우', '로그인', '회원가입',
+                '댓글', '후원', '제휴', '협찬', '스폰서', '지원', '도움',
+                '특가', '할인', '이벤트', '행사', '모집', '채용', '공고',
+                '출시', '런칭', '오픈', '오픈식', '기념', '축하', '감사',
+                '당첨', '당첨자', '수상', '수상자', '시상', '시상식',
+                '무료', '체험', '샘플', '증정', '기프트', '선물',
+                
+                # 영어 홍보성 키워드
+                'ad', 'advertisement', 'sponsored', 'promotion', 'promotional',
+                'sponsored content', 'paid', 'partnership', 'collaboration',
+                'limited time', 'special offer', 'discount', 'sale', 'deal',
+                'free trial', 'free sample', 'giveaway', 'contest', 'sweepstakes',
+                'launch', 'release', 'announcement', 'press release',
+                'event', 'celebration', 'ceremony', 'award', 'winner',
+                'subscribe', 'follow', 'sign up', 'register', 'join',
+                'click here', 'learn more', 'find out more', 'get started',
+                'exclusive', 'premium', 'vip', 'membership', 'loyalty',
+            ],
+            
+            # URL 패턴 기반 홍보성 필터
+            'url_patterns': [
+                r'/ad/', r'/ads/', r'/advertisement/', r'/sponsored/',
+                r'/promotion/', r'/promotional/', r'/event/', r'/events/',
+                r'/contest/', r'/giveaway/', r'/sweepstakes/', r'/sale/',
+                r'/deal/', r'/offer/', r'/special/', r'/limited/',
+                r'/free/', r'/trial/', r'/sample/', r'/gift/',
+                r'/subscribe/', r'/signup/', r'/register/', r'/join/',
+                r'/membership/', r'/premium/', r'/vip/', r'/exclusive/',
+                r'/press-release/', r'/announcement/', r'/launch/', r'/release/',
+                r'/partnership/', r'/collaboration/', r'/sponsor/', r'/sponsored/',
+            ],
+            
+            # 제목 패턴 기반 홍보성 필터
+            'title_patterns': [
+                r'\[.*광고.*\]', r'\[.*sponsored.*\]', r'\[.*ad.*\]',
+                r'\(.*광고.*\)', r'\(.*sponsored.*\)', r'\(.*ad.*\)',
+                r'\[.*프로모션.*\]', r'\[.*promotion.*\]',
+                r'\[.*이벤트.*\]', r'\[.*event.*\]',
+                r'\[.*특가.*\]', r'\[.*sale.*\]', r'\[.*할인.*\]',
+                r'\[.*무료.*\]', r'\[.*free.*\]',
+                r'\[.*출시.*\]', r'\[.*launch.*\]',
+                r'\[.*런칭.*\]', r'\[.*release.*\]',
+                r'\[.*공개.*\]', r'\[.*announcement.*\]',
+                r'\[.*당첨.*\]', r'\[.*winner.*\]',
+                r'\[.*수상.*\]', r'\[.*award.*\]',
+            ],
+            
+            # 짧은 제목 필터 (홍보성 제목은 보통 짧음)
+            'min_title_length': 15,
+            
+            # 과도한 특수문자 필터 (홍보성 제목에 자주 나타남)
+            'excessive_symbols': [
+                '!', '!!', '!!!', '?', '??', '???', '~', '~~', '~~~',
+                '★', '☆', '♥', '♡', '♠', '♣', '♦', '●', '○', '◆', '◇',
+                '▶', '◀', '▲', '▼', '■', '□', '▣', '▤', '▥', '▦', '▧', '▨', '▩',
+            ]
+        }
     
     def extract_news(self) -> List[Dict[str, Any]]:
         """뉴스 추출 메인 함수"""
@@ -65,15 +129,75 @@ class OptimizedNewsExtractor:
             # 뉴스 링크 추출
             news_links = self._extract_news_links(html_content)
             
-            # 뉴스 아이템 생성
-            news_items = self._create_news_items(news_links)
+            # 🚨 홍보성 뉴스 필터링 적용
+            filtered_links = self._filter_promotional_content(news_links)
             
-            print(f"HTML 파싱에서 {len(news_items)}개 뉴스 추출 완료")
+            # 뉴스 아이템 생성
+            news_items = self._create_news_items(filtered_links)
+            
+            print(f"HTML 파싱에서 {len(news_links)}개 뉴스 추출, 홍보성 필터링 후 {len(filtered_links)}개 유지")
             return news_items[:self.max_news]
             
         except Exception as e:
             logger.error(f"뉴스 추출 오류: {e}")
             return []
+    
+    def _filter_promotional_content(self, links: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """홍보성 콘텐츠 필터링"""
+        filtered_links = []
+        
+        for link in links:
+            title = link['title']
+            url = link['url']
+            
+            # 홍보성 콘텐츠 체크
+            if self._is_promotional_content(title, url):
+                print(f"🚫 홍보성 뉴스 제외: {title[:50]}...")
+                continue
+            
+            filtered_links.append(link)
+        
+        return filtered_links
+    
+    def _is_promotional_content(self, title: str, url: str) -> bool:
+        """홍보성 콘텐츠인지 판단"""
+        title_lower = title.lower()
+        url_lower = url.lower()
+        
+        # 1. 제목 키워드 체크
+        for keyword in self.promotional_patterns['title_keywords']:
+            if keyword.lower() in title_lower:
+                return True
+        
+        # 2. URL 패턴 체크
+        for pattern in self.promotional_patterns['url_patterns']:
+            if re.search(pattern, url_lower):
+                return True
+        
+        # 3. 제목 패턴 체크 (대괄호, 소괄호 안의 홍보성 키워드)
+        for pattern in self.promotional_patterns['title_patterns']:
+            if re.search(pattern, title, re.IGNORECASE):
+                return True
+        
+        # 4. 제목 길이 체크 (너무 짧으면 홍보성일 가능성)
+        if len(title.strip()) < self.promotional_patterns['min_title_length']:
+            return True
+        
+        # 5. 과도한 특수문자 체크
+        symbol_count = sum(1 for symbol in self.promotional_patterns['excessive_symbols'] if symbol in title)
+        if symbol_count >= 3:  # 3개 이상의 특수문자가 있으면 홍보성
+            return True
+        
+        # 6. 반복되는 문자 체크 (예: "대박!!!", "최고!!!")
+        if re.search(r'([!?~★☆♥♡])\1{2,}', title):
+            return True
+        
+        # 7. 과도한 대문자 체크 (홍보성 제목은 대문자를 많이 사용)
+        uppercase_ratio = sum(1 for char in title if char.isupper()) / len(title) if title else 0
+        if uppercase_ratio > 0.7:  # 70% 이상이 대문자면 홍보성
+            return True
+        
+        return False
     
     def _extract_news_links(self, html: str) -> List[Dict[str, str]]:
         """HTML에서 뉴스 링크 추출 (성능 최적화)"""

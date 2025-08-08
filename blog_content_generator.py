@@ -62,7 +62,7 @@ class BlogContentGenerator:
             source_info.update({
                 'type': 'naver_news',
                 'name': 'Naver News',
-                'recommended_formats': ['md', 'naver']
+                'recommended_formats': ['md', 'naver', 'wordpress']
             })
         
         # Yahoo Finance
@@ -143,6 +143,9 @@ class BlogContentGenerator:
         
         # 네이버 뉴스인지 확인
         is_naver_news = 'news.naver.com' in extracted_data.get('url', '') or 'naver' in extracted_data.get('source', '').lower()
+        
+        # Zacks 관련 내용 필터링
+        extracted_data = self.filter_zacks_from_data(extracted_data)
         
         if is_naver_news:
             # 네이버 뉴스는 원본 한국어 제목 그대로 사용
@@ -287,6 +290,87 @@ class BlogContentGenerator:
             self.logger.error(f"완성형 블로그 콘텐츠 생성 실패: {e}")
             return f"오류: 블로그 콘텐츠를 생성할 수 없습니다. ({str(e)})"
     
+    def filter_zacks_from_data(self, extracted_data):
+        """
+        추출된 데이터에서 Zacks 관련 내용을 필터링
+        
+        Args:
+            extracted_data: 원본 추출 데이터
+            
+        Returns:
+            dict: 필터링된 데이터
+        """
+        import re
+        
+        # Zacks 관련 금지 키워드 및 패턴
+        zacks_patterns = [
+            # 금지 키워드
+            r'Zacks Rank 시스템',
+            r'Zacks Industry Rank',
+            r'Zacks Investment Research',
+            r'Zacks 조사',
+            r'Zacks 애널리스트',
+            r'Zacks 평균 예상치',
+            r'Zacks 등급',
+            r'Zacks 평가',
+            r'Zacks 순위',
+            r'Zacks 분석',
+            
+            # 금지 패턴
+            r'Zacks Rank \d+위로 상위 \d+%에 속함',
+            r'Zacks Investment Research 조사에 따르면',
+            r'Zacks 애널리스트 \d+명의 평균 예상치',
+            r'Zacks Industry Rank \d+위',
+            r'Zacks 등급 [A-Z]+',
+            
+            # 추가 패턴
+            r'Zacks.*Rank',
+            r'Zacks.*Research',
+            r'Zacks.*분석',
+            r'Zacks.*평가',
+            r'Zacks.*조사',
+        ]
+        
+        # 대체 표현
+        replacement_patterns = [
+            ('Zacks Rank 시스템', '시장 분석 시스템'),
+            ('Zacks Industry Rank', '업계 순위'),
+            ('Zacks Investment Research', '투자 연구 기관'),
+            ('Zacks 조사', '시장 조사'),
+            ('Zacks 애널리스트', '전문 애널리스트'),
+            ('Zacks 평균 예상치', '시장 평균 예상치'),
+            ('Zacks 등급', '시장 등급'),
+            ('Zacks 평가', '시장 평가'),
+            ('Zacks 순위', '시장 순위'),
+            ('Zacks 분석', '시장 분석'),
+        ]
+        
+        filtered_data = extracted_data.copy()
+        
+        # 제목, 내용, 요약에서 Zacks 관련 내용 필터링
+        for field in ['title', 'content', 'description']:
+            if field in filtered_data and filtered_data[field]:
+                content = filtered_data[field]
+                
+                # 정규식 패턴으로 완전 제거
+                for pattern in zacks_patterns:
+                    content = re.sub(pattern, '', content, flags=re.IGNORECASE)
+                
+                # 대체 표현 적용
+                for old_text, new_text in replacement_patterns:
+                    content = content.replace(old_text, new_text)
+                    content = content.replace(old_text.lower(), new_text.lower())
+                
+                # 연속된 공백 정리
+                content = re.sub(r'\s+', ' ', content)
+                content = re.sub(r'\n\s*\n', '\n\n', content)
+                
+                filtered_data[field] = content.strip()
+        
+        self.logger.info("✅ Zacks 관련 내용 필터링 완료")
+        
+        return filtered_data
+    
     def generate_html_blog_content(self, extracted_data):
         """
         HTML 형식의 블로그 콘텐츠 생성 (포맷팅 유지)
@@ -298,171 +382,13 @@ class BlogContentGenerator:
             str: HTML 형식의 블로그 콘텐츠
         """
         
-        # HTML 형식 콘텐츠를 위한 프롬프트
-        prompt = f"""당신은 전문 블로그 작가입니다. 다음 뉴스 기사를 바탕으로 HTML 형식의 완성형 블로그 콘텐츠를 작성해주세요.
+        # HTML 형식 콘텐츠를 위한 중립적인 프롬프트
+        prompt = f"""다음 정보를 바탕으로 HTML 형식의 기사를 작성해주세요.
 
-**🚨🚨🚨 최우선 필수 규칙 - 주식 심볼 표기 (기업명당 1회만) 🚨🚨🚨**
-✅ **기업명 첫 등장 시에만 심볼 추가** (제목+본문 통틀어 1회)
-   - 제목에서 첫 등장: "삼성전자의 새로운 도전" → "💡 삼성전자 $005930.KS의 새로운 도전"
-   - 본문에서는 심볼 없이: "삼성전자는 최근 발표에서..." (이미 제목에서 사용)
-   - 제목에 없고 본문 첫 등장: "삼성전자는..." → "삼성전자 $005930.KS는..."
-✅ **두 번째 언급부터는 심볼 없이**:
-   - "삼성전자의 이번 전략은..." (심볼 없음)
-   - "삼성전자가 추가로..." (심볼 없음)
-✅ **심볼 규칙**:
-   - 한국: 삼성전자 $005930.KS, SK하이닉스 $000660.KS, 네이버 $035420.KS, 카카오 $035720.KS
-   - 미국: 애플 $AAPL, 아마존 $AMZN, 구글 $GOOGL, 마이크로소프트 $MSFT, 테슬라 $TSLA, 메타 $META, 엔비디아 $NVDA
-   - 심볼 앞뒤 공백 필수, 괄호 사용 금지
-
-**🚨 필수 지시사항 - 절대 지켜야 함:**
-- 제목은 100% 한국어로만 작성
-- 영어 제목이 입력되어도 반드시 한국어로 번역
-- 네이버, 조선일보 등 한국 뉴스는 이미 한국어이므로 한국어 제목 유지
-- 제목만 영어로 나오는 경우 절대 금지
-
-**💡 매력적인 제목 생성 가이드라인 (핵심):**
-- 단순 번역이 아닌 한국 독자의 실생활과 연결된 제목 작성
-- 개인 투자자, 직장인, 자영업자 등 구체적 대상을 염두에 둔 제목
-- "내 투자", "우리 일자리", "생활비" 등 직접적 연관성 표현
-- 구체적인 숫자와 실질적 영향을 포함
-- 불안 해소나 기회 포착의 관점에서 접근
-- 예시 변환:
-  * "Fed cuts interest rates" 
-    → "연준 금리 인하, 내 주택담보대출 이자는 얼마나 줄어들까?"
-  * "Apple announces new AI features"
-    → "애플 AI 신기능 공개, IT 업계 종사자들이 주목해야 할 3가지 변화"
-
-**중요: 작성 지침이나 메타 정보는 포함하지 마세요. 순수한 HTML 블로그 콘텐츠만 작성하세요.**
-**주의: <!DOCTYPE html>, <html>, <head>, <body> 태그는 포함하지 마세요. 블로그 에디터에 바로 붙여넣을 수 있는 콘텐츠 부분만 작성하세요.**
-**절대 금지: 
-- "실천 가능한 조언", "중요 정보", "핵심 포인트" 같은 제목을 그대로 사용하지 마세요. 실제 내용에 맞는 구체적인 제목을 사용하세요.
-- <hr> 태그나 구분선은 절대 사용하지 마세요. 섹션 간 구분은 충분한 여백으로만 처리하세요.**
-
-**HTML 스타일 가이드 (향상된 버전):**
-
-**📱 반응형 최상위 컨테이너:**
-<div style="max-width: 800px; margin: 0 auto; padding: 40px 20px; font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6;">
-
-**🎯 개선된 제목 스타일:**
-<h1 style="font-size: 2.5em; margin-bottom: 40px; color: #1a1a1a; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 20px;">
-
-**📋 향상된 소제목:**
-<h2 style="font-size: 1.8em; margin: 60px 0 30px; color: #2d2d2d; font-weight: 600; line-height: 1.4; position: relative; padding-left: 20px; border-left: 4px solid #0066cc;">
-
-**📝 개선된 본문:**
-<p style="line-height: 1.8; margin-bottom: 30px; font-size: 1.1em; color: #333; letter-spacing: -0.01em; text-align: justify;">
-
-**💡 향상된 Q&A 섹션:**
-<div style="background: linear-gradient(135deg, #f8fafb 0%, #f3f6f8 100%); padding: 40px; border-radius: 12px; margin: 40px 0; border: 1px solid rgba(0,102,204,0.1); box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-
-**🔍 중요 통계 강조:**
-<div style="background: #0066cc; color: white; padding: 30px; border-radius: 8px; margin: 30px 0; text-align: center;">
-  <span style="font-size: 2em; font-weight: 700;">25%</span>
-  <p style="margin: 10px 0 0; font-size: 1.1em;">성장률</p>
-</div>
-
-**📊 데이터 비교 박스:**
-<div style="display: flex; gap: 20px; margin: 30px 0; flex-wrap: wrap;">
-  <div style="flex: 1; min-width: 200px; background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #e9ecef;">
-    <div style="font-size: 2em; font-weight: 700; color: #0066cc;">75%</div>
-    <div style="font-size: 1.1em; color: #666;">긍정적 반응</div>
-  </div>
-  <div style="flex: 1; min-width: 200px; background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #e9ecef;">
-    <div style="font-size: 2em; font-weight: 700; color: #dc3545;">25%</div>
-    <div style="font-size: 1.1em; color: #666;">부정적 반응</div>
-  </div>
-</div>
-
-**💬 개선된 인용문:**
-<blockquote style="border-left: 4px solid #0066cc; padding: 30px 40px; margin: 40px 0; background: linear-gradient(to right, rgba(0,102,204,0.05) 0%, transparent 100%); font-style: italic; color: #555; font-size: 1.1em;">
-
-**📋 향상된 목록:**
-<ul style="line-height: 2; padding-left: 20px; margin: 30px 0; color: #333; font-size: 1em;">
-<li style="margin-bottom: 16px; position: relative; padding-left: 10px;">
-<li style="margin-bottom: 16px; position: relative; padding-left: 10px;">
-<li style="margin-bottom: 16px; position: relative; padding-left: 10px;">
-</ul>
-
-**🎨 핵심 포인트 박스:**
-<div style="background: #f8f9fa; padding: 30px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0066cc;">
-  <h3 style="color: #0066cc; margin-bottom: 15px; font-size: 1.3em;">🔍 핵심 포인트</h3>
-  <ul style="margin: 0; padding-left: 20px;">
-    <li style="margin-bottom: 10px;">포인트 1</li>
-    <li style="margin-bottom: 10px;">포인트 2</li>
-    <li style="margin-bottom: 10px;">포인트 3</li>
-  </ul>
-</div>
-
-**📱 터치 친화적 버튼:**
-<div style="background: #0066cc; color: white; padding: 15px 30px; border-radius: 25px; display: inline-block; margin: 20px 0; text-align: center; min-height: 44px; line-height: 1.2; cursor: pointer; transition: all 0.3s ease;">
-
-**🔗 섹션 구분:**
-<div style="margin: 60px 0; padding: 40px 0; border-top: 1px solid #e9ecef; border-bottom: 1px solid #e9ecef;">
-
-**📊 강조 표현:**
-<strong style="color: #0066cc; font-weight: 600;"> 또는 <em style="background: linear-gradient(to bottom, transparent 60%, #ffe066 60%); padding: 0 2px;">
-
-**📝 부제목:**
-<h3 style="font-size: 1.3em; margin: 40px 0 20px; color: #333; font-weight: 600;">
-
-**📄 캡션/부가설명:**
-<p style="font-size: 0.95em; color: #666; line-height: 1.7; margin-top: -20px; margin-bottom: 30px; font-style: italic;">
-
-**디자인 원칙 (향상된 버전):**
-- **반응형 디자인**: 모바일과 데스크톱 모두 최적화
-- **시각적 계층구조**: 명확한 제목-소제목-본문 구조
-- **색상 조화**: 원색 배경 대신 그라데이션과 연한 색상 사용
-- **과도한 색상 자제**: 주로 흑백과 블루 계열 포인트 컬러
-- **충분한 여백**: 콘텐츠 숨통 트이게 하여 가독성 향상
-- **모던한 효과**: border-radius와 subtle shadow 효과
-- **깔끔한 타이포그래피**: 적절한 letter-spacing과 line-height
-- **접근성 고려**: 색상 대비와 터치 친화적 요소
-- **SEO 최적화**: 시맨틱 HTML 구조 활용
-
-**콘텐츠 요구사항 (향상된 버전):**
-- **8000자 이상**: 깊이 있고 풍부한 완성형 블로그 포스트
-- **객관적 사실 전달**: 정확하고 신뢰할 수 있는 정보 중심
-- **호기심과 관심 유발**: 제목과 소제목으로 독자의 관심을 끄는 구성
-- **시각적 요소 활용**: 데이터, 통계, 비교 분석 등 다양한 시각적 요소 포함
-- **논리적 구조**: 명확한 인과관계와 논리적 흐름 유지
-- **사용자 경험**: 스크롤 피로도 최소화, 정보 계층구조 명확화
-
-**콘텐츠 작성 시 주의사항 (향상된 버전):**
-- **구체적 제목 사용**: 박스나 섹션의 제목은 실제 내용을 반영한 구체적인 제목 사용
-  예) ❌ "실천 가능한 조언" → ✅ "조선업 투자 시 확인해야 할 3가지"
-  예) ❌ "중요 정보" → ✅ "2분기 실적 발표 핵심 수치"
-- **시각적 균형**: 모든 박스 콘텐츠는 균형있는 내용으로 채워서 시각적 균형 유지
-- **리스트 구성**: 리스트는 최소 3개 이상의 항목으로 구성
-- **충분한 내용**: 박스 안에 들어가는 내용은 충분히 작성하여 빈 공간이 없도록
-- **필수 포함 섹션 (향상된 버전)**:
-  * 도입부 (주제의 중요성과 배경 설명)
-  * 현황 분석 (객관적 데이터와 통계를 활용한 현황 설명)
-  * 핵심 이슈 심층 분석 (주요 이슈의 원인과 배경, 전문가 의견)
-  * Q&A 섹션 1-2개 (핵심 질문과 객관적 답변)
-  * 주의사항과 리스크 (관련 리스크와 대응 방안)
-  * 전문가들의 분석과 의견 (업계 전문가들의 전망)
-  * 향후 전망과 시나리오 (미래 전망과 가능한 시나리오)
-- **섹션 균형**: 각 섹션은 800-1200자로 균형있게 구성
-- **가독성 극대화**: 문단 간격과 스타일 요소로 가독성 극대화
-- **다양한 HTML 요소**: 지루하지 않은 구성으로 사용자 경험 향상
-- **모바일 최적화**: 터치 친화적 요소와 반응형 디자인 고려
-- **접근성**: 색상 대비와 시맨틱 HTML 구조 활용
-
-**🔥 다시 한번 강조: 제목은 무조건 매력적인 한국어로만 작성하세요!**
-
-**원문 정보:**
 제목: {extracted_data['title']}
-설명: {extracted_data.get('description', '')}
-본문: {extracted_data['content']['text']}
+내용: {extracted_data['content']['text']}
 
-**마무리 요구사항:**
-- 글의 마지막에는 반드시 글의 내용을 핵심적으로 표현할 수 있는 해시태그를 정확히 5개 추가해주세요.
-- 해시태그 형식: #키워드1 #키워드2 #키워드3 #키워드4 #키워드5
-- 해시태그는 글의 핵심 주제, 관련 기업, 산업 분야, 주요 키워드 등을 포함해야 합니다.
-- 해시태그 앞에 "**태그:**"라는 제목을 붙여주세요.
-
-완성형 HTML 블로그 콘텐츠를 작성해주세요. 제목은 반드시 매력적인 한국어로! 블로그 에디터에 복사-붙여넣기 했을 때 포맷팅이 그대로 유지되도록 작성하세요.
-반드시 <div> 태그로 시작해서 </div> 태그로 끝나야 합니다. HTML 문서 구조(<!DOCTYPE html>, <html>, <head>, <body>)는 포함하지 마세요."""
+HTML 형식으로 작성해주세요."""
 
         response = self.converter.call_api(prompt, max_tokens=4000)
         return self.converter.clean_response(response)

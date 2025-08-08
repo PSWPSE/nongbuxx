@@ -958,10 +958,41 @@ function showResultSection() {
         elements.resultSection.style.display = 'block';
     }
     
-    if (currentData && elements.markdownPreview) {
-        elements.markdownPreview.innerHTML = typeof marked !== 'undefined' ? 
-            marked.parse(currentData.content) : 
-            `<pre>${currentData.content}</pre>`;
+    // 🚨 데이터 동기화 개선 - 단일 콘텐츠 생성 완료 시
+    if (currentData) {
+        // sessionContent에 추가
+        const newContent = {
+            id: `single_${Date.now()}`,
+            title: currentData.filename || currentData.title || '생성된 콘텐츠',
+            content: currentData.content || '',
+            content_type: currentData.content_type || 'standard',
+            filename: currentData.filename,
+            created_at: new Date().toISOString(),
+            success: true
+        };
+        
+        // 기존 sessionContent가 있으면 추가, 없으면 새로 생성
+        if (!sessionContent) {
+            sessionContent = [];
+        }
+        sessionContent.push(newContent);
+        
+        // generatedContentList에도 추가
+        if (!window.generatedContentList) {
+            window.generatedContentList = [];
+        }
+        window.generatedContentList.push(currentData);
+        
+        console.log('✅ 단일 콘텐츠 데이터 동기화 완료:', {
+            sessionContentLength: sessionContent.length,
+            generatedContentListLength: window.generatedContentList.length
+        });
+        
+        if (elements.markdownPreview) {
+            elements.markdownPreview.innerHTML = typeof marked !== 'undefined' ? 
+                marked.parse(currentData.content) : 
+                `<pre>${currentData.content}</pre>`;
+        }
     }
 }
 
@@ -1084,6 +1115,15 @@ async function handleNewsExtraction() {
         const result = await response.json();
         extractedNews = result.data ? result.data.news_items || [] : [];
         
+        // 🚨 홍보성 필터링 결과 저장
+        if (result.data) {
+            window.lastExtractionResult = {
+                promotional_filtered: result.data.promotional_filtered || 0,
+                total_extracted: result.data.total_extracted || 0,
+                filtered_count: result.data.filtered_count || 0
+            };
+        }
+        
         if (extractedNews.length === 0) {
             showToast('추출된 뉴스가 없습니다.', 'warning');
             return;
@@ -1101,6 +1141,11 @@ async function handleNewsExtraction() {
             }
             if (failedSources.length > 0) {
                 message += ` (실패: ${failedSources.length}개 출처)`;
+            }
+            
+            // 🚨 홍보성 뉴스 필터링 정보 추가
+            if (result.data.promotional_filtered !== undefined && result.data.promotional_filtered > 0) {
+                message += ` 🚫 홍보성 뉴스 ${result.data.promotional_filtered}개 제외됨`;
             }
             
             showToast(message, 'success');
@@ -1155,6 +1200,15 @@ function showNewsSelectionSection() {
             </div>
         ` : '';
         
+        // 🚨 홍보성 필터링 통계 추가
+        const promotionalFiltered = window.lastExtractionResult?.promotional_filtered || 0;
+        const promotionalInfo = promotionalFiltered > 0 ? `
+            <div class="promotional-filter-info">
+                <i class="fas fa-shield-alt"></i>
+                <span>🚫 홍보성 뉴스 ${promotionalFiltered}개 자동 제외됨</span>
+            </div>
+        ` : '';
+        
         elements.newsExtractionInfo.innerHTML = `
             <h3>뉴스 추출 완료</h3>
             <p>총 ${extractedNews.length}개의 뉴스를 추출했습니다. 콘텐츠로 변환할 뉴스를 선택해주세요.</p>
@@ -1164,6 +1218,7 @@ function showNewsSelectionSection() {
                     <span>💡 20개 이상 선택 시 자동으로 처음 20개만 처리됩니다.</span>
                 </div>
             ` : ''}
+            ${promotionalInfo}
             ${sourceStatsHtml}
         `;
     }
@@ -1721,11 +1776,32 @@ async function pollBatchJobStatus(jobId) {
             if (result.data && result.data.results) {
                 currentBatchData = result.data;
                 generatedContentData = result.data.results;
+                
+                // 🚨 데이터 동기화 개선
+                // sessionContent 업데이트
+                if (result.data.results && result.data.results.length > 0) {
+                    sessionContent = result.data.results.map((item, index) => ({
+                        id: `batch_${jobId}_${index}`,
+                        title: item.filename || `생성된 콘텐츠 ${index + 1}`,
+                        content: item.content || '',
+                        content_type: item.content_type || 'standard',
+                        filename: item.filename,
+                        created_at: new Date().toISOString(),
+                        success: item.success
+                    }));
+                    console.log('✅ sessionContent 업데이트 완료:', sessionContent.length);
+                }
+                
+                // generatedContentList 업데이트
+                window.generatedContentList = result.data.results;
+                console.log('✅ generatedContentList 업데이트 완료:', window.generatedContentList.length);
+                
                 // 첫 번째 성공한 콘텐츠를 currentData로 설정
                 const firstSuccessContent = result.data.results.find(item => item.success);
                 if (firstSuccessContent) {
                     currentData = firstSuccessContent;
                 }
+                
                 setTimeout(() => {
                     showResultSection();
                     showToast('일괄 콘텐츠 생성이 완료되었습니다!', 'success');
@@ -4763,20 +4839,50 @@ async function downloadContentForced(filename) {
 function showSimplePreview(index) {
     console.log('🚀 새로운 미리보기 시작:', index);
     
-    // 1. 데이터 검증
-    if (!sessionContent || sessionContent.length === 0) {
-        console.error('❌ sessionContent가 비어있음');
-        alert('표시할 콘텐츠가 없습니다.');
-        return;
+    // 1. 데이터 검증 - 여러 소스에서 데이터 찾기
+    let content = null;
+    let dataSource = '';
+    
+    // sessionContent에서 먼저 찾기
+    if (sessionContent && sessionContent.length > 0 && index < sessionContent.length) {
+        content = sessionContent[index];
+        dataSource = 'sessionContent';
+        console.log('✅ sessionContent에서 데이터 찾음');
     }
     
-    if (index < 0 || index >= sessionContent.length) {
-        console.error('❌ 잘못된 인덱스:', index, '전체 길이:', sessionContent.length);
+    // generatedContentList에서 찾기 (파일 기반)
+    if (!content && window.generatedContentList && window.generatedContentList.length > 0) {
+        const fileItem = window.generatedContentList[index];
+        if (fileItem) {
+            content = {
+                title: fileItem.filename || '제목 없음',
+                content: fileItem.content || '',
+                content_type: fileItem.content_type || 'standard',
+                filename: fileItem.filename,
+                created_at: fileItem.created_at
+            };
+            dataSource = 'generatedContentList';
+            console.log('✅ generatedContentList에서 데이터 찾음');
+        }
+    }
+    
+    // 데이터가 없으면 에러
+    if (!content) {
+        console.error('❌ 데이터를 찾을 수 없음:', {
+            index,
+            sessionContentLength: sessionContent ? sessionContent.length : 0,
+            generatedContentListLength: window.generatedContentList ? window.generatedContentList.length : 0
+        });
         alert('콘텐츠를 찾을 수 없습니다.');
         return;
     }
     
-    const content = sessionContent[index];
+    console.log('📄 미리보기 데이터:', {
+        title: content.title,
+        content_length: content.content ? content.content.length : 0,
+        content_type: content.content_type,
+        dataSource: dataSource
+    });
     console.log('📄 미리보기 데이터:', {
         title: content.title,
         content_length: content.content ? content.content.length : 0,
@@ -4852,9 +4958,14 @@ function showSimplePreview(index) {
                     align-items: center;
                     background: var(--bg-secondary);
                 ">
-                    <h3 style="margin: 0; color: var(--text-primary); font-size: 16px; font-weight: 500;">
-                        📄 콘텐츠 미리보기
-                    </h3>
+                    <div>
+                        <h3 style="margin: 0; color: var(--text-primary); font-size: 16px; font-weight: 500;">
+                            📄 콘텐츠 미리보기
+                        </h3>
+                        <small style="color: var(--text-secondary); font-size: 12px;">
+                            소스: ${dataSource} | 타입: ${content.content_type || 'standard'}
+                        </small>
+                    </div>
                     <button onclick="closeSimplePreview()" style="
                         background: none;
                         border: none;
@@ -4960,15 +5071,39 @@ function closeSimplePreview() {
 }
 
 function copySimpleContent(index) {
-    if (index >= 0 && index < sessionContent.length) {
-        const content = sessionContent[index];
-        if (content.content) {
-            navigator.clipboard.writeText(content.content).then(() => {
-                alert('클립보드에 복사되었습니다!');
-            }).catch(() => {
-                alert('복사에 실패했습니다.');
-            });
+    try {
+        // 여러 소스에서 데이터 찾기
+        let content = null;
+        
+        // sessionContent에서 찾기
+        if (sessionContent && sessionContent.length > 0 && index < sessionContent.length) {
+            content = sessionContent[index];
         }
+        
+        // generatedContentList에서 찾기
+        if (!content && window.generatedContentList && window.generatedContentList.length > 0 && index < window.generatedContentList.length) {
+            const fileItem = window.generatedContentList[index];
+            if (fileItem) {
+                content = {
+                    content: fileItem.content || '',
+                    title: fileItem.filename || '제목 없음'
+                };
+            }
+        }
+        
+        if (!content || !content.content) {
+            showToast('복사할 콘텐츠가 없습니다.', 'error');
+            return;
+        }
+        
+        navigator.clipboard.writeText(content.content).then(() => {
+            showToast('콘텐츠가 클립보드에 복사되었습니다!', 'success');
+        }).catch(() => {
+            showToast('복사에 실패했습니다.', 'error');
+        });
+    } catch (error) {
+        console.error('복사 에러:', error);
+        showToast('복사 중 오류가 발생했습니다.', 'error');
     }
 }
 
@@ -5381,8 +5516,3 @@ async function downloadEnhancedBlogContent(groupBaseName) {
         showToast('파일 다운로드 중 오류가 발생했습니다.', 'error');
     }
 }
-
-
-
-
-});
