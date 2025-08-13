@@ -184,6 +184,62 @@ class NongbuxxGenerator:
         self._is_properly_initialized = True
         print("✅ 모든 컴포넌트 초기화 검증 완료")
     
+    def _remove_zacks_automated_insights(self, extracted_content: Dict[str, Any]) -> Dict[str, Any]:
+        """Zacks/Automated Insights 관련 메시지 제거"""
+        if not extracted_content or not isinstance(extracted_content, dict):
+            return extracted_content
+        
+        # 🚨 Zacks/Automated Insights 관련 메시지 제거 패턴
+        removal_patterns = [
+            # Zacks 관련
+            r'Zacks\s+웹사이트에서\s+확인\s+가능함',
+            r'Zacks\s+Investment\s+Research의\s+자료\s+사용함',
+            r'Zacks\s+Rank\s+시스템',
+            r'Zacks\s+Industry\s+Rank',
+            r'Zacks\s+애널리스트',
+            r'Zacks\s+평균\s+예상치',
+            r'Zacks\s+등급',
+            r'Zacks\s+평가',
+            r'Zacks\s+순위',
+            r'Zacks\s+분석',
+            
+            # Automated Insights 관련
+            r'Automated\s+Insights의\s+데이터\s+기반으로\s+작성됨',
+            r'AI\s+generated',
+            r'machine\s+learning',
+            r'웹사이트에서\s+확인\s+가능함',
+            r'자료\s+사용함',
+            r'데이터\s+기반으로\s+작성됨',
+            
+            # 일반적인 패턴
+            r'웹사이트에서\s+확인\s+가능함\s*Zacks\s+웹사이트에서\s+확인\s+가능함',
+            r'Zacks\s+웹사이트에서\s+확인\s+가능함\s*웹사이트에서\s+확인\s+가능함',
+        ]
+        
+        import re
+        
+        cleaned_content = extracted_content.copy()
+        
+        # 제목, 내용에서 Zacks/Automated Insights 관련 메시지 제거
+        for field in ['title', 'content']:
+            if field in cleaned_content and cleaned_content[field]:
+                content = cleaned_content[field]
+                
+                # 정규식 패턴으로 완전 제거
+                for pattern in removal_patterns:
+                    content = re.sub(pattern, '', content, flags=re.IGNORECASE)
+                
+                # 연속된 공백 정리
+                content = re.sub(r'\s+', ' ', content)
+                content = content.strip()
+                
+                cleaned_content[field] = content
+        
+        if cleaned_content != extracted_content:
+            print("🚫 Zacks/Automated Insights 관련 메시지 제거됨")
+        
+        return cleaned_content
+    
     def is_ready(self):
         """Generator가 사용 준비가 되었는지 확인"""
         return (
@@ -265,13 +321,27 @@ class NongbuxxGenerator:
         print("🤖 AI 변환 중...")
         conversion_start = time.time()
         
+        # 🚨 Zacks/Automated Insights 관련 메시지 제거
+        extracted_content = self._remove_zacks_automated_insights(extracted_content)
+        
         # 콘텐츠 타입에 따른 변환
         if content_type == 'enhanced_blog':
             # 새로운 완성형 블로그 콘텐츠 생성 (None 체크로 린터 오류 해결)
             if self.blog_generator is None:
                 return {'success': False, 'error': 'Blog generator not initialized', 'url': url}
             rich_content = self.blog_generator.generate_rich_text_blog_content(extracted_content, wordpress_type)
-            converted_content = rich_content['markdown']  # 기본적으로 마크다운 반환
+            
+            # rich_content가 딕셔너리인지 확인하고 markdown 키가 있는지 확인
+            if isinstance(rich_content, dict) and 'markdown' in rich_content:
+                converted_content = rich_content['markdown']
+            elif isinstance(rich_content, str):
+                converted_content = rich_content
+            else:
+                return {
+                    'success': False,
+                    'error': f'Invalid blog content format: expected dict with markdown key or string, got {type(rich_content)}',
+                    'url': url
+                }
             
             # 추가 형식들도 파일로 저장 (선택된 형식만)
             domain = self.extract_domain_name(url)
@@ -534,6 +604,9 @@ class NongbuxxGenerator:
             print("🤖 AI 변환 중...")
             conversion_start = time.time()
             
+            # 🚨 Zacks/Automated Insights 관련 메시지 제거
+            extracted_content = self._remove_zacks_automated_insights(extracted_content)
+            
             # 완성형 블로그인 경우
             if content_type == 'enhanced_blog':
                 self._log_thread_activity('progress', url, message="완성형 블로그 생성 시작")
@@ -542,7 +615,7 @@ class NongbuxxGenerator:
                     return {'success': False, 'error': 'Blog generator not initialized', 'url': url}
                 blog_result = self.blog_generator.generate_rich_text_blog_content(extracted_content, wordpress_type)
                 
-                if blog_result:
+                if blog_result and isinstance(blog_result, dict):
                     # 🔧 고유한 파일명 생성 (마이크로초 + 인덱스 포함)
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     microsecond = datetime.now().microsecond
@@ -576,7 +649,7 @@ class NongbuxxGenerator:
                     result = {
                         'success': True,
                         'url': url,
-                        'title': blog_result['meta_info']['title'],
+                        'title': blog_result.get('meta_info', {}).get('title', 'Generated Blog Content'),
                         'output_file': Path(main_file) if main_file else None,
                         'all_files': saved_files,
                         'timestamp': datetime.now().isoformat(),

@@ -52,6 +52,31 @@ class NaverNewsExtractor:
                 '당첨', '당첨자', '수상', '수상자', '시상', '시상식',
                 '무료', '체험', '샘플', '증정', '기프트', '선물',
                 'AD', 'Sponsored', '후원', '제휴',
+                
+                # 🚨 ETF 소개 및 투자 상품 홍보성 키워드 추가
+                'etf 소개', 'etf 추천', 'etf 투자', 'etf 분석', 'etf 전략',
+                '투자 레이더', '투자 기회', '투자 가치', '투자 포인트',
+                '투자 고려사항', '투자 검토', '투자 평가', '투자 전망',
+                'etf introduction', 'etf recommendation', 'etf investment',
+                'investment radar', 'investment opportunity', 'investment value',
+                'investment point', 'investment consideration', 'investment review',
+                'investment evaluation', 'investment outlook',
+                
+                # 🚨 주식 추천 및 투자 제안 키워드 추가
+                '주식 어떄', '주식 추천', '주식 투자', '주식 매수', '주식 매도',
+                '투자 적기', '투자 타이밍', '투자 제안', '투자 추천',
+                '매수 시점', '매도 시점', '매수 타이밍', '매도 타이밍',
+                '주가 전망', '주가 예측', '주가 분석', '주가 추천',
+                '종목 추천', '종목 분석', '종목 전망', '종목 투자',
+                'stock recommendation', 'stock pick', 'stock analysis',
+                'investment suggestion', 'investment advice', 'buy recommendation',
+                'sell recommendation', 'timing', 'opportunity',
+                
+                # 🚨 Zacks/Automated Insights 관련 키워드 (콘텐츠 생성 시 제거용)
+                'zacks', 'zacks investment research', 'zacks rank', 'zacks industry rank',
+                'zacks analyst', 'zacks estimate', 'zacks rating', 'zacks ranking',
+                'automated insights', 'ai generated', 'machine learning',
+                '웹사이트에서 확인 가능함', '자료 사용함', '데이터 기반으로 작성됨',
             ],
             
             # URL 패턴 기반 홍보성 필터
@@ -62,9 +87,21 @@ class NaverNewsExtractor:
                 r'/deal/', r'/offer/', r'/special/', r'/limited/',
                 r'/free/', r'/trial/', r'/sample/', r'/gift/',
                 r'/subscribe/', r'/signup/', r'/register/', r'/join/',
-                r'/membership/', r'/premium/', r'/vip/', r'/exclusive/',
+                r'/membership/', r'/premium/', r'/vip', r'/exclusive/',
                 r'/press-release/', r'/announcement/', r'/launch/', r'/release/',
                 r'/partnership/', r'/collaboration/', r'/sponsor/', r'/sponsored/',
+                
+                # 🚨 ETF 및 투자 상품 관련 URL 패턴 추가
+                r'/etf/', r'/etfs/', r'/fund/', r'/funds/', r'/investment-product/',
+                r'/product/', r'/products/', r'/investment/', r'/investing/',
+                r'/portfolio/', r'/strategy/', r'/analysis/', r'/research/',
+                
+                # 🚨 주식 추천 및 투자 제안 관련 URL 패턴 추가
+                r'/recommendation/', r'/recommendations/', r'/pick/', r'/picks/',
+                r'/advice/', r'/suggestion/', r'/timing/', r'/opportunity/',
+                r'/buy/', r'/sell/', r'/trade/', r'/trading/',
+                r'/stock-pick/', r'/stock-recommendation/', r'/investment-advice/',
+                r'/market-timing/', r'/investment-timing/',
             ],
             
             # 제목 패턴 기반 홍보성 필터
@@ -80,6 +117,30 @@ class NaverNewsExtractor:
                 r'\[.*공개.*\]', r'\[.*announcement.*\]',
                 r'\[.*당첨.*\]', r'\[.*winner.*\]',
                 r'\[.*수상.*\]', r'\[.*award.*\]',
+                
+                # 🚨 ETF 소개 및 투자 상품 홍보성 패턴 추가
+                r'.*etf.*투자.*레이더.*', r'.*etf.*투자.*기회.*',
+                r'.*etf.*투자.*가치.*', r'.*etf.*투자.*포인트.*',
+                r'.*etf.*투자.*고려사항.*', r'.*etf.*투자.*검토.*',
+                r'.*etf.*투자.*평가.*', r'.*etf.*투자.*전망.*',
+                r'.*etf.*소개.*', r'.*etf.*추천.*', r'.*etf.*분석.*',
+                r'.*etf.*전략.*', r'.*투자.*레이더.*', r'.*투자.*기회.*',
+                r'.*etf.*투자.*가치.*', r'.*etf.*투자.*포인트.*', r'.*etf.*투자.*고려사항.*',
+                r'.*etf.*투자.*검토.*', r'.*etf.*투자.*평가.*', r'.*etf.*투자.*전망.*',
+                
+                # 🚨 주식 추천 및 투자 제안 패턴 추가
+                r'.*주식\s+어떄\?.*', r'.*주식\s+추천.*', r'.*주식\s+투자.*',
+                r'.*주식\s+매수.*', r'.*주식\s+매도.*', r'.*투자\s+적기.*',
+                r'.*투자\s+타이밍.*', r'.*투자\s+제안.*', r'.*투자\s+추천.*',
+                r'.*매수\s+시점.*', r'.*매도\s+시점.*', r'.*매수\s+타이밍.*',
+                r'.*매도\s+타이밍.*', r'.*주가\s+전망.*', r'.*주가\s+예측.*',
+                r'.*주가\s+분석.*', r'.*주가\s+추천.*', r'.*종목\s+추천.*',
+                r'.*종목\s+분석.*', r'.*종목\s+전망.*', r'.*종목\s+투자.*',
+                
+                # 🚨 Zacks/Automated Insights 관련 패턴 추가
+                r'.*zacks.*', r'.*automated insights.*', r'.*ai generated.*',
+                r'.*machine learning.*', r'.*웹사이트에서 확인 가능함.*',
+                r'.*자료 사용함.*', r'.*데이터 기반으로 작성됨.*',
             ],
             
             # 짧은 제목 필터 (홍보성 제목은 보통 짧음)
@@ -141,10 +202,15 @@ class NaverNewsExtractor:
         title_lower = title.lower()
         url_lower = url.lower()
         
-        # 1. 제목 키워드 체크
+        # 1. 제목 키워드 체크 (더 정교한 판단)
+        promotional_keywords = 0
         for keyword in self.promotional_patterns['title_keywords']:
             if keyword.lower() in title_lower:
-                return True
+                promotional_keywords += 1
+        
+        # 키워드가 2개 이상일 때만 홍보성으로 판단 (단일 키워드는 허용)
+        if promotional_keywords >= 2:
+            return True
         
         # 2. URL 패턴 체크
         for pattern in self.promotional_patterns['url_patterns']:
@@ -156,23 +222,190 @@ class NaverNewsExtractor:
             if re.search(pattern, title, re.IGNORECASE):
                 return True
         
-        # 4. 제목 길이 체크 (너무 짧으면 홍보성일 가능성)
+        # 4. 🚨 ETF 홍보성 콘텐츠 특별 체크 (더 정확한 판단)
+        if self._is_etf_promotional_content(title):
+            return True
+        
+        # 5. 제목 길이 체크 (너무 짧으면 홍보성일 가능성)
         if len(title.strip()) < self.promotional_patterns['min_title_length']:
             return True
         
-        # 5. 과도한 특수문자 체크
+        # 6. 과도한 특수문자 체크
         symbol_count = sum(1 for symbol in self.promotional_patterns['excessive_symbols'] if symbol in title)
         if symbol_count >= 3:  # 3개 이상의 특수문자가 있으면 홍보성
             return True
         
-        # 6. 반복되는 문자 체크 (예: "대박!!!", "최고!!!")
+        # 7. 반복되는 문자 체크 (예: "대박!!!", "최고!!!")
         if re.search(r'([!?~★☆♥♡])\1{2,}', title):
             return True
         
-        # 7. 과도한 대문자 체크 (홍보성 제목은 대문자를 많이 사용)
+        # 8. 과도한 대문자 체크 (홍보성 제목은 대문자를 많이 사용)
         uppercase_ratio = sum(1 for char in title if char.isupper()) / len(title) if title else 0
         if uppercase_ratio > 0.7:  # 70% 이상이 대문자면 홍보성
             return True
+        
+        # 9. 🚨 정상적인 뉴스 패턴 체크 (포함되어야 함)
+        if self._is_normal_news_content(title):
+            return False
+        
+        return False
+    
+    def _is_normal_news_content(self, title: str) -> bool:
+        """정상적인 뉴스 콘텐츠인지 판단"""
+        title_lower = title.lower()
+        
+        # 정상적인 뉴스 패턴들
+        normal_news_patterns = [
+            # 기업 관련
+            r'.*기업.*실적.*',
+            r'.*기업.*성과.*',
+            r'.*기업.*전략.*',
+            r'.*기업.*발표.*',
+            r'.*기업.*출시.*',
+            r'.*기업.*진출.*',
+            r'.*기업.*투자.*',
+            r'.*기업.*인수.*',
+            r'.*기업.*합병.*',
+            
+            # 시장 관련
+            r'.*시장.*동향.*',
+            r'.*시장.*분석.*',
+            r'.*시장.*전망.*',
+            r'.*시장.*변화.*',
+            r'.*시장.*성장.*',
+            r'.*시장.*규모.*',
+            
+            # 경제 관련
+            r'.*경제.*정책.*',
+            r'.*경제.*지표.*',
+            r'.*경제.*성장.*',
+            r'.*경제.*전망.*',
+            
+            # 기술 관련
+            r'.*기술.*개발.*',
+            r'.*기술.*혁신.*',
+            r'.*기술.*트렌드.*',
+            r'.*기술.*동향.*',
+            
+            # 주식/투자 관련 (정상적인 뉴스)
+            r'.*주가.*상승.*',
+            r'.*주가.*하락.*',
+            r'.*주가.*변동.*',
+            r'.*투자.*동향.*',
+            r'.*투자.*환경.*',
+            r'.*투자.*시장.*',
+        ]
+        
+        # 정상적인 뉴스 패턴 확인
+        for pattern in normal_news_patterns:
+            if re.search(pattern, title_lower):
+                return True
+        
+        return False
+    
+    def _is_etf_promotional_content(self, title: str) -> bool:
+        """ETF 홍보성 콘텐츠인지 더 정확하게 판단"""
+        title_lower = title.lower()
+        
+        # 🚨 명확한 ETF 홍보성 패턴들 (의문형, 추천형, 소개형)
+        etf_promotional_patterns = [
+            # 의문형 패턴 (투자 결정을 요구하는 형태)
+            r'.*etf.*투자.*레이더.*올려야.*할까\?',
+            r'.*etf.*투자.*가치.*있을까\?',
+            r'.*etf.*투자.*기회.*할까\?',
+            r'.*etf.*투자.*추천.*할까\?',
+            
+            # 소개/추천형 패턴
+            r'.*etf.*소개.*',
+            r'.*etf.*추천.*',
+            r'.*etf.*투자.*전략.*',
+            
+            # 투자 레이더 관련 (명확한 홍보성)
+            r'.*투자.*레이더.*',
+            r'.*투자.*기회.*',
+            r'.*투자.*가치.*',
+            r'.*투자.*포인트.*',
+            r'.*투자.*고려사항.*',
+            r'.*투자.*검토.*',
+            r'.*투자.*평가.*',
+            r'.*투자.*전망.*',
+        ]
+        
+        # 🚨 주식 추천 및 투자 제안 패턴들 추가
+        stock_promotional_patterns = [
+            # 의문형 패턴 (투자 결정을 요구하는 형태)
+            r'.*주식.*어떄\?.*',
+            r'.*주식.*투자.*할까\?.*',
+            r'.*투자.*적기.*',
+            r'.*투자.*타이밍.*',
+            r'.*매수.*시점.*',
+            r'.*매도.*시점.*',
+            r'.*매수.*타이밍.*',
+            r'.*매도.*타이밍.*',
+            
+            # 추천/제안형 패턴
+            r'.*주식.*추천.*',
+            r'.*주식.*매수.*',
+            r'.*주식.*매도.*',
+            r'.*투자.*제안.*',
+            r'.*투자.*추천.*',
+            r'.*주가.*전망.*',
+            r'.*주가.*예측.*',
+            r'.*주가.*분석.*',
+            r'.*주가.*추천.*',
+            r'.*종목.*추천.*',
+            r'.*종목.*분석.*',
+            r'.*종목.*전망.*',
+            r'.*종목.*투자.*',
+        ]
+        
+        # 🚨 정상적인 ETF 뉴스 패턴들 (포함되어야 함)
+        etf_normal_patterns = [
+            r'.*etf.*시장.*동향.*',
+            r'.*etf.*성과.*분석.*',
+            r'.*etf.*수익률.*',
+            r'.*etf.*자산.*규모.*',
+            r'.*etf.*상장.*',
+            r'.*etf.*폐지.*',
+            r'.*etf.*운용사.*',
+            r'.*etf.*투자자.*',
+        ]
+        
+        # 🚨 정상적인 주식 뉴스 패턴들 (포함되어야 함)
+        stock_normal_patterns = [
+            r'.*주가.*상승.*',
+            r'.*주가.*하락.*',
+            r'.*주가.*변동.*',
+            r'.*주가.*동향.*',
+            r'.*주가.*성과.*',
+            r'.*주가.*실적.*',
+            r'.*주가.*발표.*',
+            r'.*주가.*시장.*',
+            r'.*종목.*시장.*',
+            r'.*종목.*동향.*',
+            r'.*종목.*성과.*',
+            r'.*종목.*실적.*',
+        ]
+        
+        # 정상적인 ETF 뉴스인지 먼저 확인
+        for pattern in etf_normal_patterns:
+            if re.search(pattern, title_lower):
+                return False  # 정상적인 ETF 뉴스는 홍보성 아님
+        
+        # 정상적인 주식 뉴스인지 먼저 확인
+        for pattern in stock_normal_patterns:
+            if re.search(pattern, title_lower):
+                return False  # 정상적인 주식 뉴스는 홍보성 아님
+        
+        # ETF 홍보성 패턴 확인
+        for pattern in etf_promotional_patterns:
+            if re.search(pattern, title_lower):
+                return True
+        
+        # 주식 홍보성 패턴 확인
+        for pattern in stock_promotional_patterns:
+            if re.search(pattern, title_lower):
+                return True
         
         return False
     

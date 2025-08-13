@@ -98,14 +98,55 @@ class NewsConverter:
         elif text.lower().startswith('html '):
             text = text[5:]  # Remove 'html '
         
-        # Additional check for 'html' at the very beginning
-        if text.strip().lower().startswith('html'):
-            # Find the first line break or HTML tag
-            first_tag_index = text.find('<')
-            if first_tag_index > 0 and first_tag_index < 10:
-                text = text[first_tag_index:]
+        # 🚨 Zacks/Automated Insights 관련 메시지 제거
+        text = self._remove_zacks_automated_insights(text)
         
-        return text.strip()
+        return text
+    
+    def _remove_zacks_automated_insights(self, text: str) -> str:
+        """Zacks/Automated Insights 관련 메시지 제거"""
+        if not text:
+            return text
+        
+        # 🚨 Zacks/Automated Insights 관련 메시지 제거 패턴
+        removal_patterns = [
+            # Zacks 관련
+            r'Zacks\s+웹사이트에서\s+확인\s+가능함',
+            r'Zacks\s+Investment\s+Research의\s+자료\s+사용함',
+            r'Zacks\s+Rank\s+시스템',
+            r'Zacks\s+Industry\s+Rank',
+            r'Zacks\s+애널리스트',
+            r'Zacks\s+평균\s+예상치',
+            r'Zacks\s+등급',
+            r'Zacks\s+평가',
+            r'Zacks\s+순위',
+            r'Zacks\s+분석',
+            
+            # Automated Insights 관련
+            r'Automated\s+Insights의\s+데이터\s+기반으로\s+작성됨',
+            r'AI\s+generated',
+            r'machine\s+learning',
+            r'웹사이트에서\s+확인\s+가능함',
+            r'자료\s+사용함',
+            r'데이터\s+기반으로\s+작성됨',
+            
+            # 일반적인 패턴
+            r'웹사이트에서\s+확인\s+가능함\s*Zacks\s+웹사이트에서\s+확인\s+가능함',
+            r'Zacks\s+웹사이트에서\s+확인\s+가능함\s*웹사이트에서\s+확인\s+가능함',
+        ]
+        
+        cleaned_text = text
+        for pattern in removal_patterns:
+            cleaned_text = re.sub(pattern, '', cleaned_text, flags=re.IGNORECASE)
+        
+        # 연속된 공백 정리
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+        cleaned_text = cleaned_text.strip()
+        
+        if cleaned_text != text:
+            print("🚫 Zacks/Automated Insights 관련 메시지 제거됨")
+        
+        return cleaned_text
 
     def call_api(self, prompt, max_tokens=2000, temperature=0):
         """Call the appropriate API based on provider, fallback to OpenAI if Anthropic fails"""
@@ -124,7 +165,11 @@ class NewsConverter:
                     ]
                 )
                 print("[INFO] Used Anthropic API.")
-                return message.content[0]
+                # TextBlock 객체에서 텍스트 추출
+                if hasattr(message.content[0], 'text'):
+                    return message.content[0].text
+                else:
+                    return str(message.content[0])
             except Exception as e:
                 print(f"[WARN] Anthropic API failed: {e}\nFalling back to OpenAI API...")
                 if not self.openai_client:
@@ -488,38 +533,6 @@ Article: {content}"""
 
         response = self.call_api(prompt, max_tokens=1500)
         return self.clean_response(response)
-    
-    def _has_english(self, text: str) -> bool:
-        """텍스트에 영어가 포함되어 있는지 확인"""
-        return bool(re.search(r'[a-zA-Z]', text))
-    
-    def _has_too_much_english(self, text: str) -> bool:
-        """텍스트에 영어가 너무 많이 포함되어 있는지 확인 (50% 이상)"""
-        english_chars = len(re.findall(r'[a-zA-Z]', text))
-        total_chars = len(text.strip())
-        return total_chars > 0 and (english_chars / total_chars) > 0.5
-    
-    def _translate_title_to_korean(self, title: str) -> str:
-        """제목을 한국어로 번역"""
-        try:
-            prompt = f"""다음 영어 제목을 자연스러운 한국어로 번역하세요. 뉴스 제목으로 적합하게 번역해주세요:
-
-영어 제목: {title}
-
-한국어 번역:"""
-            
-            response = self.call_api(prompt, max_tokens=100)
-            korean_title = self.clean_response(response).strip()
-            
-            # 번역 결과 검증
-            if korean_title and len(korean_title) > 3:
-                return korean_title
-            else:
-                return title  # 번역 실패 시 원본 반환
-                
-        except Exception as e:
-            print(f"[WARN] 제목 번역 실패: {e}")
-            return title  # 에러 시 원본 반환
 
     def generate_blog_content(self, content):
         """Generate blog-style content using selected API"""

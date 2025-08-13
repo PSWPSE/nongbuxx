@@ -144,7 +144,7 @@ class BlogContentGenerator:
         # 네이버 뉴스인지 확인
         is_naver_news = 'news.naver.com' in extracted_data.get('url', '') or 'naver' in extracted_data.get('source', '').lower()
         
-        # Zacks 관련 내용 필터링
+        # 🚨 Zacks/Automated Insights 관련 내용 필터링
         extracted_data = self.filter_zacks_from_data(extracted_data)
         
         if is_naver_news:
@@ -173,6 +173,21 @@ class BlogContentGenerator:
 - 다양한 형식 활용: 일반 설명, Q&A, 리스트, 사례 분석 등
 - 각 섹션은 800-1200자 정도로 균형있게 구성
 - 지루하지 않고 끝까지 읽고 싶은 콘텐츠 구성
+
+**📊 글자수 보장 및 콘텐츠 보강 전략:**
+- **목표**: 8000자 이상 (최소 6000자)
+- **부족한 경우 보강 방법**:
+  1. **배경 정보 추가**: 관련 산업 동향, 역사적 맥락
+  2. **전문가 의견 확장**: 다양한 관점의 분석 추가
+  3. **사례 분석**: 구체적인 기업이나 사례 추가
+  4. **시장 영향 분석**: 관련 산업에 미치는 영향
+  5. **국제 비교**: 해외 사례나 비교 분석
+
+**💡 구체적인 예시를 통한 메시지 전달:**
+- **투자 관점**: 구체적 수치와 데이터 포함
+- **시장 영향**: 연관 산업 분석 추가
+- **전문가 의견**: 다양한 전문가 견해 포함
+- **미래 전망**: 단기/중기/장기 시나리오 제시
 
 **섹션 구성 원칙:**
 - 정형화된 고정 구조를 피하고 원문 내용에 따라 자연스럽게 구성
@@ -207,9 +222,9 @@ class BlogContentGenerator:
 - 해시태그 형식: #키워드 (한국어 또는 영어)
 - 예시:
   ```
-  결론적으로, 트럼프의 반도체 관세전쟁은 우리 생활에 다양한 영향을 미칠 수 있어요. 전자제품 가격 상승은 물론, 장기적으로는 시장의 변화를 가져올 수 있죠. 따라서 이러한 변화에 대비해 현명한 소비를 하는 것이 중요합니다. 이 글이 여러분의 현명한 소비에 도움이 되길 바랍니다.
+  결론적으로, 트럼프의 반도체 관세전쟁은 글로벌 시장에 다양한 영향을 미칠 수 있어요. 전자제품 가격 상승은 물론, 장기적으로는 시장의 변화를 가져올 수 있죠. 따라서 이러한 변화에 대비해 현명한 투자 전략을 세우는 것이 중요합니다. 이 글이 여러분의 투자 결정에 도움이 되길 바랍니다.
 
-  #반도체관세 #트럼프정책 #전자제품가격 #소비자주의 #시장변화
+  #반도체관세 #트럼프정책 #전자제품가격 #투자전략 #시장변화
   ```"""
         else:
             # 해외 뉴스는 기존 번역 로직 적용
@@ -281,6 +296,21 @@ class BlogContentGenerator:
 - 각 섹션은 800-1200자로 균형있게 구성
 - 섹션 간 자연스러운 연결과 논리적 흐름 유지
 
+**📊 글자수 보장 및 콘텐츠 보강 전략:**
+- **목표**: 8000자 이상 (최소 6000자)
+- **부족한 경우 보강 방법**:
+  1. **배경 정보 추가**: 관련 산업 동향, 역사적 맥락
+  2. **전문가 의견 확장**: 다양한 관점의 분석 추가
+  3. **사례 분석**: 구체적인 기업이나 사례 추가
+  4. **시장 영향 분석**: 관련 산업에 미치는 영향
+  5. **국제 비교**: 해외 사례나 비교 분석
+
+**💡 구체적인 예시를 통한 메시지 전달:**
+- **투자 관점**: 구체적 수치와 데이터 포함
+- **시장 영향**: 연관 산업 분석 추가
+- **전문가 의견**: 다양한 전문가 견해 포함
+- **미래 전망**: 단기/중기/장기 시나리오 제시
+
 **작성 스타일:**
 - 객관적이고 정확한 설명: 사실에 기반한 명확한 정보 전달
 - 전문적이면서도 이해하기 쉬운 표현: 복잡한 개념을 명확하게 설명
@@ -302,21 +332,28 @@ class BlogContentGenerator:
 - 해시태그 형식: #키워드 (한국어 또는 영어)
 - 예시:
   ```
-  결론적으로, 트럼프의 반도체 관세전쟁은 우리 생활에 다양한 영향을 미칠 수 있어요. 전자제품 가격 상승은 물론, 장기적으로는 시장의 변화를 가져올 수 있죠. 따라서 이러한 변화에 대비해 현명한 소비를 하는 것이 중요합니다. 이 글이 여러분의 현명한 소비에 도움이 되길 바랍니다.
+  결론적으로, 트럼프의 반도체 관세전쟁은 글로벌 시장에 다양한 영향을 미칠 수 있어요. 전자제품 가격 상승은 물론, 장기적으로는 시장의 변화를 가져올 수 있죠. 따라서 이러한 변화에 대비해 현명한 투자 전략을 세우는 것이 중요합니다. 이 글이 여러분의 투자 결정에 도움이 되길 바랍니다.
 
-  #반도체관세 #트럼프정책 #전자제품가격 #소비자주의 #시장변화
+  #반도체관세 #트럼프정책 #전자제품가격 #투자전략 #시장변화
   ```"""
         
         try:
             response = self.converter.call_api(prompt, max_tokens=4000)
-            return self.converter.clean_response(response)
+            cleaned_response = self.converter.clean_response(response)
+            
+            # cleaned_response가 문자열인지 확인
+            if isinstance(cleaned_response, str):
+                return cleaned_response
+            else:
+                self.logger.error(f"API 응답이 문자열이 아님: {type(cleaned_response)}")
+                return f"오류: API 응답 형식이 올바르지 않습니다. ({type(cleaned_response)})"
         except Exception as e:
             self.logger.error(f"완성형 블로그 콘텐츠 생성 실패: {e}")
             return f"오류: 블로그 콘텐츠를 생성할 수 없습니다. ({str(e)})"
     
     def filter_zacks_from_data(self, extracted_data):
         """
-        추출된 데이터에서 Zacks 관련 내용을 필터링
+        추출된 데이터에서 Zacks/Automated Insights 관련 내용과 ETF 홍보성 콘텐츠를 필터링
         
         Args:
             extracted_data: 원본 추출 데이터
@@ -326,7 +363,7 @@ class BlogContentGenerator:
         """
         import re
         
-        # Zacks 관련 금지 키워드 및 패턴
+        # 🚨 Zacks 관련 금지 키워드 및 패턴
         zacks_patterns = [
             # 금지 키워드
             r'Zacks Rank 시스템',
@@ -355,6 +392,55 @@ class BlogContentGenerator:
             r'Zacks.*조사',
         ]
         
+        # 🚨 Automated Insights 관련 금지 키워드 및 패턴
+        automated_insights_patterns = [
+            # 금지 키워드
+            r'Automated Insights의 데이터 기반으로 작성됨',
+            r'AI generated',
+            r'Machine learning',
+            r'웹사이트에서 확인 가능함',
+            r'자료 사용함',
+            r'데이터 기반으로 작성됨',
+            
+            # 금지 패턴
+            r'웹사이트에서 확인 가능함\s*Zacks\s+웹사이트에서 확인 가능함',
+            r'Zacks\s+웹사이트에서 확인 가능함\s*웹사이트에서 확인 가능함',
+            r'Zacks\s+Investment\s+Research의\s+자료\s+사용함',
+            r'Automated\s+Insights의\s+데이터\s+기반으로\s+작성됨',
+        ]
+        
+        # 🚨 ETF 소개 및 투자 상품 홍보성 콘텐츠 패턴
+        etf_promotional_patterns = [
+            # 한국어 패턴
+            r'.*ETF\s+소개.*', r'.*ETF\s+추천.*', r'.*ETF\s+투자.*',
+            r'.*ETF\s+분석.*', r'.*ETF\s+전략.*', r'.*투자\s+레이더.*',
+            r'.*투자\s+기회.*', r'.*투자\s+가치.*', r'.*투자\s+포인트.*',
+            r'.*ETF\s+투자\s+고려사항.*', r'.*ETF\s+투자\s+검토.*', r'.*ETF\s+투자\s+평가.*', r'.*ETF\s+투자\s+전망.*',
+            
+            # 영어 패턴
+            r'.*ETF\s+introduction.*', r'.*ETF\s+recommendation.*', r'.*ETF\s+investment.*',
+            r'.*Investment\s+radar.*', r'.*Investment\s+opportunity.*', r'.*Investment\s+value.*',
+            r'.*Investment\s+point.*', r'.*Investment\s+consideration.*', r'.*Investment\s+review.*',
+            r'.*Investment\s+evaluation.*', r'.*Investment\s+outlook.*',
+        ]
+        
+        # 🚨 주식 추천 및 투자 제안 패턴 추가
+        stock_promotional_patterns = [
+            # 한국어 패턴
+            r'.*주식\s+어떄\?.*', r'.*주식\s+추천.*', r'.*주식\s+투자.*',
+            r'.*주식\s+매수.*', r'.*주식\s+매도.*', r'.*투자\s+적기.*',
+            r'.*투자\s+타이밍.*', r'.*투자\s+제안.*', r'.*투자\s+추천.*',
+            r'.*매수\s+시점.*', r'.*매도\s+시점.*', r'.*매수\s+타이밍.*',
+            r'.*매도\s+타이밍.*', r'.*주가\s+전망.*', r'.*주가\s+예측.*',
+            r'.*주가\s+분석.*', r'.*주가\s+추천.*', r'.*종목\s+추천.*',
+            r'.*종목\s+분석.*', r'.*종목\s+전망.*', r'.*종목\s+투자.*',
+            
+            # 영어 패턴
+            r'.*Stock\s+recommendation.*', r'.*Stock\s+pick.*', r'.*Stock\s+analysis.*',
+            r'.*Investment\s+suggestion.*', r'.*Investment\s+advice.*', r'.*Buy\s+recommendation.*',
+            r'.*Sell\s+recommendation.*', r'.*Timing.*', r'.*Opportunity.*',
+        ]
+        
         # 대체 표현
         replacement_patterns = [
             ('Zacks Rank 시스템', '시장 분석 시스템'),
@@ -371,14 +457,40 @@ class BlogContentGenerator:
         
         filtered_data = extracted_data.copy()
         
-        # 제목, 내용, 요약에서 Zacks 관련 내용 필터링
+        # 제목, 내용, 요약에서 필터링 적용
         for field in ['title', 'content', 'description']:
             if field in filtered_data and filtered_data[field]:
                 content = filtered_data[field]
                 
-                # 정규식 패턴으로 완전 제거
+                # 🚨 ETF 홍보성 콘텐츠 체크 (제목에 해당 패턴이 있으면 전체 콘텐츠 제외)
+                if field == 'title':
+                    for pattern in etf_promotional_patterns:
+                        if re.search(pattern, content, re.IGNORECASE):
+                            self.logger.warning(f"🚫 ETF 홍보성 콘텐츠 감지됨: {content[:50]}...")
+                            # 제목을 일반적인 뉴스 제목으로 변경
+                            content = re.sub(pattern, '시장 동향 분석', content, flags=re.IGNORECASE)
+                    
+                    # 🚨 주식 추천 및 투자 제안 체크 (제목에 해당 패턴이 있으면 전체 콘텐츠 제외)
+                    for pattern in stock_promotional_patterns:
+                        if re.search(pattern, content, re.IGNORECASE):
+                            self.logger.warning(f"🚫 주식 추천 및 투자 제안 콘텐츠 감지됨: {content[:50]}...")
+                            # 제목을 일반적인 뉴스 제목으로 변경
+                            content = re.sub(pattern, '시장 동향 분석', content, flags=re.IGNORECASE)
+                
+                # 🚨 Zacks 관련 내용 완전 제거
                 for pattern in zacks_patterns:
                     content = re.sub(pattern, '', content, flags=re.IGNORECASE)
+                
+                # 🚨 Automated Insights 관련 내용 완전 제거
+                for pattern in automated_insights_patterns:
+                    content = re.sub(pattern, '', content, flags=re.IGNORECASE)
+                
+                # 🚨 주식 추천 및 투자 제안 패턴 체크
+                for pattern in stock_promotional_patterns:
+                    if re.search(pattern, content, re.IGNORECASE):
+                        self.logger.warning(f"🚫 주식 추천 및 투자 제안 패턴 감지됨: {content[:50]}...")
+                        # 주식 추천 및 투자 제안 내용 제거
+                        content = re.sub(pattern, '', content, flags=re.IGNORECASE)
                 
                 # 대체 표현 적용
                 for old_text, new_text in replacement_patterns:
@@ -391,7 +503,7 @@ class BlogContentGenerator:
                 
                 filtered_data[field] = content.strip()
         
-        self.logger.info("✅ Zacks 관련 내용 필터링 완료")
+        self.logger.info("✅ Zacks/Automated Insights 관련 내용 및 ETF 홍보성 콘텐츠 필터링 완료")
         
         return filtered_data
     
@@ -538,10 +650,9 @@ HTML 형식으로 작성해주세요."""
             # HTML 기반 워드프레스 콘텐츠
             wordpress_prompt = f"""워드프레스 블로그에 최적화된 고품질 HTML 콘텐츠를 작성해주세요.
 
-**🌟 실생활 중심 콘텐츠 작성 원칙:**
-- **원본 뉴스를 일반 대중의 실생활과 연결하여 재구성**
-- **"나와 관련있다"고 느끼도록 개인 재정, 일자리, 생활비 등과 연결**
-- **전문용어는 쉬운 말로 풀어서 설명**
+**🌟 고품질 콘텐츠 작성 원칙:**
+- **원본 뉴스를 객관적이고 정확한 정보로 재구성**
+- **전문용어는 이해하기 쉽게 설명**
 - **8000자 이상의 깊이 있고 풍부한 내용 필수**
 
 **중요: HTML 태그를 포함한 완전한 HTML 콘텐츠를 작성하세요. Gutenberg 블록 에디터에서 사용할 수 있는 형식입니다.**
@@ -572,16 +683,15 @@ HTML 형식으로 작성해주세요."""
 - **원본 뉴스 제목을 절대 그대로 사용하지 말 것 (가장 중요!)**
 - **완전히 새로운 창의적 제목을 생성할 것**
 
-**💡 실생활 연관 제목 생성 가이드라인 (핵심):**
-- **한국 독자의 실생활과 직접 연결된 제목 작성**
-- **개인 투자자, 직장인, 자영업자 등 구체적 대상 명시**
-- **"내 투자", "우리 일자리", "생활비" 등 직접적 영향 표현**
-- **구체적인 숫자와 실질적 영향 포함**
-- **불안 해소나 기회 포착의 관점**
+**💡 매력적인 제목 생성 가이드라인 (핵심):**
+- **호기심과 관심을 유발하는 제목 작성**
+- **객관적이고 정확한 정보 전달**
+- **구체적인 데이터와 분석 포함**
+- **전문적이면서도 이해하기 쉬운 표현**
 - 예시:
   * 원본: "삼성전자 3분기 실적 발표"
-  * 실생활 제목: "삼성전자 실적 호조가 내 퇴직연금에 미치는 영향 3가지"
-  * 실생활 제목: "삼성 호실적 뒤 개인투자자가 놓치면 안 되는 투자 타이밍"
+  * 개선된 제목: "삼성전자 실적 호조, 전문가들이 주목하는 핵심 포인트"
+  * 개선된 제목: "삼성전자 실적 분석, 시장에 미치는 영향과 전망"
 
 **📚 콘텐츠 재구성 가이드라인:**
 - **원본 뉴스를 단순 요약하지 말고 완전히 새로운 스토리로 재구성**
@@ -837,6 +947,11 @@ HTML 형식으로 작성해주세요."""
         
         saved_files = {}
         
+        # content_data가 딕셔너리인지 확인
+        if not isinstance(content_data, dict):
+            self.logger.error(f"content_data가 딕셔너리가 아닙니다: {type(content_data)}")
+            return {}
+        
         # 마크다운 파일 저장 (selected_formats에 포함된 경우에만)
         # 워드프레스 HTML이 선택된 경우 md 파일 생성하지 않음
         # 워드프레스가 유일한 형식이고 HTML 타입인 경우에도 md 파일 생성하지 않음
@@ -847,7 +962,7 @@ HTML 형식으로 작성해주세요."""
             # selected_formats에서 'md' 제거
             selected_formats = [fmt for fmt in selected_formats if fmt != 'md']
         
-        if should_save_md:
+        if should_save_md and 'markdown' in content_data:
             markdown_file = self.output_dir / f"{filename_prefix}.md"
             with open(markdown_file, 'w', encoding='utf-8') as f:
                 f.write(content_data['markdown'])
@@ -862,7 +977,7 @@ HTML 형식으로 작성해주세요."""
         }
         
         for format_key, platform_key in platform_mapping.items():
-            if format_key in selected_formats and platform_key in content_data['platform_optimized']:
+            if format_key in selected_formats and 'platform_optimized' in content_data and platform_key in content_data['platform_optimized']:
                 # 워드프레스는 선택된 형식에 따라 확장자 결정
                 if format_key == 'wordpress' and wordpress_type == 'html':
                     extension = '.html'

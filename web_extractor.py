@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Any, Union, cast
 import logging
 import time
 import os
+import re # Added for regex operations
 
 class WebExtractor:
     def __init__(self, use_selenium: bool = False, save_to_file: bool = True):
@@ -30,6 +31,96 @@ class WebExtractor:
         self.session = requests.Session()
         self.ua = UserAgent()
         self.setup_logging()
+        
+        # 🚨 홍보성 콘텐츠 필터링 시스템 추가
+        self.promotional_patterns = {
+            # 제목 기반 홍보성 키워드
+            'title_keywords': [
+                # 한국어 홍보성 키워드
+                '광고', '프로모션', '홍보', '선전', '어필', '추천', '소개',
+                '바로가기', '더보기', '전체보기', '구독', '팔로우', '로그인', '회원가입',
+                '댓글', '후원', '제휴', '협찬', '스폰서', '지원', '도움',
+                '특가', '할인', '이벤트', '행사', '모집', '채용', '공고',
+                '출시', '런칭', '오픈', '오픈식', '기념', '축하', '감사',
+                '당첨', '당첨자', '수상', '수상자', '시상', '시상식',
+                '무료', '체험', '샘플', '증정', '기프트', '선물',
+                
+                # 영어 홍보성 키워드
+                'ad', 'advertisement', 'sponsored', 'promotion', 'promotional',
+                'sponsored content', 'paid', 'partnership', 'collaboration',
+                'limited time', 'special offer', 'discount', 'sale', 'deal',
+                'free trial', 'free sample', 'giveaway', 'contest', 'sweepstakes',
+                'launch', 'release', 'announcement', 'press release',
+                'event', 'celebration', 'ceremony', 'award', 'winner',
+                'subscribe', 'follow', 'sign up', 'register', 'join',
+                'click here', 'learn more', 'find out more', 'get started',
+                'exclusive', 'premium', 'vip', 'membership', 'loyalty',
+                
+                # 🚨 ETF 소개 및 투자 상품 홍보성 키워드 추가
+                'etf 소개', 'etf 추천', 'etf 투자', 'etf 분석', 'etf 전략',
+                '투자 레이더', '투자 기회', '투자 가치', '투자 포인트',
+                '투자 고려사항', '투자 검토', '투자 평가', '투자 전망',
+                'etf introduction', 'etf recommendation', 'etf investment',
+                'investment radar', 'investment opportunity', 'investment value',
+                'investment point', 'investment consideration', 'investment review',
+                'investment evaluation', 'investment outlook',
+                
+                # 🚨 주식 추천 및 투자 제안 키워드 추가
+                '주식 어떄', '주식 추천', '주식 투자', '주식 매수', '주식 매도',
+                '투자 적기', '투자 타이밍', '투자 제안', '투자 추천',
+                '매수 시점', '매도 시점', '매수 타이밍', '매도 타이밍',
+                '주가 전망', '주가 예측', '주가 분석', '주가 추천',
+                '종목 추천', '종목 분석', '종목 전망', '종목 투자',
+                'stock recommendation', 'stock pick', 'stock analysis',
+                'investment suggestion', 'investment advice', 'buy recommendation',
+                'sell recommendation', 'timing', 'opportunity',
+                
+                # 🚨 Zacks/Automated Insights 관련 키워드 (콘텐츠 생성 시 제거용)
+                'zacks', 'zacks investment research', 'zacks rank', 'zacks industry rank',
+                'zacks analyst', 'zacks estimate', 'zacks rating', 'zacks ranking',
+                'automated insights', 'ai generated', 'machine learning',
+                '웹사이트에서 확인 가능함', '자료 사용함', '데이터 기반으로 작성됨',
+            ],
+            
+            # 제목 패턴 기반 홍보성 필터
+            'title_patterns': [
+                r'\[.*광고.*\]', r'\[.*sponsored.*\]', r'\[.*ad.*\]',
+                r'\(.*광고.*\)', r'\(.*sponsored.*\)', r'\(.*ad.*\)',
+                r'\[.*프로모션.*\]', r'\[.*promotion.*\]',
+                r'\[.*이벤트.*\]', r'\[.*event.*\]',
+                r'\[.*특가.*\]', r'\[.*sale.*\]', r'\[.*할인.*\]',
+                r'\[.*무료.*\]', r'\[.*free.*\]',
+                r'\[.*출시.*\]', r'\[.*launch.*\]',
+                r'\[.*런칭.*\]', r'\[.*release.*\]',
+                r'\[.*공개.*\]', r'\[.*announcement.*\]',
+                r'\[.*당첨.*\]', r'\[.*winner.*\]',
+                r'\[.*수상.*\]', r'\[.*award.*\]',
+                
+                # 🚨 ETF 소개 및 투자 상품 홍보성 패턴 추가
+                r'.*etf.*투자.*레이더.*', r'.*etf.*투자.*기회.*',
+                r'.*etf.*투자.*가치.*', r'.*etf.*투자.*포인트.*',
+                r'.*etf.*투자.*고려사항.*', r'.*etf.*투자.*검토.*',
+                r'.*etf.*투자.*평가.*', r'.*etf.*투자.*전망.*',
+                r'.*etf.*소개.*', r'.*etf.*추천.*', r'.*etf.*분석.*',
+                r'.*etf.*전략.*', r'.*투자.*레이더.*', r'.*투자.*기회.*',
+                r'.*투자.*가치.*', r'.*투자.*포인트.*', r'.*투자.*고려사항.*',
+                r'.*투자.*검토.*', r'.*투자.*평가.*', r'.*투자.*전망.*',
+                
+                # 🚨 주식 추천 및 투자 제안 패턴 추가
+                r'.*주식\s+어떄\?.*', r'.*주식\s+추천.*', r'.*주식\s+투자.*',
+                r'.*주식\s+매수.*', r'.*주식\s+매도.*', r'.*투자\s+적기.*',
+                r'.*투자\s+타이밍.*', r'.*투자\s+제안.*', r'.*투자\s+추천.*',
+                r'.*매수\s+시점.*', r'.*매도\s+시점.*', r'.*매수\s+타이밍.*',
+                r'.*매도\s+타이밍.*', r'.*주가\s+전망.*', r'.*주가\s+예측.*',
+                r'.*주가\s+분석.*', r'.*주가\s+추천.*', r'.*종목\s+추천.*',
+                r'.*종목\s+분석.*', r'.*종목\s+전망.*', r'.*종목\s+투자.*',
+                
+                # 🚨 Zacks/Automated Insights 관련 패턴 추가
+                r'.*zacks.*', r'.*automated insights.*', r'.*ai generated.*',
+                r'.*machine learning.*', r'.*웹사이트에서 확인 가능함.*',
+                r'.*자료 사용함.*', r'.*데이터 기반으로 작성됨.*',
+            ],
+        }
         
         if use_selenium:
             self.setup_selenium()
@@ -128,17 +219,93 @@ class WebExtractor:
         if not article:
             return self._error_response(url, "기사 본문을 찾을 수 없습니다")
         
+        # 🚨 홍보성 콘텐츠 필터링 적용
+        title = self._get_title(soup)
+        if self._is_promotional_content(title):
+            return self._error_response(url, "홍보성 콘텐츠로 판단되어 제외되었습니다")
+        
+        # 🚨 Zacks/Automated Insights 관련 메시지 제거
+        content = self._get_content(article)
+        content = self._remove_zacks_automated_insights(content)
+        
         return {
             'success': True,
             'url': url,
             'timestamp': datetime.now().isoformat(),
-            'title': self._get_title(soup),
+            'title': title,
             'metadata': self._get_metadata(soup),
-            'content': self._get_content(article),
+            'content': content,
             'author': self._get_author(soup),
             'publish_date': self._get_publish_date(soup),
             'publisher': self._get_publisher(soup, url)
         }
+    
+    def _is_promotional_content(self, title: str) -> bool:
+        """홍보성 콘텐츠인지 판단"""
+        if not title:
+            return False
+            
+        title_lower = title.lower()
+        
+        # 1. 제목 키워드 체크
+        for keyword in self.promotional_patterns['title_keywords']:
+            if keyword.lower() in title_lower:
+                self.logger.info(f"🚫 홍보성 콘텐츠 제외 (키워드): {title[:50]}...")
+                return True
+        
+        # 2. 제목 패턴 체크 (대괄호, 소괄호 안의 홍보성 키워드)
+        for pattern in self.promotional_patterns['title_patterns']:
+            if re.search(pattern, title, re.IGNORECASE):
+                self.logger.info(f"🚫 홍보성 콘텐츠 제외 (패턴): {title[:50]}...")
+                return True
+        
+        return False
+    
+    def _remove_zacks_automated_insights(self, content: str) -> str:
+        """Zacks/Automated Insights 관련 메시지 제거"""
+        if not content:
+            return content
+        
+        # 🚨 Zacks/Automated Insights 관련 메시지 제거 패턴
+        removal_patterns = [
+            # Zacks 관련
+            r'Zacks\s+웹사이트에서\s+확인\s+가능함',
+            r'Zacks\s+Investment\s+Research의\s+자료\s+사용함',
+            r'Zacks\s+Investment\s+Research의\s+자료\s+사용함',
+            r'Zacks\s+Rank\s+시스템',
+            r'Zacks\s+Industry\s+Rank',
+            r'Zacks\s+애널리스트',
+            r'Zacks\s+평균\s+예상치',
+            r'Zacks\s+등급',
+            r'Zacks\s+평가',
+            r'Zacks\s+순위',
+            r'Zacks\s+분석',
+            
+            # Automated Insights 관련
+            r'Automated\s+Insights의\s+데이터\s+기반으로\s+작성됨',
+            r'AI\s+generated',
+            r'machine\s+learning',
+            r'웹사이트에서\s+확인\s+가능함',
+            r'자료\s+사용함',
+            r'데이터\s+기반으로\s+작성됨',
+            
+            # 일반적인 패턴
+            r'웹사이트에서\s+확인\s+가능함\s*Zacks\s+웹사이트에서\s+확인\s+가능함',
+            r'Zacks\s+웹사이트에서\s+확인\s+가능함\s*웹사이트에서\s+확인\s+가능함',
+        ]
+        
+        cleaned_content = content
+        for pattern in removal_patterns:
+            cleaned_content = re.sub(pattern, '', cleaned_content, flags=re.IGNORECASE)
+        
+        # 연속된 공백 정리
+        cleaned_content = re.sub(r'\s+', ' ', cleaned_content)
+        cleaned_content = cleaned_content.strip()
+        
+        if cleaned_content != content:
+            self.logger.info("🚫 Zacks/Automated Insights 관련 메시지 제거됨")
+        
+        return cleaned_content
     
     def _find_article(self, soup: BeautifulSoup) -> Optional[Tag]:
         """기사 본문 요소 찾기"""
