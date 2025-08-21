@@ -279,8 +279,46 @@ body {
 
 .header-controls {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     align-items: center;
+    flex-wrap: nowrap;
+}
+
+/* 헤더 버튼 스타일 */
+.btn.btn-header {
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.btn.btn-header:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* API 상태 표시기 */
+.api-status-indicator {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: var(--danger-color, #ef4444);
+    color: white;
+    font-weight: 500;
+    margin-left: 4px;
+    transition: all 0.2s ease;
+}
+
+.api-status-indicator.active {
+    background: var(--success-color, #10b981);
 }
 
 .result-header {
@@ -356,6 +394,50 @@ body {
 
 /* 모바일에서 버튼 스타일 조정 */
 @media (max-width: 768px) {
+    .card-header {
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: nowrap;
+        min-height: 44px;
+    }
+    
+    .card-header h2 {
+        font-size: 16px;
+        margin: 0;
+        flex: 0 0 auto;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+    
+    .header-controls {
+        gap: 3px;
+        flex-shrink: 0;
+        justify-content: flex-end;
+        display: flex;
+        align-items: center;
+    }
+    
+    .btn.btn-header {
+        padding: 5px 10px;
+        font-size: 11px;
+        min-width: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .api-status-indicator {
+        font-size: 9px;
+        padding: 1px 3px;
+        margin-left: 2px;
+    }
+    
     .form-actions {
         flex-direction: column;
         gap: 8px;
@@ -365,6 +447,65 @@ body {
         width: 100%;
         min-width: auto;
     }
+}
+
+/* 중간 모바일 화면 최적화 */
+@media (max-width: 600px) {
+    .card-header {
+        gap: 4px;
+        min-height: 40px;
+    }
+    
+    .card-header h2 {
+        font-size: 15px;
+        max-width: 160px;
+    }
+    
+    .btn.btn-header {
+        padding: 6px 12px;
+        font-size: 11px;
+        height: 30px;
+    }
+    
+    .api-status-indicator {
+        font-size: 8px;
+        padding: 1px 2px;
+    }
+}
+
+/* 작은 모바일 화면 최적화 */
+@media (max-width: 480px) {
+    .card-header {
+        gap: 3px;
+        flex-wrap: nowrap;
+        min-height: 36px;
+    }
+    
+    .card-header h2 {
+        font-size: 14px;
+        max-width: 140px;
+        flex-shrink: 0;
+    }
+    
+    .header-controls {
+        gap: 2px;
+        flex-shrink: 0;
+    }
+    
+    .btn.btn-header {
+        padding: 5px 8px;
+        font-size: 10px;
+        min-width: auto;
+        flex-shrink: 0;
+        height: 28px;
+    }
+    
+    .api-status-indicator {
+        font-size: 8px;
+        padding: 1px 2px;
+        margin-left: 1px;
+    }
+}
 }
 
 /* 결과 섹션 버튼 간격 조정 */
@@ -1050,24 +1191,49 @@ textarea:focus-visible {
    출처 관리 스타일
    ============================================================================ */
 
+/* 출처 선택 헤더 */
+.source-selection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: nowrap;
+}
+
+.source-selection-header label {
+    margin: 0;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex-shrink: 0;
+}
+
+.source-selection-header .btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    min-width: auto;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
 /* 출처 선택 컨테이너 */
 .source-selection-container {
     display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
 }
 
 .selected-sources {
-    flex: 1;
+    width: 100%;
     min-height: 40px;
-    padding: 8px 12px;
+    padding: 12px 16px;
     border: 2px solid var(--border-color);
     border-radius: 8px;
     background: var(--input-background);
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
     transition: border-color 0.2s ease;
 }
@@ -1106,6 +1272,7 @@ textarea:focus-visible {
 
 /* 부모-서브카테고리 구조 표시 */
 .parent-source-group {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -1113,6 +1280,31 @@ textarea:focus-visible {
     border-radius: 6px;
     padding: 8px;
     background: var(--background-color);
+}
+
+.parent-source-group .remove-group {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    background: var(--danger-color, #ef4444);
+    color: white;
+    border: 2px solid var(--background-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    z-index: 1;
+}
+
+.parent-source-group .remove-group:hover {
+    background: var(--danger-hover, #dc2626);
+    transform: scale(1.1);
 }
 
 .parent-source-name {
@@ -1238,6 +1430,187 @@ textarea:focus-visible {
     font-size: 12px;
     border-radius: 6px;
     min-width: auto;
+}
+
+/* 출처 선택 모바일 반응형 스타일 */
+@media (max-width: 768px) {
+    .source-selection-header {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        justify-content: space-between;
+    }
+    
+    .source-selection-header .btn-sm {
+        padding: 8px 16px;
+        font-size: 13px;
+        margin-left: 8px;
+    }
+    
+    .source-selection-container {
+        gap: 16px;
+    }
+    
+    .selected-sources {
+        padding: 16px 20px;
+        min-height: 60px;
+        gap: 10px;
+    }
+    
+    .source-tag {
+        padding: 6px 12px;
+        font-size: 13px;
+        border-radius: 16px;
+    }
+    
+    .parent-source-group {
+        padding: 12px;
+        gap: 8px;
+    }
+    
+    .parent-source-group .remove-group {
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
+        top: -10px;
+        right: -10px;
+    }
+    
+    .subcategory-tag {
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 6px;
+    }
+}
+
+/* 작은 모바일 화면 최적화 */
+@media (max-width: 480px) {
+    .source-selection-header {
+        gap: 12px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 44px;
+    }
+    
+    .source-selection-header label {
+        font-size: 14px;
+        line-height: 1.2;
+    }
+    
+    .source-selection-header .btn-sm {
+        padding: 10px 18px;
+        font-size: 14px;
+        margin-left: 10px;
+        white-space: nowrap;
+    }
+    
+    .source-selection-container {
+        gap: 20px;
+    }
+    
+    .selected-sources {
+        padding: 20px 24px;
+        min-height: 80px;
+        gap: 12px;
+    }
+    
+    .source-tag {
+        padding: 8px 16px;
+        font-size: 14px;
+        border-radius: 20px;
+    }
+    
+    .parent-source-group {
+        padding: 16px;
+        gap: 10px;
+    }
+    
+    .parent-source-group .remove-group {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+        top: -12px;
+        right: -12px;
+    }
+    
+    .subcategory-tag {
+        padding: 6px 10px;
+        font-size: 13px;
+        border-radius: 8px;
+    }
+}
+
+/* 매우 작은 모바일 화면 최적화 */
+@media (max-width: 360px) {
+    .card-header {
+        gap: 2px;
+        min-height: 32px;
+    }
+    
+    .card-header h2 {
+        font-size: 13px;
+        max-width: 120px;
+    }
+    
+    .header-controls {
+        gap: 1px;
+    }
+    
+    .btn.btn-header {
+        padding: 4px 6px;
+        font-size: 9px;
+        height: 24px;
+    }
+    
+    .api-status-indicator {
+        font-size: 7px;
+        padding: 0px 1px;
+        margin-left: 1px;
+    }
+    
+    .source-selection-header {
+        gap: 8px;
+    }
+    
+    .source-selection-header label {
+        font-size: 13px;
+    }
+    
+    .source-selection-header .btn-sm {
+        padding: 8px 14px;
+        font-size: 13px;
+        margin-left: 6px;
+    }
+}
+
+/* 극도로 좁은 모바일 화면 최적화 */
+@media (max-width: 320px) {
+    .card-header {
+        gap: 1px;
+        min-height: 28px;
+    }
+    
+    .card-header h2 {
+        font-size: 12px;
+        max-width: 100px;
+    }
+    
+    .header-controls {
+        gap: 1px;
+    }
+    
+    .btn.btn-header {
+        padding: 3px 5px;
+        font-size: 8px;
+        height: 22px;
+    }
+    
+    .api-status-indicator {
+        font-size: 6px;
+        padding: 0px 1px;
+        margin-left: 0px;
+    }
 }
 
 /* 모달 스타일 개선 */

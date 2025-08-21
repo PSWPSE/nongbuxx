@@ -70,11 +70,8 @@
                                 <button type="button" id="apiSettingsBtn" class="btn btn-header">
                                     <i class="fas fa-key"></i>
                                     API 키 설정
+                                    <span class="api-status-indicator" id="apiStatusIndicator">비활성</span>
                                 </button>
-                                <div class="api-status-simple" id="apiStatus">
-                                    <span class="status-dot"></span>
-                                    <span class="status-text">AI비활성</span>
-                                </div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -89,15 +86,17 @@
                                 <small class="input-hint">1~50개 사이로 설정해주세요</small>
                             </div>
                         <div class="form-group">
-                            <label for="newsSourcesSelect">출처 선택</label>
+                            <div class="source-selection-header">
+                                <label for="newsSourcesSelect">출처 선택</label>
+                                <button type="button" id="selectSourcesBtn" class="btn btn-outline btn-sm">
+                                    <i class="fas fa-check-square"></i>
+                                    출처 선택
+                                </button>
+                            </div>
                             <div class="source-selection-container">
                                 <div class="selected-sources" id="selectedSources">
                                     <span class="loading">출처 로딩 중...</span>
                                 </div>
-                                <button type="button" id="selectSourcesBtn" class="btn btn-outline">
-                                    <i class="fas fa-check-square"></i>
-                                    출처 선택
-                                </button>
                             </div>
                             <small class="input-hint">선택한 출처에서 뉴스를 추출합니다 (복수 선택 가능)</small>
                         </div>

@@ -50,7 +50,7 @@ const elements = {
     
     // API 키 설정 모달 관련 요소들
     apiSettingsBtn: document.getElementById('apiSettingsBtn'),
-    apiStatus: document.getElementById('apiStatus'),
+    apiStatusIndicator: document.getElementById('apiStatusIndicator'),
     apiSettingsModalSection: document.getElementById('apiSettingsModalSection'),
     apiSettingsModalOverlay: document.getElementById('apiSettingsModalOverlay'),
     closeApiSettingsModalBtn: document.getElementById('closeApiSettingsModalBtn'),
@@ -2496,12 +2496,9 @@ function deleteApiSettings() {
 }
 
 function updateApiStatus(provider, isConfigured) {
-    if (elements.apiStatus) {
-        elements.apiStatus.classList.toggle('configured', isConfigured);
-        const statusText = elements.apiStatus.querySelector('.status-text');
-        if (statusText) {
-            statusText.textContent = isConfigured ? `${provider} 활성` : 'AI 비활성';
-        }
+    if (elements.apiStatusIndicator) {
+        elements.apiStatusIndicator.textContent = isConfigured ? '활성' : '비활성';
+        elements.apiStatusIndicator.classList.toggle('active', isConfigured);
     }
 }
 
@@ -2948,6 +2945,7 @@ function updateSelectedSourcesDisplay() {
             
             return `
                 <div class="parent-source-group">
+                    <span class="remove-group" onclick="removeParentSourceGroup('${parentName}')" title="출처 묶음 전체 삭제">×</span>
                     <span class="parent-source-name">@${parentName}</span>
                     <div class="subcategories">${subcategories}</div>
                 </div>
@@ -2965,6 +2963,88 @@ function removeSelectedSource(sourceId) {
     if (selectedSourceIds.length === 0) {
         showToast('최소 하나의 출처는 선택되어야 합니다.', 'warning');
     }
+}
+
+function removeParentSourceGroup(parentName) {
+    console.log('🔍 출처 그룹 삭제 시도:', parentName);
+    console.log('현재 선택된 출처 IDs:', selectedSourceIds);
+    console.log('사용 가능한 출처들:', availableSources);
+    
+    // availableSources가 비어있는지 확인
+    if (!availableSources || availableSources.length === 0) {
+        console.log('❌ availableSources가 비어있음');
+        showToast('출처 정보를 불러올 수 없습니다.', 'error');
+        return;
+    }
+    
+    // 선택된 출처들 중에서 해당 부모 그룹에 속하는 출처들 찾기
+    const selectedSources = availableSources.filter(source => 
+        selectedSourceIds.includes(source.id)
+    );
+    
+    console.log('선택된 출처들:', selectedSources);
+    
+    // 해당 부모 그룹에 속하는 출처들 찾기 (parent_name 또는 name으로 매칭)
+    const groupSources = selectedSources.filter(source => {
+        const sourceParentName = source.parent_name || source.name;
+        console.log(`출처 ${source.name}의 부모명: ${sourceParentName}, 찾는 부모명: ${parentName}`);
+        return sourceParentName === parentName;
+    });
+    
+    console.log('삭제할 그룹 출처들:', groupSources);
+    
+    if (groupSources.length === 0) {
+        console.log('❌ 해당 부모 그룹을 찾을 수 없음');
+        showToast(`${parentName} 출처 그룹을 찾을 수 없습니다.`, 'error');
+        return;
+    }
+    
+    // 해당 그룹의 모든 출처 ID 제거
+    const groupSourceIds = groupSources.map(source => source.id);
+    const beforeCount = selectedSourceIds.length;
+    selectedSourceIds = selectedSourceIds.filter(id => !groupSourceIds.includes(id));
+    const afterCount = selectedSourceIds.length;
+    
+    console.log(`삭제 전: ${beforeCount}개, 삭제 후: ${afterCount}개`);
+    console.log('삭제 후 선택된 출처 IDs:', selectedSourceIds);
+    
+    // 화면 업데이트
+    updateSelectedSourcesDisplay();
+    
+    // 사용자에게 알림
+    const removedCount = groupSources.length;
+    showToast(`${parentName} 출처 그룹 ${removedCount}개가 모두 제거되었습니다.`, 'info');
+    
+    // 최소 하나의 출처는 선택되어야 함
+    if (selectedSourceIds.length === 0) {
+        showToast('최소 하나의 출처는 선택되어야 합니다.', 'warning');
+    }
+}
+
+// 디버깅용 함수 (브라우저 콘솔에서 직접 호출 가능)
+function debugSourceGroup(parentName) {
+    console.log('🔍 디버깅: 출처 그룹 정보 확인');
+    console.log('부모명:', parentName);
+    console.log('availableSources:', availableSources);
+    console.log('selectedSourceIds:', selectedSourceIds);
+    
+    const selectedSources = availableSources.filter(source => 
+        selectedSourceIds.includes(source.id)
+    );
+    console.log('선택된 출처들:', selectedSources);
+    
+    const groupSources = selectedSources.filter(source => 
+        (source.parent_name || source.name) === parentName
+    );
+    console.log('해당 그룹 출처들:', groupSources);
+    
+    return {
+        parentName,
+        availableSources,
+        selectedSourceIds,
+        selectedSources,
+        groupSources
+    };
 }
 
 function showSourceManagementModal() {
