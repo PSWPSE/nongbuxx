@@ -34,7 +34,10 @@ CORS(app, origins=[
     "http://localhost:8080",  # Local development
     "https://nongbuxxfrontend.vercel.app",  # Main production frontend domain
     "https://nongbuxx.vercel.app",  # Alternative domain
-], allow_headers=["Content-Type", "Authorization", "Accept"], methods=["GET", "POST", "OPTIONS"], supports_credentials=False)
+    "https://*.vercel.app",  # All Vercel deployments
+], allow_headers=["Content-Type", "Authorization", "Accept", "X-Requested-With"], 
+methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], 
+supports_credentials=True)
 
 # Configuration
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
