@@ -1934,12 +1934,46 @@ function displaySessionContent() {
                             <i class="fas fa-download"></i>
                             <span>다운로드</span>
                         </button>
-                        ${(item.content_type === 'x' || item.content_type === 'twitter' || item.content_type === 'standard') ? `
-                        <button class="content-action-btn x-publish-btn" onclick="openXPublishingModal(\`${item.content ? item.content.replace(/`/g, '\\`').replace(/\$/g, '\\$') : ''}\`, '${item.content_type}')" title="X에 게시">
-                            <i class="fab fa-x-twitter"></i>
-                            <span>X 게시</span>
-                        </button>
-                        ` : ''}
+                        ${(() => {
+                            // X 게시 버튼 표시 조건 개선
+                            // 1. content_type 확인
+                            const isXType = item.content_type === 'x' || 
+                                          item.content_type === 'twitter' || 
+                                          item.content_type === 'standard';
+                            
+                            // 2. 파일명 확인
+                            const filename = item.filename || item.title || '';
+                            const hasXInFilename = filename.toLowerCase().includes('twitter') || 
+                                                  filename.toLowerCase().includes('_x_') ||
+                                                  filename.toLowerCase().includes('standard');
+                            
+                            // 3. Threads나 Blog가 아닌 경우
+                            const notThreadsOrBlog = item.content_type !== 'threads' && 
+                                                    item.content_type !== 'enhanced_blog' && 
+                                                    item.content_type !== 'blog' &&
+                                                    !filename.toLowerCase().includes('threads') &&
+                                                    !filename.toLowerCase().includes('blog');
+                            
+                            // 디버깅 로그
+                            console.log(`🔍 X 게시 버튼 조건 체크 [${item.title}]:`, {
+                                content_type: item.content_type,
+                                isXType,
+                                hasXInFilename,
+                                notThreadsOrBlog,
+                                showButton: isXType || hasXInFilename || notThreadsOrBlog
+                            });
+                            
+                            // 조건 중 하나라도 만족하면 버튼 표시
+                            if (isXType || hasXInFilename || notThreadsOrBlog) {
+                                return `
+                                <button class="content-action-btn x-publish-btn" onclick="openXPublishingModal(\`${item.content ? item.content.replace(/`/g, '\\`').replace(/\$/g, '\\$') : ''}\`, '${item.content_type || 'standard'}')" title="X에 게시">
+                                    <i class="fab fa-x-twitter"></i>
+                                    <span>X 게시</span>
+                                </button>
+                                `;
+                            }
+                            return '';
+                        })()}
                     </div>
                 </div>
             </div>
