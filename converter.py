@@ -858,7 +858,11 @@ Article: {content}"""
             str: 변환된 마크다운 콘텐츠
         """
         # 추출된 데이터를 변환기가 이해할 수 있는 형태로 변환
-        content_text = extracted_data['content']['text']
+        # content가 딕셔너리인 경우와 문자열인 경우 모두 처리
+        if isinstance(extracted_data['content'], dict):
+            content_text = extracted_data['content'].get('text', '')
+        else:
+            content_text = extracted_data['content']
         
         # 제목과 설명 추출
         title = extracted_data['title']
@@ -893,7 +897,11 @@ Article: {content}"""
             str: 변환된 블로그 마크다운 콘텐츠
         """
         # 추출된 데이터를 변환기가 이해할 수 있는 형태로 변환
-        content_text = extracted_data['content']['text']
+        # content가 딕셔너리인 경우와 문자열인 경우 모두 처리
+        if isinstance(extracted_data['content'], dict):
+            content_text = extracted_data['content'].get('text', '')
+        else:
+            content_text = extracted_data['content']
         
         # 제목과 설명 추출
         title = extracted_data['title']
