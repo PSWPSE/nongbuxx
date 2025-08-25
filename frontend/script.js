@@ -1909,6 +1909,12 @@ function displaySessionContent() {
                             <i class="fas fa-download"></i>
                             <span>다운로드</span>
                         </button>
+                        ${(item.content_type === 'x' || item.content_type === 'twitter' || item.content_type === 'standard') ? `
+                        <button class="content-action-btn x-publish-btn" onclick="openXPublishingModal(\`${item.content ? item.content.replace(/`/g, '\\`').replace(/\$/g, '\\$') : ''}\`, '${item.content_type}')" title="X에 게시">
+                            <i class="fab fa-x-twitter"></i>
+                            <span>X 게시</span>
+                        </button>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -2070,6 +2076,31 @@ async function loadContentPreviewInModal(item, index) {
 
 function setupContentPreviewModalEvents(item, index) {
     console.log('🔧 모달 이벤트 설정 중...');
+    
+    // X 게시 버튼 표시 여부 확인
+    const publishToXBtn = document.getElementById('publishPreviewToXBtn');
+    if (publishToXBtn) {
+        // 파일명에서 콘텐츠 타입 확인 (standard, x, twitter 모두 포함)
+        const filename = item.filename || '';
+        const isXContent = filename.includes('_x_') || filename.includes('_twitter_') || 
+                          filename.includes('_standard_') || filename.includes('_normal_') ||
+                          filename.startsWith('x_') || filename.startsWith('twitter_') ||
+                          filename.startsWith('standard_');
+        
+        if (isXContent) {
+            publishToXBtn.style.display = 'inline-block';
+            publishToXBtn.onclick = () => {
+                const previewContent = document.getElementById('previewContentBody');
+                if (previewContent) {
+                    const content = previewContent.textContent || previewContent.innerText;
+                    hideContentPreviewModal();
+                    openXPublishingModal(content, 'x');
+                }
+            };
+        } else {
+            publishToXBtn.style.display = 'none';
+        }
+    }
     
     // 모달 닫기 이벤트
     const closeButtons = [
@@ -5596,3 +5627,395 @@ async function downloadEnhancedBlogContent(groupBaseName) {
         showToast('파일 다운로드 중 오류가 발생했습니다.', 'error');
     }
 }
+
+// ============================================
+// X(Twitter) 게시 관련 기능
+// ============================================
+
+// X API 인증 정보 저장 (LocalStorage)
+const X_API_STORAGE_KEY = 'x_api_credentials';
+
+// X 게시 모달 요소들
+const xModalElements = {
+    modal: document.getElementById('xPublishingModalSection'),
+    overlay: document.getElementById('xPublishingModalOverlay'),
+    closeBtn: document.getElementById('closeXPublishingModalBtn'),
+    cancelBtn: document.getElementById('cancelXPublishBtn'),
+    
+    // API 설정
+    consumerKey: document.getElementById('xConsumerKey'),
+    consumerSecret: document.getElementById('xConsumerSecret'),
+    accessToken: document.getElementById('xAccessToken'),
+    accessTokenSecret: document.getElementById('xAccessTokenSecret'),
+    validateBtn: document.getElementById('validateXCredentialsBtn'),
+    saveBtn: document.getElementById('saveXCredentialsBtn'),
+    loadBtn: document.getElementById('loadXCredentialsBtn'),
+    validationResult: document.getElementById('xValidationResult'),
+    
+    // 콘텐츠 프리뷰
+    contentTextarea: document.getElementById('xContentTextarea'),
+    contentType: document.getElementById('xContentType'),
+    contentLength: document.getElementById('xContentLength'),
+    publishAsThread: document.getElementById('publishAsThreadCheckbox'),
+    
+    // 게시 버튼
+    publishBtn: document.getElementById('publishToXBtn'),
+    
+    // 진행 상태
+    progressSection: document.getElementById('xPublishingProgress'),
+    progressFill: document.getElementById('xProgressFill'),
+    progressMessage: document.getElementById('xProgressMessage'),
+    
+    // 결과
+    resultSection: document.getElementById('xPublishingResult'),
+    
+    // 미리보기 모달의 X 게시 버튼
+    previewPublishBtn: document.getElementById('publishPreviewToXBtn')
+};
+
+// X 게시 모달 열기
+function openXPublishingModal(content = '', contentType = 'x') {
+    if (xModalElements.modal) {
+        xModalElements.modal.style.display = 'block';
+        
+        // 콘텐츠 설정
+        if (xModalElements.contentTextarea && content) {
+            // 마크다운 및 HTML 태그 제거
+            let cleanContent = content;
+            // 마크다운 헤더 제거
+            cleanContent = cleanContent.replace(/^#{1,6}\s+/gm, '');
+            // 마크다운 볼드/이탤릭 제거
+            cleanContent = cleanContent.replace(/\*\*([^*]+)\*\*/g, '$1');
+            cleanContent = cleanContent.replace(/\*([^*]+)\*/g, '$1');
+            cleanContent = cleanContent.replace(/__([^_]+)__/g, '$1');
+            cleanContent = cleanContent.replace(/_([^_]+)_/g, '$1');
+            // 마크다운 링크 제거
+            cleanContent = cleanContent.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+            // HTML 태그 제거
+            cleanContent = cleanContent.replace(/<[^>]*>/g, '');
+            // 과도한 줄바꿈 정리
+            cleanContent = cleanContent.replace(/\n{3,}/g, '\n\n');
+            
+            xModalElements.contentTextarea.value = cleanContent.trim();
+            updateXContentLength();
+        }
+        
+        // 콘텐츠 타입 표시
+        if (xModalElements.contentType) {
+            const typeNames = {
+                'x': 'X(Twitter) Short Form',
+                'standard': 'X(Twitter) Normal Form',
+                'twitter': 'X(Twitter) 콘텐츠',
+                'threads': 'Threads 콘텐츠',
+                'blog': '블로그 콘텐츠'
+            };
+            xModalElements.contentType.textContent = typeNames[contentType] || 'X(Twitter) 콘텐츠';
+        }
+        
+        // 저장된 API 인증 정보 불러오기
+        loadXCredentials();
+        
+        // 결과 섹션 숨기기
+        if (xModalElements.resultSection) {
+            xModalElements.resultSection.style.display = 'none';
+            xModalElements.resultSection.innerHTML = '';
+        }
+        
+        // 진행 상태 숨기기
+        if (xModalElements.progressSection) {
+            xModalElements.progressSection.style.display = 'none';
+        }
+    }
+}
+
+// X 게시 모달 닫기
+function closeXPublishingModal() {
+    if (xModalElements.modal) {
+        xModalElements.modal.style.display = 'none';
+    }
+}
+
+// 콘텐츠 길이 업데이트
+function updateXContentLength() {
+    if (xModalElements.contentTextarea && xModalElements.contentLength) {
+        const length = xModalElements.contentTextarea.value.length;
+        xModalElements.contentLength.textContent = `${length}/280`;
+        
+        // 길이에 따른 색상 변경
+        xModalElements.contentLength.classList.remove('warning', 'error');
+        if (length > 280) {
+            xModalElements.contentLength.classList.add('error');
+        } else if (length > 250) {
+            xModalElements.contentLength.classList.add('warning');
+        }
+        
+        // 280자 초과시 스레드 옵션 자동 체크
+        if (length > 280 && xModalElements.publishAsThread) {
+            xModalElements.publishAsThread.checked = true;
+        }
+    }
+}
+
+// X API 인증 정보 저장
+function saveXCredentials() {
+    const credentials = {
+        consumer_key: xModalElements.consumerKey.value,
+        consumer_secret: xModalElements.consumerSecret.value,
+        access_token: xModalElements.accessToken.value,
+        access_token_secret: xModalElements.accessTokenSecret.value
+    };
+    
+    // 암호화된 형태로 저장 (실제로는 더 안전한 방법 필요)
+    localStorage.setItem(X_API_STORAGE_KEY, btoa(JSON.stringify(credentials)));
+    showToast('X API 인증 정보가 저장되었습니다.', 'success');
+}
+
+// X API 인증 정보 불러오기
+function loadXCredentials() {
+    try {
+        const stored = localStorage.getItem(X_API_STORAGE_KEY);
+        if (stored) {
+            const credentials = JSON.parse(atob(stored));
+            if (xModalElements.consumerKey) xModalElements.consumerKey.value = credentials.consumer_key || '';
+            if (xModalElements.consumerSecret) xModalElements.consumerSecret.value = credentials.consumer_secret || '';
+            if (xModalElements.accessToken) xModalElements.accessToken.value = credentials.access_token || '';
+            if (xModalElements.accessTokenSecret) xModalElements.accessTokenSecret.value = credentials.access_token_secret || '';
+        }
+    } catch (error) {
+        console.error('X API 인증 정보 불러오기 실패:', error);
+    }
+}
+
+// X API 인증 확인
+async function validateXCredentials() {
+    try {
+        const credentials = {
+            consumer_key: xModalElements.consumerKey.value,
+            consumer_secret: xModalElements.consumerSecret.value,
+            access_token: xModalElements.accessToken.value,
+            access_token_secret: xModalElements.accessTokenSecret.value
+        };
+        
+        // 필수 필드 확인
+        if (!credentials.consumer_key || !credentials.consumer_secret || 
+            !credentials.access_token || !credentials.access_token_secret) {
+            showValidationResult('모든 API 인증 정보를 입력해주세요.', 'error');
+            return false;
+        }
+        
+        showValidationResult('인증 확인 중...', 'info');
+        
+        const response = await fetch(`${API_BASE_URL}/api/validate/x-credentials`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(credentials)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showValidationResult(`✅ 인증 성공! @${result.user.username}로 로그인되었습니다.`, 'success');
+            if (xModalElements.publishBtn) {
+                xModalElements.publishBtn.disabled = false;
+            }
+            return true;
+        } else {
+            showValidationResult(`❌ 인증 실패: ${result.error}`, 'error');
+            if (xModalElements.publishBtn) {
+                xModalElements.publishBtn.disabled = true;
+            }
+            return false;
+        }
+    } catch (error) {
+        console.error('X API 인증 확인 실패:', error);
+        showValidationResult('인증 확인 중 오류가 발생했습니다.', 'error');
+        return false;
+    }
+}
+
+// 인증 결과 표시
+function showValidationResult(message, type) {
+    if (xModalElements.validationResult) {
+        xModalElements.validationResult.style.display = 'block';
+        xModalElements.validationResult.className = `validation-result ${type}`;
+        xModalElements.validationResult.innerHTML = `
+            <div class="validation-message ${type}">
+                ${message}
+            </div>
+        `;
+    }
+}
+
+// X에 게시
+async function publishToX() {
+    try {
+        // 인증 확인
+        const isValid = await validateXCredentials();
+        if (!isValid) {
+            showToast('X API 인증에 실패했습니다. 인증 정보를 확인해주세요.', 'error');
+            return;
+        }
+        
+        const content = xModalElements.contentTextarea.value;
+        if (!content) {
+            showToast('게시할 콘텐츠를 입력해주세요.', 'error');
+            return;
+        }
+        
+        // 진행 상태 표시
+        if (xModalElements.progressSection) {
+            xModalElements.progressSection.style.display = 'block';
+            xModalElements.progressFill.style.width = '50%';
+            xModalElements.progressMessage.textContent = 'X에 게시 중...';
+        }
+        
+        const requestData = {
+            content: content,
+            consumer_key: xModalElements.consumerKey.value,
+            consumer_secret: xModalElements.consumerSecret.value,
+            access_token: xModalElements.accessToken.value,
+            access_token_secret: xModalElements.accessTokenSecret.value,
+            publish_as_thread: xModalElements.publishAsThread.checked
+        };
+        
+        const response = await fetch(`${API_BASE_URL}/api/publish/x`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        const result = await response.json();
+        
+        // 진행 상태 업데이트
+        if (xModalElements.progressFill) {
+            xModalElements.progressFill.style.width = '100%';
+        }
+        
+        if (result.success) {
+            // 성공 결과 표시
+            showPublishingResult('success', result.data);
+            showToast('X에 성공적으로 게시되었습니다!', 'success');
+        } else {
+            // 실패 결과 표시
+            showPublishingResult('error', { error: result.error });
+            showToast(`게시 실패: ${result.error}`, 'error');
+        }
+        
+        // 진행 상태 숨기기
+        setTimeout(() => {
+            if (xModalElements.progressSection) {
+                xModalElements.progressSection.style.display = 'none';
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('X 게시 실패:', error);
+        showToast('X 게시 중 오류가 발생했습니다.', 'error');
+        
+        if (xModalElements.progressSection) {
+            xModalElements.progressSection.style.display = 'none';
+        }
+    }
+}
+
+// 게시 결과 표시
+function showPublishingResult(type, data) {
+    if (xModalElements.resultSection) {
+        xModalElements.resultSection.style.display = 'block';
+        xModalElements.resultSection.className = `publishing-result ${type}`;
+        
+        if (type === 'success') {
+            const tweetUrl = data.tweet_url || data.thread_url;
+            xModalElements.resultSection.innerHTML = `
+                <h5><i class="fas fa-check-circle"></i> 게시 성공!</h5>
+                <p>콘텐츠가 X에 성공적으로 게시되었습니다.</p>
+                ${tweetUrl ? `
+                    <div class="tweet-url">
+                        <a href="${tweetUrl}" target="_blank">
+                            <i class="fab fa-x-twitter"></i> 게시물 보기
+                        </a>
+                    </div>
+                ` : ''}
+                ${data.tweets ? `
+                    <p class="tweet-count">총 ${data.tweets.length}개의 트윗이 스레드로 게시되었습니다.</p>
+                ` : ''}
+            `;
+        } else {
+            xModalElements.resultSection.innerHTML = `
+                <h5><i class="fas fa-exclamation-circle"></i> 게시 실패</h5>
+                <p>${data.error || '알 수 없는 오류가 발생했습니다.'}</p>
+            `;
+        }
+    }
+}
+
+// 생성된 콘텐츠 카드에 X 게시 버튼 추가
+function addXPublishButton(cardElement, content, contentType) {
+    const actionsDiv = cardElement.querySelector('.generated-content-actions');
+    if (actionsDiv && (contentType === 'x' || contentType === 'twitter')) {
+        const publishBtn = document.createElement('button');
+        publishBtn.className = 'btn btn-icon btn-x-publish';
+        publishBtn.innerHTML = '<i class="fab fa-x-twitter"></i>';
+        publishBtn.title = 'X에 게시';
+        publishBtn.onclick = () => openXPublishingModal(content, contentType);
+        actionsDiv.appendChild(publishBtn);
+    }
+}
+
+// 이벤트 리스너 설정
+document.addEventListener('DOMContentLoaded', function() {
+    // X 게시 모달 이벤트
+    if (xModalElements.closeBtn) {
+        xModalElements.closeBtn.addEventListener('click', closeXPublishingModal);
+    }
+    
+    if (xModalElements.cancelBtn) {
+        xModalElements.cancelBtn.addEventListener('click', closeXPublishingModal);
+    }
+    
+    if (xModalElements.overlay) {
+        xModalElements.overlay.addEventListener('click', function(e) {
+            if (e.target === xModalElements.overlay) {
+                closeXPublishingModal();
+            }
+        });
+    }
+    
+    // API 인증 관련 이벤트
+    if (xModalElements.validateBtn) {
+        xModalElements.validateBtn.addEventListener('click', validateXCredentials);
+    }
+    
+    if (xModalElements.saveBtn) {
+        xModalElements.saveBtn.addEventListener('click', saveXCredentials);
+    }
+    
+    if (xModalElements.loadBtn) {
+        xModalElements.loadBtn.addEventListener('click', loadXCredentials);
+    }
+    
+    // 콘텐츠 길이 업데이트
+    if (xModalElements.contentTextarea) {
+        xModalElements.contentTextarea.addEventListener('input', updateXContentLength);
+    }
+    
+    // 게시 버튼
+    if (xModalElements.publishBtn) {
+        xModalElements.publishBtn.addEventListener('click', publishToX);
+    }
+    
+    // 미리보기 모달의 X 게시 버튼
+    if (xModalElements.previewPublishBtn) {
+        xModalElements.previewPublishBtn.addEventListener('click', function() {
+            const previewContent = document.getElementById('previewContentBody');
+            if (previewContent) {
+                const content = previewContent.textContent || previewContent.innerText;
+                openXPublishingModal(content, 'x');
+            }
+        });
+    }
+});

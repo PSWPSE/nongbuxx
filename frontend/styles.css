@@ -8090,4 +8090,253 @@ textarea:focus-visible {
 
 /* ================================================= */
 
+/* X(Twitter) Publishing Modal Styles */
+.x-publishing-modal-section {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+}
+
+.x-api-settings-section {
+    margin-bottom: 24px;
+}
+
+.x-api-settings-section h4 {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.x-api-settings-section .info-box {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.x-api-settings-section .info-box a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.x-api-settings-section .info-box a:hover {
+    text-decoration: underline;
+}
+
+.x-api-settings-section .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.x-api-settings-section .form-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.x-content-preview-section {
+    margin-bottom: 24px;
+}
+
+.x-content-preview-section h4 {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.content-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.content-info .content-type {
+    background: var(--bg-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+}
+
+.content-info .content-length {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.content-info .content-length.warning {
+    color: var(--warning-color);
+}
+
+.content-info .content-length.error {
+    color: var(--error-color);
+}
+
+.x-content-textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 120px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.x-content-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.publishing-options {
+    margin-top: 12px;
+}
+
+.publishing-options .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.publishing-options .checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+}
+
+.publishing-progress {
+    margin-top: 24px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.publishing-progress .progress-bar {
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.publishing-progress .progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.publishing-progress .progress-message {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.publishing-result {
+    margin-top: 24px;
+    padding: 16px;
+    border-radius: 8px;
+}
+
+.publishing-result.success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.publishing-result.error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.publishing-result h5 {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.publishing-result .tweet-url {
+    margin-top: 8px;
+}
+
+.publishing-result .tweet-url a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.publishing-result .tweet-url a:hover {
+    text-decoration: underline;
+}
+
+/* X 게시 버튼 스타일 */
+.btn-x-publish {
+    background: #000000;
+    color: white;
+    border: 1px solid #000000;
+}
+
+.btn-x-publish:hover {
+    background: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+.btn-x-publish i {
+    margin-right: 4px;
+}
+
+/* 콘텐츠 카드의 X 게시 버튼 */
+.content-action-btn.x-publish-btn {
+    background: #000000;
+    color: white;
+    border: 1px solid #000000;
+}
+
+.content-action-btn.x-publish-btn:hover {
+    background: #1a1a1a;
+    border-color: #1a1a1a;
+    transform: translateY(-2px);
+}
+
+.content-action-btn.x-publish-btn i {
+    margin-right: 4px;
+}
+
+@media (max-width: 768px) {
+    .x-api-settings-section .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ================================================= */
+
 }

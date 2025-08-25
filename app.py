@@ -18,6 +18,7 @@ load_dotenv('env.local')
 
 from url_extractor import OptimizedNewsExtractor
 from nongbuxx_generator import NongbuxxGenerator
+from x_publisher import XPublisher
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -441,6 +442,147 @@ def generate_content():
         return jsonify({
             'success': False,
             'error': 'Internal server error',
+            'code': 'INTERNAL_ERROR'
+        }), 500
+
+@app.route('/api/publish/x', methods=['POST', 'OPTIONS'])
+def publish_to_x():
+    """X(Twitter)에 콘텐츠 게시"""
+    if request.method == 'OPTIONS':
+        return jsonify({'success': True}), 200
+    
+    try:
+        data = request.json
+        
+        # 필수 파라미터 검증
+        required_fields = ['content', 'consumer_key', 'consumer_secret', 
+                          'access_token', 'access_token_secret']
+        
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'필수 필드가 누락되었습니다: {field}',
+                    'code': 'MISSING_FIELD'
+                }), 400
+        
+        content = data['content']
+        consumer_key = data['consumer_key']
+        consumer_secret = data['consumer_secret']
+        access_token = data['access_token']
+        access_token_secret = data['access_token_secret']
+        
+        # 옵션 파라미터
+        publish_as_thread = data.get('publish_as_thread', False)
+        
+        # X Publisher 초기화
+        publisher = XPublisher(
+            consumer_key=consumer_key,
+            consumer_secret=consumer_secret,
+            access_token=access_token,
+            access_token_secret=access_token_secret
+        )
+        
+        # 인증 확인
+        auth_result = publisher.verify_credentials()
+        if not auth_result['success']:
+            return jsonify({
+                'success': False,
+                'error': 'X API 인증 실패: ' + auth_result.get('error', '알 수 없는 오류'),
+                'code': 'AUTH_FAILED'
+            }), 401
+        
+        # 콘텐츠 포맷팅
+        formatted_content = publisher.format_content_for_x(content)
+        
+        # 게시 처리
+        if len(formatted_content) > 280 and publish_as_thread:
+            # 스레드로 게시
+            tweets = publisher.split_long_content(formatted_content)
+            result = publisher.post_thread(tweets)
+        else:
+            # 단일 트윗 게시
+            if len(formatted_content) > 280:
+                # 280자 초과 시 자동 축약
+                formatted_content = formatted_content[:277] + '...'
+            
+            result = publisher.post_tweet(formatted_content)
+        
+        if result['success']:
+            logger.info(f"X 게시 성공: {result.get('tweet_url', 'URL 없음')}")
+            return jsonify({
+                'success': True,
+                'data': result,
+                'message': 'X에 성공적으로 게시되었습니다',
+                'user': auth_result['user']
+            }), 200
+        else:
+            logger.error(f"X 게시 실패: {result.get('error', '알 수 없는 오류')}")
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'X 게시 중 오류가 발생했습니다'),
+                'code': 'PUBLISH_FAILED'
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"X 게시 오류: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'code': 'INTERNAL_ERROR'
+        }), 500
+
+@app.route('/api/validate/x-credentials', methods=['POST', 'OPTIONS'])
+def validate_x_credentials():
+    """X API 인증 정보 검증"""
+    if request.method == 'OPTIONS':
+        return jsonify({'success': True}), 200
+    
+    try:
+        data = request.json
+        
+        # 필수 파라미터 검증
+        required_fields = ['consumer_key', 'consumer_secret', 
+                          'access_token', 'access_token_secret']
+        
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'필수 필드가 누락되었습니다: {field}',
+                    'code': 'MISSING_FIELD'
+                }), 400
+        
+        # X Publisher 초기화
+        publisher = XPublisher(
+            consumer_key=data['consumer_key'],
+            consumer_secret=data['consumer_secret'],
+            access_token=data['access_token'],
+            access_token_secret=data['access_token_secret']
+        )
+        
+        # 인증 확인
+        result = publisher.verify_credentials()
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'user': result['user'],
+                'message': f"인증 성공! @{result['user']['username']}로 로그인되었습니다"
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'X API 인증에 실패했습니다'),
+                'code': 'AUTH_FAILED'
+            }), 401
+            
+    except Exception as e:
+        logger.error(f"X 인증 검증 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
             'code': 'INTERNAL_ERROR'
         }), 500
 

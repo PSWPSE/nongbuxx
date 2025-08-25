@@ -700,10 +700,123 @@
                                 <i class="fas fa-download"></i>
                                 다운로드
                             </button>
+                            <button type="button" id="publishPreviewToXBtn" class="btn btn-primary" style="display: none;">
+                                <i class="fab fa-x-twitter"></i>
+                                X에 게시
+                            </button>
                             <button type="button" id="closePreviewModalBtn" class="btn btn-secondary">
                                 <i class="fas fa-times"></i>
                                 닫기
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- X(Twitter) Publishing Modal Section -->
+            <section class="x-publishing-modal-section" id="xPublishingModalSection" style="display: none;">
+                <div class="modal-overlay" id="xPublishingModalOverlay">
+                    <div class="modal-content large-modal">
+                        <div class="modal-header">
+                            <h3>
+                                <i class="fab fa-x-twitter"></i> X(Twitter)에 게시
+                            </h3>
+                            <button type="button" id="closeXPublishingModalBtn" class="btn btn-icon">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <!-- X API 설정 섹션 -->
+                            <div class="x-api-settings-section" id="xApiSettingsSection">
+                                <h4>X API 인증 정보</h4>
+                                <div class="info-box">
+                                    <i class="fas fa-info-circle"></i>
+                                    X API 키는 <a href="https://developer.twitter.com/en/portal/dashboard" target="_blank">Twitter Developer Portal</a>에서 발급받을 수 있습니다.
+                                </div>
+                                
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="xConsumerKey">API Key (Consumer Key):</label>
+                                        <input type="text" id="xConsumerKey" class="form-control" placeholder="Consumer Key 입력">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="xConsumerSecret">API Secret (Consumer Secret):</label>
+                                        <input type="password" id="xConsumerSecret" class="form-control" placeholder="Consumer Secret 입력">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="xAccessToken">Access Token:</label>
+                                        <input type="text" id="xAccessToken" class="form-control" placeholder="Access Token 입력">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="xAccessTokenSecret">Access Token Secret:</label>
+                                        <input type="password" id="xAccessTokenSecret" class="form-control" placeholder="Access Token Secret 입력">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="button" id="validateXCredentialsBtn" class="btn btn-primary">
+                                        <i class="fas fa-check"></i> 인증 확인
+                                    </button>
+                                    <button type="button" id="saveXCredentialsBtn" class="btn btn-success">
+                                        <i class="fas fa-save"></i> 저장
+                                    </button>
+                                    <button type="button" id="loadXCredentialsBtn" class="btn btn-info">
+                                        <i class="fas fa-upload"></i> 불러오기
+                                    </button>
+                                </div>
+                                
+                                <div class="validation-result" id="xValidationResult" style="display: none;">
+                                    <!-- 인증 결과가 여기에 표시됩니다 -->
+                                </div>
+                            </div>
+                            
+                            <!-- 콘텐츠 미리보기 및 편집 섹션 -->
+                            <div class="x-content-preview-section" id="xContentPreviewSection">
+                                <h4>게시할 콘텐츠</h4>
+                                
+                                <div class="content-info" id="xContentInfo">
+                                    <span class="content-type" id="xContentType"></span>
+                                    <span class="content-length" id="xContentLength">0/280</span>
+                                </div>
+                                
+                                <textarea id="xContentTextarea" class="form-control x-content-textarea" rows="8" maxlength="280" placeholder="게시할 내용을 입력하세요...">
+                                </textarea>
+                                
+                                <div class="publishing-options">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="publishAsThreadCheckbox">
+                                        <span>긴 콘텐츠를 스레드로 게시 (280자 초과 시)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" id="publishToXBtn" class="btn btn-primary" disabled>
+                                <i class="fab fa-x-twitter"></i>
+                                X에 게시
+                            </button>
+                            <button type="button" id="cancelXPublishBtn" class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                                취소
+                            </button>
+                        </div>
+                        
+                        <!-- 게시 진행 상태 -->
+                        <div class="publishing-progress" id="xPublishingProgress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="xProgressFill"></div>
+                            </div>
+                            <p class="progress-message" id="xProgressMessage">게시 중...</p>
+                        </div>
+                        
+                        <!-- 게시 결과 -->
+                        <div class="publishing-result" id="xPublishingResult" style="display: none;">
+                            <!-- 결과가 여기에 표시됩니다 -->
                         </div>
                     </div>
                 </div>

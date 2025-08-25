@@ -19,6 +19,9 @@ gunicorn>=21.2.0
 python-multipart>=0.0.6
 psutil>=5.9.0
 
+# X(Twitter) API integration
+tweepy>=4.14.0
+
 # Development dependencies
 pytest>=7.4.0
 pytest-cov>=4.1.0 

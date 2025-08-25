@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X API 설정</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #000;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        button {
+            background: #000;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #333;
+        }
+        .info {
+            background: #cfe2ff;
+            color: #084298;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        code {
+            background: #f0f0f0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐦 X API 자동 설정</h1>
+        
+        <div class="info">
+            <strong>계정 정보:</strong><br>
+            👤 @NongBuDaddy (농부의 미국주식 소식통)
+        </div>
+        
+        <p>아래 버튼을 클릭하면 X API 인증 정보가 자동으로 브라우저에 저장됩니다.</p>
+        
+        <button onclick="setupXAPI()">X API 설정하기</button>
+        
+        <div id="result"></div>
+        
+        <div class="info">
+            <strong>설정 후 사용 방법:</strong><br>
+            1. <a href="http://localhost:3000" target="_blank">NONGBUXX 서비스</a> 접속<br>
+            2. X(Twitter) 콘텐츠 생성<br>
+            3. "생성된 콘텐츠" 탭에서 "X 게시" 버튼 클릭<br>
+            4. 자동으로 API 키가 입력됨
+        </div>
+    </div>
+    
+    <script>
+        function setupXAPI() {
+            const credentials = {
+                consumer_key: 'S4jbIoE27BfooEye1jPPB5cHC',
+                consumer_secret: 'KwwrjBfXXEvR3Lx2V5h1Od7OXOUel5Vo05tEYHpzpuwFjOCWRP',
+                access_token: '1663454549993205761-Ky0TbAU4Zn0qUeocBaKDYp1PGNbqd3',
+                access_token_secret: '3xRVfvWNavv7lUebX26WNs9pwWXhmtDzhqE1wmaMg6TnZ'
+            };
+            
+            // LocalStorage에 저장
+            localStorage.setItem('x_api_credentials', btoa(JSON.stringify(credentials)));
+            
+            // 결과 표시
+            document.getElementById('result').innerHTML = `
+                <div class="success">
+                    ✅ X API 인증 정보가 성공적으로 저장되었습니다!<br><br>
+                    이제 <a href="http://localhost:3000" target="_blank">NONGBUXX 서비스</a>에서 
+                    X 게시 기능을 바로 사용할 수 있습니다.
+                </div>
+            `;
+        }
+        
+        // 페이지 로드 시 이미 설정되어 있는지 확인
+        window.onload = function() {
+            const stored = localStorage.getItem('x_api_credentials');
+            if (stored) {
+                document.getElementById('result').innerHTML = `
+                    <div class="info">
+                        ℹ️ X API 인증 정보가 이미 설정되어 있습니다.<br>
+                        다시 설정하려면 위 버튼을 클릭하세요.
+                    </div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>
