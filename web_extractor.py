@@ -226,7 +226,18 @@ class WebExtractor:
         
         # 🚨 Zacks/Automated Insights 관련 메시지 제거
         content = self._get_content(article)
-        content = self._remove_zacks_automated_insights(content)
+        # content가 딕셔너리인 경우 text 필드 추출
+        if isinstance(content, dict):
+            content_text = content.get('text', '')
+            content_text = self._remove_zacks_automated_insights(content_text)
+            # 딕셔너리 형태 유지
+            content = {
+                'text': content_text,
+                'paragraphs': content.get('paragraphs', [])
+            }
+        else:
+            # 문자열인 경우 그대로 처리
+            content = self._remove_zacks_automated_insights(content)
         
         return {
             'success': True,
