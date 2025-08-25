@@ -213,6 +213,11 @@ class OptimizedNewsExtractor:
                 print(f"🚫 홍보성 뉴스 제외: {title[:50]}...")
                 continue
             
+            # 🚨 클릭베이트/저품질 투자 추천 기사 필터링
+            if self._is_clickbait_investment_article(title):
+                print(f"🚫 클릭베이트 투자 기사 제외: {title[:50]}...")
+                continue
+            
             filtered_links.append(link)
         
         return filtered_links
@@ -320,6 +325,109 @@ class OptimizedNewsExtractor:
         for pattern in normal_news_patterns:
             if re.search(pattern, title_lower):
                 return True
+        
+        return False
+    
+    def _is_clickbait_investment_article(self, title: str) -> bool:
+        """클릭베이트성 투자 추천 기사인지 판단"""
+        title_lower = title.lower()
+        
+        # 🚨 사용자가 제시한 패턴들 (절대 제외해야 할 기사들)
+        clickbait_patterns = [
+            # 1. 과거 투자 시뮬레이션 패턴
+            r"if you['']d invested \$?\d+",  # If You'd Invested $1000
+            r"if you invested \$?\d+",  # If You Invested $100
+            r"had you invested \$?\d+",  # Had You Invested
+            r"\d+ years ago.*how much.*today",  # 5 Years Ago, Here's How Much You'd Have Today
+            r"here['']s how much you['']d have",  # Here's How Much You'd Have
+            r"here['']s what happened",  # Here's What Happened
+            r"here['']s what you['']d have",  # Here's What You'd Have
+            
+            # 2. 특정 날짜 추천 패턴
+            r"best .* to buy for [a-z]+ \d+",  # Best Income Stocks to Buy for August 25th
+            r"top .* to buy for [a-z]+ \d+",  # Top Stocks to Buy for July 15th
+            r"best .* to buy today",  # Best Stocks to Buy Today
+            r"best .* to buy this week",  # Best Stocks to Buy This Week
+            r"best .* to buy this month",  # Best Stocks to Buy This Month
+            r"stocks to buy for [a-z]+ \d+",  # Stocks to Buy for August 25th
+            
+            # 3. 리스트형 주식 추천 패턴
+            r"^\d+ .*stocks",  # 2 Profitable Stocks, 3 Volatile Stocks
+            r"^top \d+ stocks",  # Top 5 Stocks
+            r"^best \d+ stocks",  # Best 10 Stocks
+            r"\d+ stocks to",  # 5 Stocks to Watch
+            r"\d+ stocks for",  # 3 Stocks for Long-Term
+            r"\d+ stocks that",  # 2 Stocks That
+            r"\d+ stocks with",  # 3 Stocks with Warning
+            
+            # 4. 주관적 평가 포함 패턴
+            r"we question",  # and 1 We Question
+            r"we find risky",  # and 1 We Find Risky
+            r"we think twice",  # We Think Twice About
+            r"deserve.*love",  # Deserve Some Love
+            r"should avoid",  # Should Avoid
+            r"stay away from",  # Stay Away From
+            r"warning sign",  # with Warning Sign
+            r"red flag",  # Red Flag
+            
+            # 5. 클릭베이트 구조 패턴
+            r"and \d+ we",  # and 1 We Question/Find
+            r"you won['']t believe",  # You Won't Believe
+            r"shocking.*truth",  # Shocking Truth
+            r"this one.*trick",  # This One Trick
+            r"analysts.*hate",  # Analysts Hate
+            r"wall street.*secret",  # Wall Street Secret
+            
+            # 6. 가정법/조건부 패턴
+            r"what if you",  # What If You
+            r"imagine if",  # Imagine If
+            r"suppose you",  # Suppose You
+            r"let['']s say you",  # Let's Say You
+            
+            # 7. 수익률 자랑 패턴
+            r"\d+% return",  # 500% Return
+            r"\d+x your money",  # 10x Your Money
+            r"doubled your money",  # Doubled Your Money
+            r"tripled your investment",  # Tripled Your Investment
+            r"millionaire.*\$\d+",  # Millionaire with $1000
+            
+            # 8. 긴급성 조장 패턴
+            r"before it['']s too late",  # Before It's Too Late
+            r"last chance",  # Last Chance
+            r"don['']t miss",  # Don't Miss
+            r"act now",  # Act Now
+            r"limited time",  # Limited Time
+            r"hurry",  # Hurry
+            
+            # 9. 예측/추측 패턴
+            r"could be worth",  # Could Be Worth
+            r"might reach",  # Might Reach
+            r"expected to soar",  # Expected to Soar
+            r"set to explode",  # Set to Explode
+            r"ready to breakout",  # Ready to Breakout
+            
+            # 10. 리스트 + 부정적 평가 조합
+            r"\d+.*and \d+.*risky",  # 2 Good and 1 Risky
+            r"\d+.*and \d+.*avoid",  # 3 Buy and 2 Avoid
+            r"\d+.*but \d+",  # 5 Winners but 2 Losers
+        ]
+        
+        # 패턴 매칭 검사
+        for pattern in clickbait_patterns:
+            if re.search(pattern, title_lower, re.IGNORECASE):
+                return True
+        
+        # 추가 조건: 제목에 달러 금액과 "ago", "today"가 함께 있는 경우
+        if "$" in title and ("ago" in title_lower and "today" in title_lower):
+            return True
+        
+        # 추가 조건: "Best", "Top", "Must" + "Buy"/"Sell" 조합
+        if re.search(r"(best|top|must).*(buy|sell|own|avoid)", title_lower):
+            return True
+        
+        # 추가 조건: 숫자로 시작하고 "Stocks"가 포함된 제목
+        if re.match(r"^\d+\s+\w+\s+stocks", title_lower):
+            return True
         
         return False
     

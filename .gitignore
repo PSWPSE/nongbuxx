@@ -62,5 +62,23 @@ converted_articles/
 
 # Temporary files
 *.tmp
-*.temp env.local
+*.temp
 .vercel
+
+# Local test files
+test_*.py
+local_*.py
+example_*.py
+
+# Local generated content
+local_generated_content/
+
+# Local environment files  
+env.local
+
+# Documentation summaries
+DEPLOYMENT_CLEANUP_SUMMARY.md
+LOCAL_BLOG_README.md
+
+# Deployment checklist
+*_CHECKLIST.md
