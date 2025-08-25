@@ -27,7 +27,15 @@ print_color "📅 배포 시각: $TIMESTAMP" $BLUE
 
 # Vercel로 배포 (프로덕션)
 print_color "🌐 Vercel 프로덕션 배포 중..." $BLUE
-vercel --prod --yes
+DEPLOYMENT_OUTPUT=$(vercel --prod --yes 2>&1)
+echo "$DEPLOYMENT_OUTPUT"
+
+# 배포 URL 추출 및 도메인 연결
+DEPLOYMENT_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep "Production:" | awk '{print $2}')
+if [ ! -z "$DEPLOYMENT_URL" ]; then
+    print_color "📌 도메인 연결 중..." $YELLOW
+    vercel alias $DEPLOYMENT_URL nongbuxxfrontend.vercel.app 2>/dev/null || true
+fi
 
 # 배포 완료 메시지
 print_color "✅ 배포 완료!" $GREEN
