@@ -1,0 +1,103 @@
+---
+alwaysApply: true
+description: "NONGBUXX 프론트엔드 배포 표준 프로토콜 - Vercel 배포 시 반드시 따라야 할 규칙"
+---
+
+# 🚀 NONGBUXX 프론트엔드 배포 프로토콜
+
+## ⚠️ **절대 규칙**
+
+사용자가 "배포해줘", "프론트엔드 배포", "frontend deploy" 등 배포 요청 시:
+- **반드시 `./deploy-quick.sh` 스크립트만 사용**
+- 다른 배포 방법(`vercel --prod`, `vercel init`, 개별 vercel 명령어) **절대 사용 금지**
+
+## 📋 **표준 배포 프로세스**
+
+### 1️⃣ **배포 요청 시 즉시 실행**
+```bash
+# 프론트엔드 배포 (유일한 방법)
+./deploy-quick.sh
+```
+
+### 2️⃣ **백엔드 배포는 별도**
+```bash
+# 백엔드 배포 (Railway)
+./deploy-backend-safe.sh "커밋 메시지"
+```
+
+## 🔧 **deploy-quick.sh 스크립트 동작**
+
+[deploy-quick.sh](mdc:deploy-quick.sh) 스크립트는 다음을 자동으로 수행:
+1. Vercel 프로덕션 배포 생성
+2. **중요**: 배포 URL을 `nongbuxxfrontend.vercel.app` 도메인에 자동 연결
+3. 배포 완료 확인
+
+## ❌ **절대 하지 말아야 할 것**
+
+1. **개별 Vercel 명령어 사용 금지**:
+   - `vercel` ❌
+   - `vercel --prod` ❌
+   - `vercel init` ❌
+   - `vercel alias` (수동) ❌
+
+2. **직접 frontend 폴더 이동 후 배포 금지**:
+   - `cd frontend && vercel --prod` ❌
+
+3. **다른 배포 도구 사용 금지**:
+   - `npm run deploy` ❌
+   - `yarn deploy` ❌
+
+## ✅ **올바른 배포 응답 예시**
+
+사용자: "프론트엔드 배포해줘"
+AI 응답:
+```
+네, 프론트엔드를 배포하겠습니다.
+
+[run_terminal_cmd 실행: ./deploy-quick.sh]
+
+✅ 배포가 완료되었습니다!
+🌐 https://nongbuxxfrontend.vercel.app/
+```
+
+## 🚨 **배포 문제 발생 시**
+
+### 문제: 변경사항이 반영되지 않음
+**원인**: Vercel이 새 배포를 생성했지만 메인 도메인이 업데이트되지 않음
+
+**해결**: 
+1. 먼저 `./deploy-quick.sh` 실행
+2. 그래도 안 되면 수동으로 도메인 연결:
+```bash
+# 최신 배포 URL 확인
+cd frontend && vercel ls | head -1
+# 도메인 수동 연결 (URL은 위에서 확인한 것 사용)
+vercel alias [배포-URL] nongbuxxfrontend.vercel.app
+```
+
+### 문제: 스크립트 실행 권한 없음
+```bash
+chmod +x deploy-quick.sh
+./deploy-quick.sh
+```
+
+## 📊 **배포 확인 방법**
+
+```bash
+# 배포된 사이트 버전 확인
+curl -s https://nongbuxxfrontend.vercel.app/script.js | head -3
+
+# 최근 배포 목록 확인
+cd frontend && vercel ls | head -5
+```
+
+## 💡 **핵심 포인트**
+
+> **"배포 = ./deploy-quick.sh"**
+> 
+> 사용자가 어떤 방식으로 배포를 요청하든 항상 이 스크립트만 사용
+> 스크립트가 도메인 alias 업데이트까지 자동으로 처리함
+
+---
+
+**기억하세요**: NONGBUXX 프론트엔드 배포는 오직 `./deploy-quick.sh`로만!
