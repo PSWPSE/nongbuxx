@@ -1660,13 +1660,21 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                 // 성공한 결과만 세션 콘텐츠에 추가
                 const successfulResults = result.data.results.filter(item => item.success);
                 successfulResults.forEach(item => {
+                    // content_type 결정: 백엔드에서 받은 값 우선, 없으면 함수 파라미터 사용
+                    const itemContentType = item.content_type || contentType || 'standard';
+                    console.log('📊 콘텐츠 타입 확인:', {
+                        item_content_type: item.content_type,
+                        param_contentType: contentType,
+                        final: itemContentType
+                    });
+                    
                     sessionContent.push({
                         id: `content_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                         content: item.content,
                         title: item.title || 'Generated Content',
                         created_at: new Date().toISOString(),
                         source_url: item.url || 'Unknown',
-                        content_type: contentType,
+                        content_type: itemContentType,
                         processing_time: processingTime
                     });
                 });
@@ -1780,15 +1788,25 @@ async function pollBatchJobStatus(jobId) {
                 // 🚨 데이터 동기화 개선
                 // sessionContent 업데이트
                 if (result.data.results && result.data.results.length > 0) {
-                    sessionContent = result.data.results.map((item, index) => ({
-                        id: `batch_${jobId}_${index}`,
-                        title: item.filename || `생성된 콘텐츠 ${index + 1}`,
-                        content: item.content || '',
-                        content_type: item.content_type || 'standard',
-                        filename: item.filename,
-                        created_at: new Date().toISOString(),
-                        success: item.success
-                    }));
+                    sessionContent = result.data.results.map((item, index) => {
+                        // content_type 확인 및 로깅
+                        const finalContentType = item.content_type || 'standard';
+                        console.log(`📊 [pollBatchJobStatus] 콘텐츠 ${index} 타입:`, {
+                            item_content_type: item.content_type,
+                            final: finalContentType,
+                            filename: item.filename
+                        });
+                        
+                        return {
+                            id: `batch_${jobId}_${index}`,
+                            title: item.filename || `생성된 콘텐츠 ${index + 1}`,
+                            content: item.content || '',
+                            content_type: finalContentType,
+                            filename: item.filename,
+                            created_at: new Date().toISOString(),
+                            success: item.success
+                        };
+                    });
                     console.log('✅ sessionContent 업데이트 완료:', sessionContent.length);
                 }
                 
@@ -1867,6 +1885,13 @@ function displaySessionContent() {
     );
     
     contentListElement.innerHTML = sortedContent.map((item, index) => {
+        // 디버깅: content_type 확인
+        console.log(`📋 콘텐츠 ${index}:`, {
+            id: item.id,
+            content_type: item.content_type,
+            title: item.title
+        });
+        
         // 콘텐츠 미리보기 (첫 280자, 더 나은 처리)
         const contentPreview = item.content ? 
             item.content.substring(0, 280)

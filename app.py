@@ -801,7 +801,7 @@ def batch_generate():
                         'content': content,
                         'filename': result['output_file'].name,
                         'timestamp': result['timestamp'],
-                        'content_type': result['content_type'],
+                        'content_type': result.get('content_type', content_type),  # 백엔드에서 content_type 보장
                         'output_file': str(result['output_file'])
                     })
                 else:
