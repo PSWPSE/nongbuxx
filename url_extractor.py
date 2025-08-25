@@ -410,6 +410,41 @@ class OptimizedNewsExtractor:
             r"\d+.*and \d+.*risky",  # 2 Good and 1 Risky
             r"\d+.*and \d+.*avoid",  # 3 Buy and 2 Avoid
             r"\d+.*but \d+",  # 5 Winners but 2 Losers
+            
+            # 11. 과장된 형용사 + 투자 권유
+            r"\d+\s+(phenomenal|amazing|incredible|unbelievable|extraordinary|fantastic|spectacular|outstanding|remarkable|exceptional)",  # 3 Phenomenal Stocks
+            r"(phenomenal|amazing|incredible|unbelievable|extraordinary|fantastic|spectacular|outstanding|remarkable|exceptional).*stocks.*buy",  # Phenomenal Stocks to Buy
+            
+            # 12. 즉시 구매 권유 패턴
+            r"buy.*right now",  # Buy Right Now
+            r"buy.*now",  # Buy Now
+            r"buy.*immediately",  # Buy Immediately
+            r"buy.*today",  # Buy Today
+            r"buy.*asap",  # Buy ASAP
+            r"must buy.*now",  # Must Buy Now
+            r"should buy.*now",  # Should Buy Now
+            
+            # 13. 비현실적 가격 예측 (의문형)
+            r"can .* hit \$?\d+",  # Can Bitcoin Hit $600,000?
+            r"will .* reach \$?\d+",  # Will Tesla Reach $1000?
+            r"could .* hit \$?\d+",  # Could Ethereum Hit $10,000?
+            r"might .* reach \$?\d+",  # Might Apple Reach $500?
+            r"can .* reach \$?\d+",  # Can Stock Reach $X?
+            r"will .* hit \$?\d+",  # Will Stock Hit $X?
+            
+            # 14. 극단적 가격 목표 패턴
+            r"\$?\d{3,},\d{3}",  # $600,000 같은 큰 숫자
+            r"to \$?\d{4,}",  # to $10000 이상
+            r"hit.*\d{3,}%",  # hit 500% 같은 극단적 퍼센트
+            r"surge.*\d{3,}%",  # surge 1000%
+            r"soar.*\d{3,}%",  # soar 500%
+            
+            # 15. 클릭베이트 질문 패턴
+            r"^can .*\?$",  # Can ... ? 로 시작하고 끝나는 제목
+            r"^will .*\?$",  # Will ... ? 로 시작하고 끝나는 제목
+            r"^should you .*\?$",  # Should You ... ?
+            r"^is this .*\?$",  # Is This ... ?
+            r"^are these .*\?$",  # Are These ... ?
         ]
         
         # 패턴 매칭 검사
@@ -427,6 +462,18 @@ class OptimizedNewsExtractor:
         
         # 추가 조건: 숫자로 시작하고 "Stocks"가 포함된 제목
         if re.match(r"^\d+\s+\w+\s+stocks", title_lower):
+            return True
+        
+        # 추가 조건: 과장된 형용사로 시작하는 주식 추천
+        if re.search(r"(phenomenal|amazing|incredible|unbelievable|extraordinary|fantastic|spectacular).*stocks", title_lower):
+            return True
+        
+        # 추가 조건: 극단적인 가격 예측 (특히 월 단위 예측)
+        if re.search(r"by (january|february|march|april|may|june|july|august|september|october|november|december)", title_lower) and "$" in title:
+            return True
+        
+        # 추가 조건: "Right Now" 긴급성 조장
+        if "right now" in title_lower:
             return True
         
         return False
