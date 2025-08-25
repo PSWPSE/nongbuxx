@@ -47,8 +47,6 @@ const elements = {
     generatedContentListSection: document.getElementById('generatedContentListSection'),
     generatedContentList: document.getElementById('generatedContentList'),
     downloadAllGeneratedBtn: document.getElementById('downloadAllGeneratedBtn'),
-
-    resetAllBtn: document.getElementById('resetAllBtn'),
     
     // API 키 설정 모달 관련 요소들
     apiSettingsBtn: document.getElementById('apiSettingsBtn'),
@@ -436,10 +434,6 @@ function initEventListeners() {
     const resetGeneratedContentBtn = document.getElementById('resetGeneratedContentBtn');
     if (resetGeneratedContentBtn) {
         resetGeneratedContentBtn.addEventListener('click', resetGeneratedContent);
-    }
-
-    if (elements.resetAllBtn) {
-        elements.resetAllBtn.addEventListener('click', resetAllFeatures);
     }
     
     // 뉴스 정렬 관련
