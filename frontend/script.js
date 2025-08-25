@@ -5701,8 +5701,10 @@ const xModalElements = {
     previewPublishBtn: document.getElementById('publishPreviewToXBtn')
 };
 
-// X 게시 모달 열기
-function openXPublishingModal(content = '', contentType = 'x') {
+// X 게시 모달 열기 - window 객체에 노출
+window.openXPublishingModal = function(content = '', contentType = 'x') {
+    console.log('🚀 X 게시 모달 열기 시도:', { content: content?.substring(0, 50), contentType });
+    
     if (xModalElements.modal) {
         xModalElements.modal.style.display = 'block';
         
@@ -5756,15 +5758,16 @@ function openXPublishingModal(content = '', contentType = 'x') {
     }
 }
 
-// X 게시 모달 닫기
-function closeXPublishingModal() {
+// X 게시 모달 닫기 - window 객체에 노출
+window.closeXPublishingModal = function() {
+    console.log('🔒 X 게시 모달 닫기');
     if (xModalElements.modal) {
         xModalElements.modal.style.display = 'none';
     }
 }
 
-// 콘텐츠 길이 업데이트
-function updateXContentLength() {
+// 콘텐츠 길이 업데이트 - window 객체에 노출
+window.updateXContentLength = function() {
     if (xModalElements.contentTextarea && xModalElements.contentLength) {
         const length = xModalElements.contentTextarea.value.length;
         xModalElements.contentLength.textContent = `${length}/280`;
@@ -5785,7 +5788,7 @@ function updateXContentLength() {
 }
 
 // X API 인증 정보 저장
-function saveXCredentials() {
+window.saveXCredentials = function() {
     const credentials = {
         consumer_key: xModalElements.consumerKey.value,
         consumer_secret: xModalElements.consumerSecret.value,
@@ -5798,8 +5801,8 @@ function saveXCredentials() {
     showToast('X API 인증 정보가 저장되었습니다.', 'success');
 }
 
-// X API 인증 정보 불러오기
-function loadXCredentials() {
+// X API 인증 정보 불러오기  
+window.loadXCredentials = function() {
     try {
         const stored = localStorage.getItem(X_API_STORAGE_KEY);
         if (stored) {
@@ -5815,7 +5818,7 @@ function loadXCredentials() {
 }
 
 // X API 인증 확인
-async function validateXCredentials() {
+window.validateXCredentials = async function() {
     try {
         const credentials = {
             consumer_key: xModalElements.consumerKey.value,
@@ -5863,8 +5866,8 @@ async function validateXCredentials() {
     }
 }
 
-// 인증 결과 표시
-function showValidationResult(message, type) {
+// 인증 결과 표시 - window 객체에 노출
+window.showValidationResult = function(message, type) {
     if (xModalElements.validationResult) {
         xModalElements.validationResult.style.display = 'block';
         xModalElements.validationResult.className = `validation-result ${type}`;
@@ -5876,8 +5879,8 @@ function showValidationResult(message, type) {
     }
 }
 
-// X에 게시
-async function publishToX() {
+// X에 게시 - window 객체에 노출
+window.publishToX = async function() {
     try {
         // 인증 확인
         const isValid = await validateXCredentials();
@@ -5996,9 +5999,26 @@ function addXPublishButton(cardElement, content, contentType) {
 
 // 이벤트 리스너 설정
 document.addEventListener('DOMContentLoaded', function() {
+    // X 게시 모달 요소 재초기화
+    console.log('🔧 X 게시 모달 초기화 시작');
+    xModalElements.modal = document.getElementById('xPublishingModalSection');
+    xModalElements.overlay = document.getElementById('xPublishingModalOverlay');
+    xModalElements.closeBtn = document.getElementById('closeXPublishingModalBtn');
+    xModalElements.cancelBtn = document.getElementById('cancelXPublishBtn');
+    xModalElements.publishBtn = document.getElementById('publishToXBtn');
+    xModalElements.contentTextarea = document.getElementById('xContentTextarea');
+    xModalElements.contentLength = document.getElementById('xContentLength');
+    xModalElements.consumerKey = document.getElementById('xConsumerKey');
+    xModalElements.consumerSecret = document.getElementById('xConsumerSecret');
+    xModalElements.accessToken = document.getElementById('xAccessToken');
+    xModalElements.accessTokenSecret = document.getElementById('xAccessTokenSecret');
+    xModalElements.validateBtn = document.getElementById('validateXCredentialsBtn');
+    xModalElements.saveBtn = document.getElementById('saveXCredentialsBtn');
+    xModalElements.loadBtn = document.getElementById('loadXCredentialsBtn');
+    
     // X 게시 모달 이벤트
     if (xModalElements.closeBtn) {
-        xModalElements.closeBtn.addEventListener('click', closeXPublishingModal);
+        xModalElements.closeBtn.addEventListener('click', window.closeXPublishingModal);
     }
     
     if (xModalElements.cancelBtn) {
@@ -6015,25 +6035,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // API 인증 관련 이벤트
     if (xModalElements.validateBtn) {
-        xModalElements.validateBtn.addEventListener('click', validateXCredentials);
+        xModalElements.validateBtn.addEventListener('click', window.validateXCredentials);
     }
     
     if (xModalElements.saveBtn) {
-        xModalElements.saveBtn.addEventListener('click', saveXCredentials);
+        xModalElements.saveBtn.addEventListener('click', window.saveXCredentials);
     }
     
     if (xModalElements.loadBtn) {
-        xModalElements.loadBtn.addEventListener('click', loadXCredentials);
+        xModalElements.loadBtn.addEventListener('click', window.loadXCredentials);
     }
     
     // 콘텐츠 길이 업데이트
     if (xModalElements.contentTextarea) {
-        xModalElements.contentTextarea.addEventListener('input', updateXContentLength);
+        xModalElements.contentTextarea.addEventListener('input', window.updateXContentLength);
     }
     
     // 게시 버튼
     if (xModalElements.publishBtn) {
-        xModalElements.publishBtn.addEventListener('click', publishToX);
+        xModalElements.publishBtn.addEventListener('click', window.publishToX);
     }
     
     // 미리보기 모달의 X 게시 버튼
