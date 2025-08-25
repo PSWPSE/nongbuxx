@@ -1,4 +1,6 @@
 // 최적화된 JavaScript - 성능 개선 및 핵심 기능 중심
+// VERSION: 2025-08-25-21:12 - X 게시 버튼 수정 완료
+console.log('🚀 NONGBUXX 스크립트 로드 - VERSION: 2025-08-25-21:12');
 // 전역 변수
 let currentJobId = null;
 let currentData = null;
