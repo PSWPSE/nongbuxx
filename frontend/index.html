@@ -724,11 +724,20 @@
                         <div class="modal-body">
                             <!-- X API 설정 섹션 -->
                             <div class="x-api-settings-section" id="xApiSettingsSection">
-                                <h4>X API 인증 정보</h4>
-                                <div class="info-box">
-                                    <i class="fas fa-info-circle"></i>
-                                    X API 키는 <a href="https://developer.twitter.com/en/portal/dashboard" target="_blank">Twitter Developer Portal</a>에서 발급받을 수 있습니다.
+                                <h4>X API 인증 정보 
+                                    <button type="button" id="toggleApiFormBtn" class="btn btn-small btn-secondary" style="float: right; font-size: 12px;">
+                                        <i class="fas fa-cog"></i> 설정
+                                    </button>
+                                </h4>
+                                <div class="info-box" id="apiStatusBox">
+                                    <i class="fas fa-check-circle" style="color: #4CAF50;"></i>
+                                    <span id="apiStatusText">인증 정보를 확인 중입니다...</span>
                                 </div>
+                                <div id="apiFormSection" style="display: none;">
+                                    <div class="info-box">
+                                        <i class="fas fa-info-circle"></i>
+                                        한 번만 입력하면 브라우저에 안전하게 저장됩니다.
+                                    </div>
                                 
                                 <div class="form-grid">
                                     <div class="form-group">

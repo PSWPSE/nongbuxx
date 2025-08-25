@@ -5708,6 +5708,9 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
     if (xModalElements.modal) {
         xModalElements.modal.style.display = 'block';
         
+        // 저장된 인증 정보 자동 불러오기
+        window.loadXCredentials();
+        
         // 콘텐츠 설정
         if (xModalElements.contentTextarea && content) {
             // 마크다운 및 HTML 태그 제거
@@ -5788,7 +5791,7 @@ window.updateXContentLength = function() {
 }
 
 // X API 인증 정보 저장
-window.saveXCredentials = function() {
+window.saveXCredentials = async function() {
     const credentials = {
         consumer_key: xModalElements.consumerKey.value,
         consumer_secret: xModalElements.consumerSecret.value,
@@ -5796,9 +5799,29 @@ window.saveXCredentials = function() {
         access_token_secret: xModalElements.accessTokenSecret.value
     };
     
+    // 저장 전 인증 확인
+    const isValid = await window.validateXCredentials();
+    if (!isValid) {
+        showToast('인증에 실패했습니다. 올바른 정보를 입력해주세요.', 'error');
+        return;
+    }
+    
     // 암호화된 형태로 저장 (실제로는 더 안전한 방법 필요)
     localStorage.setItem(X_API_STORAGE_KEY, btoa(JSON.stringify(credentials)));
-    showToast('X API 인증 정보가 저장되었습니다.', 'success');
+    showToast('X API 인증 정보가 저장되었습니다. 이제 바로 사용할 수 있습니다!', 'success');
+    
+    // API 설정 섹션 숨기기
+    const apiSection = document.querySelector('.x-api-settings-section');
+    if (apiSection) {
+        apiSection.style.display = 'none';
+    }
+    
+    // 콘텐츠 섹션 활성화
+    const contentSection = document.querySelector('.x-content-preview-section');
+    if (contentSection) {
+        contentSection.style.opacity = '1';
+        contentSection.style.pointerEvents = 'auto';
+    }
 }
 
 // X API 인증 정보 불러오기  
@@ -5811,9 +5834,41 @@ window.loadXCredentials = function() {
             if (xModalElements.consumerSecret) xModalElements.consumerSecret.value = credentials.consumer_secret || '';
             if (xModalElements.accessToken) xModalElements.accessToken.value = credentials.access_token || '';
             if (xModalElements.accessTokenSecret) xModalElements.accessTokenSecret.value = credentials.access_token_secret || '';
+            
+            // API 상태 업데이트
+            const apiStatusText = document.getElementById('apiStatusText');
+            const apiStatusBox = document.getElementById('apiStatusBox');
+            const apiFormSection = document.getElementById('apiFormSection');
+            
+            if (apiStatusText) {
+                apiStatusText.innerHTML = '✅ 인증 정보가 저장되어 있습니다. 바로 사용 가능합니다!';
+            }
+            
+            if (apiFormSection) {
+                apiFormSection.style.display = 'none';
+            }
+            
+            if (apiStatusBox) {
+                apiStatusBox.style.display = 'block';
+            }
+            
+            const contentSection = document.querySelector('.x-content-preview-section');
+            if (contentSection) {
+                contentSection.style.opacity = '1';
+                contentSection.style.pointerEvents = 'auto';
+            }
+            
+            // 자동으로 인증 확인 (백그라운드에서)
+            setTimeout(() => {
+                window.validateXCredentials();
+            }, 500);
+            
+            return true;
         }
+        return false;
     } catch (error) {
         console.error('X API 인증 정보 불러오기 실패:', error);
+        return false;
     }
 }
 
@@ -6015,6 +6070,23 @@ document.addEventListener('DOMContentLoaded', function() {
     xModalElements.validateBtn = document.getElementById('validateXCredentialsBtn');
     xModalElements.saveBtn = document.getElementById('saveXCredentialsBtn');
     xModalElements.loadBtn = document.getElementById('loadXCredentialsBtn');
+    
+    // API 설정 토글 버튼
+    const toggleApiFormBtn = document.getElementById('toggleApiFormBtn');
+    const apiFormSection = document.getElementById('apiFormSection');
+    const apiStatusBox = document.getElementById('apiStatusBox');
+    
+    if (toggleApiFormBtn) {
+        toggleApiFormBtn.addEventListener('click', function() {
+            if (apiFormSection.style.display === 'none') {
+                apiFormSection.style.display = 'block';
+                apiStatusBox.style.display = 'none';
+            } else {
+                apiFormSection.style.display = 'none';
+                apiStatusBox.style.display = 'block';
+            }
+        });
+    }
     
     // X 게시 모달 이벤트
     if (xModalElements.closeBtn) {
