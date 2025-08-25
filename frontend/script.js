@@ -430,11 +430,7 @@ function initEventListeners() {
         elements.downloadAllGeneratedBtn.addEventListener('click', downloadAllGeneratedContent);
     }
 
-    // 생성된 콘텐츠 탭 초기화 버튼 이벤트 리스너 추가
-    const resetGeneratedContentBtn = document.getElementById('resetGeneratedContentBtn');
-    if (resetGeneratedContentBtn) {
-        resetGeneratedContentBtn.addEventListener('click', resetGeneratedContent);
-    }
+
     
     // 뉴스 정렬 관련
     const newsSortSelect = document.getElementById('newsSortSelect');
@@ -2407,73 +2403,9 @@ async function downloadAllGeneratedContent() {
 
 
 
-function resetAllFeatures() {
-    // 🎯 모든 상태 및 세션 초기화
-    currentJobId = null;
-    currentData = null;
-    currentBatchJobId = null;
-    currentBatchData = null;
-    extractedNews = [];
-    selectedNewsUrls = [];
-    sessionContent = []; // 세션 콘텐츠 초기화
-    
-    // 모든 섹션 숨기기 (이미 메인 뉴스 추출 섹션 표시됨)
-    hideAllSections();
-    
-    // URL 입력 필드 초기화
-    const urlInputs = document.querySelectorAll('input[name="urlInput[]"]');
-    urlInputs.forEach(input => input.value = '');
-    
-    // 추가 URL 입력 필드 제거
-    const additionalRows = document.querySelectorAll('.url-input-row:not(:first-child)');
-    additionalRows.forEach(row => row.remove());
-    
-    // 뉴스 추출 입력 필드 초기화
-    if (elements.newsCount) elements.newsCount.value = '10';
-    
-    // 메인 뉴스 추출 섹션 확실히 표시
-    showNewsExtractorSection();
-    
-    // 모든 배지 초기화
-    updateTabBadge('news-extraction', 0);
-    updateTabBadge('content-generation', 0);
-    updateTabBadge('generated-content', 0);
-    
-    // 첫 번째 탭으로 전환
-    switchTab('news-extraction');
-    
-    // 저장된 사용자 설정 초기화
-    clearUserPreferences();
-    
-    showToast('모든 기능이 초기화되었습니다. 새로운 세션을 시작합니다.', 'info');
-}
 
-function resetGeneratedContent() {
-    // 🎯 생성된 콘텐츠만 초기화 (뉴스 추출 탭 기능과 동일)
-    console.log('🔄 생성된 콘텐츠 초기화 시작');
-    
-    // 생성된 콘텐츠 관련 상태 초기화
-    currentJobId = null;
-    currentData = null;
-    currentBatchJobId = null;
-    currentBatchData = null;
-    sessionContent = []; // 세션 콘텐츠 초기화
-    
-    // 생성된 콘텐츠 배지 초기화
-    updateTabBadge('generated-content', 0);
-    
-    // 생성된 콘텐츠 목록 초기화
-    updateGeneratedContentBadge();
-    
-    // 뉴스 추출 탭으로 이동 (뉴스 추출 탭 초기화 기능과 동일)
-    switchTab('news-extraction');
-    
-    // 뉴스 추출 섹션 표시
-    showNewsExtractorSection();
-    
-    console.log('✅ 생성된 콘텐츠 초기화 완료 - 뉴스 추출 탭으로 이동');
-    showToast('생성된 콘텐츠가 초기화되었습니다. 뉴스 추출 탭으로 이동합니다.', 'info');
-}
+
+
 
 // 파일 다운로드 및 복사 함수
 async function downloadFile() {
