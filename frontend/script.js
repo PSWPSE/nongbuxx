@@ -4773,8 +4773,8 @@ async function copySessionContent(index) {
             lines.forEach(line => {
                 const trimmedLine = line.trim();
                 
-                // 제목 (이모지로 시작)
-                if (!title && /^[🚨📈📊🎯💡🚀🔍📌⚡️🌟💰📱🏆🎮🌍🛡️]/.test(trimmedLine)) {
+                // 제목 (다양한 이모지로 시작)
+                if (!title && /^[🚨📈📉📊💰💵💴💶🏢🏭🛍️🏦🚀💡🔬🤖💻⚠️🔥💥🇺🇸🇨🇳🇯🇵🇰🇷🇪🇺🎯⚡🌍📱🏆🎮🛡️📌🔍🌟]/.test(trimmedLine)) {
                     if (trimmedLine.includes('(출처:')) {
                         title = trimmedLine.split('(출처:')[0].trim();
                         source = '(출처:' + trimmedLine.split('(출처:')[1];
@@ -5561,8 +5561,8 @@ async function copyContent(contentId) {
             lines.forEach(line => {
                 const trimmedLine = line.trim();
                 
-                // 제목 (이모지로 시작)
-                if (!title && /^[🚨📈📊🎯💡🚀🔍📌⚡️🌟💰📱🏆🎮🌍🛡️]/.test(trimmedLine)) {
+                // 제목 (다양한 이모지로 시작)
+                if (!title && /^[🚨📈📉📊💰💵💴💶🏢🏭🛍️🏦🚀💡🔬🤖💻⚠️🔥💥🇺🇸🇨🇳🇯🇵🇰🇷🇪🇺🎯⚡🌍📱🏆🎮🛡️📌🔍🌟]/.test(trimmedLine)) {
                     if (trimmedLine.includes('(출처:')) {
                         title = trimmedLine.split('(출처:')[0].trim();
                         source = '(출처:' + trimmedLine.split('(출처:')[1];
@@ -6127,8 +6127,8 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
             lines.forEach(line => {
                 const trimmedLine = line.trim();
                 
-                // 제목 (이모지로 시작)
-                if (!title && /^[🚨📈📊🎯💡🚀🔍📌⚡️🌟💰📱🏆🎮🌍🛡️]/.test(trimmedLine)) {
+                // 제목 (다양한 이모지로 시작)
+                if (!title && /^[🚨📈📉📊💰💵💴💶🏢🏭🛍️🏦🚀💡🔬🤖💻⚠️🔥💥🇺🇸🇨🇳🇯🇵🇰🇷🇪🇺🎯⚡🌍📱🏆🎮🛡️📌🔍🌟]/.test(trimmedLine)) {
                     if (trimmedLine.includes('(출처:')) {
                         title = trimmedLine.split('(출처:')[0].trim();
                         source = '(출처:' + trimmedLine.split('(출처:')[1];
