@@ -4749,7 +4749,24 @@ async function copySessionContent(index) {
     }
     
     try {
-        await navigator.clipboard.writeText(item.content);
+        // 콘텐츠가 이미 포맷팅되어 있는지 확인
+        let formattedContent = item.content;
+        
+        // 줄바꿈이 제대로 없는 경우 포맷팅 추가
+        if (!formattedContent.includes('\n\n')) {
+            // ▶ 앞뒤로 줄바꿈 추가
+            formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n\n$2');
+            formattedContent = formattedContent.replace(/(▶[^\n]+)/g, '$1\n');
+            
+            // 불렛포인트 줄바꿈
+            formattedContent = formattedContent.replace(/([:\n])\s*(•)/g, '$1\n$2');
+            formattedContent = formattedContent.replace(/(•[^•\n]+)(?=•)/g, '$1\n');
+            
+            // 해시태그 앞 줄바꿈
+            formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
+        }
+        
+        await navigator.clipboard.writeText(formattedContent);
         showToast('클립보드에 복사되었습니다!', 'success');
     } catch (error) {
         console.error('복사 에러:', error);
@@ -5065,7 +5082,24 @@ async function copyContentForced(filename) {
         const response = await fetch(`${API_BASE_URL}/api/generated-content/${filename}`);
         const result = await response.json();
         if (result.success) {
-            await navigator.clipboard.writeText(result.data.content);
+            // 콘텐츠가 이미 포맷팅되어 있는지 확인
+            let formattedContent = result.data.content;
+            
+            // 줄바꿈이 제대로 없는 경우 포맷팅 추가
+            if (!formattedContent.includes('\n\n')) {
+                // ▶ 앞뒤로 줄바꿈 추가
+                formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n\n$2');
+                formattedContent = formattedContent.replace(/(▶[^\n]+)/g, '$1\n');
+                
+                // 불렛포인트 줄바꿈
+                formattedContent = formattedContent.replace(/([:\n])\s*(•)/g, '$1\n$2');
+                formattedContent = formattedContent.replace(/(•[^•\n]+)(?=•)/g, '$1\n');
+                
+                // 해시태그 앞 줄바꿈
+                formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
+            }
+            
+            await navigator.clipboard.writeText(formattedContent);
             showToast('클립보드에 복사되었습니다!', 'success');
         }
     } catch (error) {
@@ -5429,7 +5463,24 @@ async function copyContent(contentId) {
     }
     
     try {
-        await navigator.clipboard.writeText(content.content);
+        // 콘텐츠가 이미 포맷팅되어 있는지 확인
+        let formattedContent = content.content;
+        
+        // 줄바꿈이 제대로 없는 경우 포맷팅 추가
+        if (!formattedContent.includes('\n\n')) {
+            // ▶ 앞뒤로 줄바꿈 추가
+            formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n\n$2');
+            formattedContent = formattedContent.replace(/(▶[^\n]+)/g, '$1\n');
+            
+            // 불렛포인트 줄바꿈
+            formattedContent = formattedContent.replace(/([:\n])\s*(•)/g, '$1\n$2');
+            formattedContent = formattedContent.replace(/(•[^•\n]+)(?=•)/g, '$1\n');
+            
+            // 해시태그 앞 줄바꿈
+            formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
+        }
+        
+        await navigator.clipboard.writeText(formattedContent);
         showToast('콘텐츠가 클립보드에 복사되었습니다!', 'success');
     } catch (error) {
         showToast('복사에 실패했습니다.', 'error');
