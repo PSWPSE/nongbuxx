@@ -323,11 +323,56 @@ class XPublisher:
         # 마크다운 링크 제거 (텍스트만 유지)
         content = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', content)
         
-        # (출처: ...) 패턴을 독립 라인으로
-        content = re.sub(r'([^(\n]+)\s*(\(출처:[^)]+\))', r'\1\n\2', content)
+        # X Short Form 포맷팅 적용
+        # 구조: 제목 → 출처 → 빈줄 → 본문 → 빈줄 → 해시태그
+        lines = content.split('\n')
+        title = ""
+        source = ""
+        body_lines = []
+        hashtags = ""
         
-        # 과도한 줄바꿈 정리 (최대 1줄)
-        content = re.sub(r'\n{2,}', '\n', content)
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # 제목 (이모지로 시작)
+            if not title and any(line.startswith(emoji) for emoji in ['🚨', '📈', '📊', '🎯', '💡', '🚀', '🔍', '📌', '⚡️', '🌟', '💰', '📱', '🏆', '🎮', '🌍', '🛡️']):
+                if '(출처:' in line:
+                    title = line.split('(출처:')[0].strip()
+                    source = '(출처:' + line.split('(출처:')[1]
+                else:
+                    title = line
+            # 출처
+            elif not source and '(출처:' in line:
+                source = line
+            # 해시태그
+            elif line.startswith('#') and line.count('#') >= 2:
+                hashtags = line
+            # 불렛 포인트나 섹션 구분자
+            elif line.startswith('•') or line.startswith('▶'):
+                body_lines.append(line)
+            # 기타 내용
+            elif not title:
+                title = line
+            elif not line.startswith('#'):
+                body_lines.append(line)
+        
+        # 재구성
+        parts = []
+        if title:
+            parts.append(title)
+        if source:
+            parts.append(source)
+            parts.append("")  # 출처 다음 빈 줄
+        if body_lines:
+            parts.extend(body_lines)
+        if hashtags:
+            if parts and parts[-1].strip() != "":
+                parts.append("")  # 해시태그 앞 빈 줄
+            parts.append(hashtags)
+        
+        content = '\n'.join(parts)
         
         # 불필요한 공백 제거
         content = content.strip()
