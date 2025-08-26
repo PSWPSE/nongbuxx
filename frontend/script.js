@@ -1662,11 +1662,34 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                 
                 // 성공한 결과만 세션 콘텐츠에 추가
                 const successfulResults = result.data.results.filter(item => item.success);
+                const failedResults = result.data.results.filter(item => !item.success);
+                
                 console.log('🔍 [batch-generate] 생성 결과:', {
                     전체결과: result.data.results.length,
                     성공결과: successfulResults.length,
+                    실패결과: failedResults.length,
                     기존sessionContent: sessionContent.length
                 });
+                
+                // 실패한 결과 상세 로그 및 사용자 알림
+                if (failedResults.length > 0) {
+                    console.error('❌ 실패한 콘텐츠 생성:', failedResults.map(item => ({
+                        url: item.url,
+                        error: item.error || item.message || '알 수 없는 오류'
+                    })));
+                    
+                    // 사용자에게 실패 알림
+                    const failedUrls = failedResults.map(item => {
+                        const errorMsg = item.error || item.message || '알 수 없는 오류';
+                        return `• ${item.url}: ${errorMsg}`;
+                    }).join('\n');
+                    
+                    showToast(
+                        `⚠️ ${failedResults.length}개 콘텐츠 생성 실패:\n${failedUrls}`,
+                        'warning',
+                        8000 // 8초 동안 표시
+                    );
+                }
                 
                 successfulResults.forEach((item, idx) => {
                     // content_type 결정: 백엔드에서 받은 값 우선, 없으면 함수 파라미터 사용
@@ -1718,10 +1741,19 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                         parallelInfo = ` | 병렬처리: ${stats.max_workers}개 스레드, 효율성: ${stats.parallel_efficiency}, 속도 향상: ${stats.speedup_factor}`;
                     }
                     
-                    showToast(
-                        `🚀 병렬 일괄 ${contentTypeName}콘텐츠 생성 완료! 성공: ${successCount}/${totalCount} ${performanceInfo}${parallelInfo}`, 
-                        'success'
-                    );
+                    // 성공/실패 상태에 따른 메시지
+                    const failCount = totalCount - successCount;
+                    if (failCount > 0) {
+                        showToast(
+                            `⚠️ 일괄 ${contentTypeName}콘텐츠 생성 부분 완료\n✅ 성공: ${successCount}개\n❌ 실패: ${failCount}개\n${performanceInfo}`, 
+                            'warning'
+                        );
+                    } else {
+                        showToast(
+                            `🚀 병렬 일괄 ${contentTypeName}콘텐츠 생성 완료! 성공: ${successCount}/${totalCount} ${performanceInfo}${parallelInfo}`, 
+                            'success'
+                        );
+                    }
                 }, 500);
             } else {
                 throw new Error(result.error || '서버에서 올바른 응답을 받지 못했습니다.');
