@@ -5721,23 +5721,40 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
         
         // 콘텐츠 설정
         if (xModalElements.contentTextarea && content) {
-            // 마크다운 및 HTML 태그 제거
+            // X 게시용 포맷팅
             let cleanContent = content;
-            // 마크다운 헤더 제거
+            
+            // 마크다운 헤더는 제거하되 줄바꿈 유지
             cleanContent = cleanContent.replace(/^#{1,6}\s+/gm, '');
-            // 마크다운 볼드/이탤릭 제거
+            
+            // 불렛 포인트 처리 (• 유지)
+            // 마크다운 리스트를 불렛으로 변환
+            cleanContent = cleanContent.replace(/^[\*\-]\s+/gm, '• ');
+            cleanContent = cleanContent.replace(/^\d+\.\s+/gm, '• ');
+            
+            // 볼드 텍스트는 유지하거나 대문자로 변환 (선택적)
             cleanContent = cleanContent.replace(/\*\*([^*]+)\*\*/g, '$1');
             cleanContent = cleanContent.replace(/\*([^*]+)\*/g, '$1');
             cleanContent = cleanContent.replace(/__([^_]+)__/g, '$1');
             cleanContent = cleanContent.replace(/_([^_]+)_/g, '$1');
+            
             // 마크다운 링크 제거
             cleanContent = cleanContent.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+            
             // HTML 태그 제거
             cleanContent = cleanContent.replace(/<[^>]*>/g, '');
-            // 과도한 줄바꿈 정리
+            
+            // 과도한 줄바꿈 정리 (최대 2줄)
             cleanContent = cleanContent.replace(/\n{3,}/g, '\n\n');
             
-            xModalElements.contentTextarea.value = cleanContent.trim();
+            // 섹션 구분자(▶) 앞에 줄바꿈 추가로 가독성 향상
+            cleanContent = cleanContent.replace(/([^\n])(\n▶)/g, '$1\n$2');
+            
+            // 해시태그는 마지막에 위치하도록 (이미 되어있음)
+            // 앞뒤 공백 정리
+            cleanContent = cleanContent.trim();
+            
+            xModalElements.contentTextarea.value = cleanContent;
             updateXContentLength();
         }
         

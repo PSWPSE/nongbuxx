@@ -290,10 +290,23 @@ class XPublisher:
         Returns:
             포맷된 콘텐츠
         """
-        # 마크다운 제거
-        content = re.sub(r'[#\*_`~]', '', content)
+        # 마크다운 헤더 제거 (# ## ### 등)
+        content = re.sub(r'^#{1,6}\s+', '', content, flags=re.MULTILINE)
         
-        # 과도한 줄바꿈 정리
+        # 마크다운 볼드/이탤릭 제거 (내용은 유지)
+        content = re.sub(r'\*\*([^*]+)\*\*', r'\1', content)
+        content = re.sub(r'\*([^*]+)\*', r'\1', content)
+        content = re.sub(r'__([^_]+)__', r'\1', content)
+        content = re.sub(r'_([^_]+)_', r'\1', content)
+        
+        # 마크다운 코드 블록 제거
+        content = re.sub(r'```[^`]*```', '', content)
+        content = re.sub(r'`([^`]+)`', r'\1', content)
+        
+        # 마크다운 링크 제거 (텍스트만 유지)
+        content = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', content)
+        
+        # 과도한 줄바꿈 정리 (최대 2줄)
         content = re.sub(r'\n{3,}', '\n\n', content)
         
         # 불필요한 공백 제거
