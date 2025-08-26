@@ -1956,7 +1956,7 @@ function displaySessionContent() {
                             // 조건 중 하나라도 만족하면 버튼 표시
                             if (isXType || hasXInFilename || notThreadsOrBlog) {
                                 return `
-                                <button class="content-action-btn x-publish-btn" onclick="openXPublishingModal(\`${item.content ? item.content.replace(/`/g, '\\`').replace(/\$/g, '\\$') : ''}\`, '${item.content_type || 'standard'}')" title="X에 게시">
+                                <button class="content-action-btn x-publish-btn" onclick="openXPublishingModal(\`${item.content ? item.content.replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/\\n/g, '\\n') : ''}\`, '${item.content_type || 'standard'}')" title="X에 게시">
                                     <i class="fab fa-x-twitter"></i>
                                     <span>X 게시</span>
                                 </button>
@@ -2141,7 +2141,21 @@ function setupContentPreviewModalEvents(item, index) {
             publishToXBtn.onclick = () => {
                 const previewContent = document.getElementById('previewContentBody');
                 if (previewContent) {
-                    const content = previewContent.textContent || previewContent.innerText;
+                    // innerHTML을 사용하여 HTML 구조 유지
+                    let content = previewContent.innerHTML;
+                    // <br> 태그를 줄바꿈으로 변환
+                    content = content.replace(/<br\s*\/?>/gi, '\n');
+                    // <p> 태그를 줄바꿈으로 변환
+                    content = content.replace(/<\/p>\s*<p>/gi, '\n\n');
+                    content = content.replace(/<p>/gi, '');
+                    content = content.replace(/<\/p>/gi, '\n');
+                    // 나머지 HTML 태그 제거
+                    content = content.replace(/<[^>]*>/g, '');
+                    // HTML 엔티티 디코딩
+                    const textarea = document.createElement('textarea');
+                    textarea.innerHTML = content;
+                    content = textarea.value;
+                    
                     hideContentPreviewModal();
                     openXPublishingModal(content, 'x');
                 }
@@ -6127,7 +6141,21 @@ document.addEventListener('DOMContentLoaded', function() {
         xModalElements.previewPublishBtn.addEventListener('click', function() {
             const previewContent = document.getElementById('previewContentBody');
             if (previewContent) {
-                const content = previewContent.textContent || previewContent.innerText;
+                // innerHTML을 사용하여 HTML 구조 유지
+                let content = previewContent.innerHTML;
+                // <br> 태그를 줄바꿈으로 변환
+                content = content.replace(/<br\s*\/?>/gi, '\n');
+                // <p> 태그를 줄바꿈으로 변환
+                content = content.replace(/<\/p>\s*<p>/gi, '\n\n');
+                content = content.replace(/<p>/gi, '');
+                content = content.replace(/<\/p>/gi, '\n');
+                // 나머지 HTML 태그 제거
+                content = content.replace(/<[^>]*>/g, '');
+                // HTML 엔티티 디코딩
+                const textarea = document.createElement('textarea');
+                textarea.innerHTML = content;
+                content = textarea.value;
+                
                 openXPublishingModal(content, 'x');
             }
         });
