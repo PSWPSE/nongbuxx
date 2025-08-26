@@ -5744,21 +5744,36 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
         // 저장된 인증 정보 자동 불러오기
         window.loadXCredentials();
         
+        // publishBtn이 없으면 재초기화
+        if (!xModalElements.publishBtn) {
+            console.log('⚠️ publishBtn이 없어서 재초기화');
+            xModalElements.publishBtn = document.getElementById('publishToXBtn');
+        }
+        
         // 버튼 초기 상태 설정 (인증 확인 전까지 비활성화)
         if (xModalElements.publishBtn) {
             xModalElements.publishBtn.disabled = true;
+            console.log('🔒 초기 상태: publishBtn disabled = true');
+        } else {
+            console.error('❌ publishBtn을 찾을 수 없습니다!');
         }
         
         // 인증 정보가 있으면 자동으로 인증 확인 후 버튼 활성화
         setTimeout(async () => {
+            console.log('⏰ 자동 인증 확인 시작');
             if (xModalElements.consumerKey && xModalElements.consumerKey.value &&
                 xModalElements.consumerSecret && xModalElements.consumerSecret.value &&
                 xModalElements.accessToken && xModalElements.accessToken.value &&
                 xModalElements.accessTokenSecret && xModalElements.accessTokenSecret.value) {
+                console.log('🔑 인증 정보가 모두 있음, validateXCredentials 호출');
                 const isValid = await window.validateXCredentials();
+                console.log('🔐 인증 결과:', isValid);
                 if (isValid && xModalElements.publishBtn) {
                     xModalElements.publishBtn.disabled = false;
+                    console.log('🔓 최종: publishBtn disabled = false');
                 }
+            } else {
+                console.log('⚠️ 인증 정보가 부족함');
             }
         }, 100);
         
@@ -5945,6 +5960,10 @@ window.loadXCredentials = function() {
 
 // X API 인증 확인
 window.validateXCredentials = async function() {
+    console.log('🔐 validateXCredentials 시작');
+    console.log('📌 현재 publishBtn:', xModalElements.publishBtn);
+    console.log('📌 현재 publishBtn disabled:', xModalElements.publishBtn?.disabled);
+    
     try {
         const credentials = {
             consumer_key: xModalElements.consumerKey.value,
@@ -5952,6 +5971,13 @@ window.validateXCredentials = async function() {
             access_token: xModalElements.accessToken.value,
             access_token_secret: xModalElements.accessTokenSecret.value
         };
+        
+        console.log('🔑 인증 정보 존재 여부:', {
+            consumer_key: !!credentials.consumer_key,
+            consumer_secret: !!credentials.consumer_secret,
+            access_token: !!credentials.access_token,
+            access_token_secret: !!credentials.access_token_secret
+        });
         
         // 필수 필드 확인
         if (!credentials.consumer_key || !credentials.consumer_secret || 
@@ -5974,12 +6000,19 @@ window.validateXCredentials = async function() {
         
         if (result.success) {
             showValidationResult(`✅ 인증 성공! @${result.user.username}로 로그인되었습니다.`, 'success');
+            console.log('✅ 인증 성공! publishBtn 활성화 시도');
+            console.log('📌 publishBtn 존재:', !!xModalElements.publishBtn);
             if (xModalElements.publishBtn) {
                 xModalElements.publishBtn.disabled = false;
+                console.log('✅ publishBtn disabled = false 설정 완료');
+                console.log('📌 설정 후 disabled 상태:', xModalElements.publishBtn.disabled);
+            } else {
+                console.error('❌ publishBtn이 null입니다!');
             }
             return true;
         } else {
             showValidationResult(`❌ 인증 실패: ${result.error}`, 'error');
+            console.log('❌ 인증 실패! publishBtn 비활성화');
             if (xModalElements.publishBtn) {
                 xModalElements.publishBtn.disabled = true;
             }
@@ -6132,6 +6165,11 @@ document.addEventListener('DOMContentLoaded', function() {
     xModalElements.closeBtn = document.getElementById('closeXPublishingModalBtn');
     xModalElements.cancelBtn = document.getElementById('cancelXPublishBtn');
     xModalElements.publishBtn = document.getElementById('publishToXBtn');
+    
+    // 디버깅: publishBtn 확인
+    console.log('📌 publishBtn 요소:', xModalElements.publishBtn);
+    console.log('📌 publishBtn disabled 상태:', xModalElements.publishBtn?.disabled);
+    
     xModalElements.contentTextarea = document.getElementById('xContentTextarea');
     xModalElements.contentLength = document.getElementById('xContentLength');
     xModalElements.consumerKey = document.getElementById('xConsumerKey');
