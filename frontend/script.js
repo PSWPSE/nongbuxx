@@ -1955,8 +1955,14 @@ function displaySessionContent() {
                             
                             // 조건 중 하나라도 만족하면 버튼 표시
                             if (isXType || hasXInFilename || notThreadsOrBlog) {
+                                // 콘텐츠를 data 속성에 저장하여 줄바꿈 보존
+                                const encodedContent = item.content ? btoa(encodeURIComponent(item.content)) : '';
                                 return `
-                                <button class="content-action-btn x-publish-btn" onclick="openXPublishingModal(\`${item.content ? item.content.replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/\\n/g, '\\n') : ''}\`, '${item.content_type || 'standard'}')" title="X에 게시">
+                                <button class="content-action-btn x-publish-btn" 
+                                    data-content="${encodedContent}"
+                                    data-content-type="${item.content_type || 'standard'}"
+                                    onclick="handleXPublishClick(this)" 
+                                    title="X에 게시">
                                     <i class="fab fa-x-twitter"></i>
                                     <span>X 게시</span>
                                 </button>
@@ -5708,6 +5714,25 @@ const xModalElements = {
     // 미리보기 모달의 X 게시 버튼
     previewPublishBtn: document.getElementById('publishPreviewToXBtn')
 };
+
+// X 게시 버튼 클릭 핸들러
+window.handleXPublishClick = function(button) {
+    const encodedContent = button.getAttribute('data-content');
+    const contentType = button.getAttribute('data-content-type');
+    
+    // Base64 디코딩 및 URL 디코딩
+    let content = '';
+    if (encodedContent) {
+        try {
+            content = decodeURIComponent(atob(encodedContent));
+        } catch (e) {
+            console.error('콘텐츠 디코딩 실패:', e);
+            content = '';
+        }
+    }
+    
+    window.openXPublishingModal(content, contentType);
+}
 
 // X 게시 모달 열기 - window 객체에 노출
 window.openXPublishingModal = function(content = '', contentType = 'x') {
