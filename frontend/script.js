@@ -6126,7 +6126,16 @@ window.validateXCredentials = async function() {
             }
             return true;
         } else {
-            showValidationResult(`❌ 인증 실패: ${result.error}`, 'error');
+            // 429 Too Many Requests 특별 처리
+            if (response.status === 429) {
+                showValidationResult(
+                    `⏳ X API 요청 제한 초과\n15분 후에 다시 시도해주세요.\n(Rate Limit: 15분당 15회)`, 
+                    'warning'
+                );
+                console.warn('⚠️ X API Rate Limit 초과 (429)');
+            } else {
+                showValidationResult(`❌ 인증 실패: ${result.error}`, 'error');
+            }
             console.log('❌ 인증 실패! publishBtn 비활성화');
             if (xModalElements.publishBtn) {
                 xModalElements.publishBtn.disabled = true;
@@ -6205,9 +6214,21 @@ window.publishToX = async function() {
             showPublishingResult('success', result.data);
             showToast('X에 성공적으로 게시되었습니다!', 'success');
         } else {
-            // 실패 결과 표시
-            showPublishingResult('error', { error: result.error });
-            showToast(`게시 실패: ${result.error}`, 'error');
+            // 429 Too Many Requests 특별 처리
+            if (response.status === 429) {
+                showPublishingResult('error', { 
+                    error: 'X API 요청 제한 초과. 15분 후에 다시 시도해주세요.' 
+                });
+                showToast(
+                    '⏳ X API 요청 제한 초과\n15분 후에 다시 시도해주세요.', 
+                    'warning',
+                    10000 // 10초 동안 표시
+                );
+            } else {
+                // 실패 결과 표시
+                showPublishingResult('error', { error: result.error });
+                showToast(`게시 실패: ${result.error}`, 'error');
+            }
         }
         
         // 진행 상태 숨기기

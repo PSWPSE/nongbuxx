@@ -82,11 +82,28 @@ class XPublisher:
                 }
                 
         except Exception as e:
-            logger.error(f"인증 확인 실패: {str(e)}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            error_msg = str(e)
+            logger.error(f"인증 확인 실패: {error_msg}")
+            
+            # 429 Too Many Requests 처리
+            if '429' in error_msg or 'Too Many Requests' in error_msg:
+                return {
+                    'success': False,
+                    'error': 'X API 요청 제한에 도달했습니다. 15분 후에 다시 시도해주세요.',
+                    'code': 'RATE_LIMIT_EXCEEDED'
+                }
+            # 401 Unauthorized
+            elif '401' in error_msg or 'Unauthorized' in error_msg:
+                return {
+                    'success': False,
+                    'error': 'X API 인증에 실패했습니다. API 키를 확인해주세요.',
+                    'code': 'UNAUTHORIZED'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': error_msg
+                }
     
     def post_tweet(self, text: str, media_ids: Optional[List[str]] = None) -> Dict:
         """

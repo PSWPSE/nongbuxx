@@ -575,11 +575,18 @@ def validate_x_credentials():
                 'message': f"인증 성공! @{result['user']['username']}로 로그인되었습니다"
             }), 200
         else:
+            error_code = result.get('code', 'AUTH_FAILED')
+            status_code = 401  # 기본값
+            
+            # Rate limit 에러는 429 반환
+            if error_code == 'RATE_LIMIT_EXCEEDED':
+                status_code = 429
+            
             return jsonify({
                 'success': False,
                 'error': result.get('error', 'X API 인증에 실패했습니다'),
-                'code': 'AUTH_FAILED'
-            }), 401
+                'code': error_code
+            }), status_code
             
     except Exception as e:
         logger.error(f"X 인증 검증 오류: {str(e)}")
