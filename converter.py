@@ -74,7 +74,14 @@ class NewsConverter:
         text = text.replace(', type=\'text\')', '')
         text = text.strip('"\'')
         text = text.lstrip('\n')
+        
+        # 줄바꿈 처리 개선 - ▶ 앞에 줄바꿈 추가
         text = text.replace('\\n', '\n')
+        text = re.sub(r'([^\n])(▶)', r'\1\n\n\2', text)  # ▶ 앞에 줄바꿈 추가
+        text = re.sub(r'(:)(\s*)(•)', r'\1\n\2\3', text)  # 콜론 뒤 불렛포인트 앞에 줄바꿈
+        text = re.sub(r'(•[^\n•]+)(•)', r'\1\n\2', text)  # 불렛포인트 간 줄바꿈
+        text = re.sub(r'([^#\n])(#[^\s])', r'\1\n\n\2', text)  # 해시태그 앞 줄바꿈
+        
         # Remove triple backticks that might be in the response
         text = text.strip()
         if text.startswith('```') and text.endswith('```'):
