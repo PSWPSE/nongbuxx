@@ -5946,7 +5946,7 @@ window.showValidationResult = function(message, type) {
 window.publishToX = async function() {
     try {
         // 인증 확인
-        const isValid = await validateXCredentials();
+        const isValid = await window.validateXCredentials();
         if (!isValid) {
             showToast('X API 인증에 실패했습니다. 인증 정보를 확인해주세요.', 'error');
             return;
