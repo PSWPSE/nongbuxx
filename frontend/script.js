@@ -2993,15 +2993,32 @@ function clearUserPreferences() {
 
 async function loadAvailableSources() {
     try {
-        // 계층적 구조 정보 로드
-        const structuredResponse = await fetch(`${API_BASE_URL}/api/sources/structured`);
+        // 계층적 구조 정보 로드 - extractable 엔드포인트 사용
+        const structuredResponse = await fetch(`${API_BASE_URL}/api/sources/extractable`);
         const structuredResult = await structuredResponse.json();
         
-        if (structuredResult.success) {
+        if (structuredResult.success && structuredResult.data) {
             // 전역 변수에 저장
-            availableSources = structuredResult.data.extractable_sources;
-            parentSources = structuredResult.data.parent_sources;
-            standaloneSources = structuredResult.data.standalone_sources;
+            // extractable 엔드포인트는 sources 배열을 직접 반환
+            availableSources = structuredResult.data.sources || structuredResult.data || [];
+            
+            // 부모 출처와 독립 출처 분류
+            parentSources = [];
+            standaloneSources = [];
+            
+            // availableSources에서 부모/독립 출처 분류
+            const parentIds = new Set();
+            availableSources.forEach(source => {
+                if (source.parent_id) {
+                    parentIds.add(source.parent_id);
+                }
+            });
+            
+            availableSources.forEach(source => {
+                if (!source.parent_id && !parentIds.has(source.id)) {
+                    standaloneSources.push(source);
+                }
+            });
             
             // 🚀 선택된 출처 ID 유효성 검증 및 동기화
             const validSelectedIds = selectedSourceIds.filter(id => 
@@ -6047,8 +6064,8 @@ const xModalElements = {
     contentLength: document.getElementById('xContentLength'),
     publishAsThread: document.getElementById('publishAsThreadCheckbox'),
     
-    // 게시 버튼
-    publishBtn: document.getElementById('publishToXBtn'),
+    // 게시 버튼 (나중에 초기화)
+    publishBtn: null,
     
     // 진행 상태
     progressSection: document.getElementById('xPublishingProgress'),
