@@ -1234,6 +1234,11 @@ function showNewsSelectionSection() {
 function displayNewsList() {
     if (!elements.newsList) return;
     
+    console.log('📰 뉴스 리스트 표시 시작:', {
+        전체뉴스개수: extractedNews.length,
+        뉴스목록: extractedNews.map(n => ({title: n.title, url: n.url}))
+    });
+    
     // 현재 정렬 옵션 가져오기
     const sortOption = document.getElementById('newsSortSelect')?.value || 'newest';
     
@@ -1345,6 +1350,11 @@ function restoreNewsSelection() {
 
 function toggleNewsSelectionByUrl(url) {
     const newsItem = elements.newsList.querySelector(`[data-url="${url}"]`);
+    if (!newsItem) {
+        console.error('뉴스 아이템을 찾을 수 없음:', url);
+        return;
+    }
+    
     const checkbox = newsItem.querySelector('.news-checkbox');
     
     if (selectedNewsUrls.includes(url)) {
@@ -1353,8 +1363,10 @@ function toggleNewsSelectionByUrl(url) {
         newsItem.classList.remove('selected');
         checkbox.classList.remove('checked');
     } else {
-        // 선택
-        selectedNewsUrls.push(url);
+        // 중복 체크
+        if (!selectedNewsUrls.includes(url)) {
+            selectedNewsUrls.push(url);
+        }
         newsItem.classList.add('selected');
         checkbox.classList.add('checked');
     }
@@ -1548,6 +1560,18 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
         return;
     }
     
+    // 중복 제거
+    const uniqueUrls = [...new Set(selectedNewsUrls)];
+    console.log('🔍 선택된 URL 확인:', {
+        원본개수: selectedNewsUrls.length,
+        중복제거후: uniqueUrls.length,
+        urls: uniqueUrls
+    });
+    
+    if (uniqueUrls.length !== selectedNewsUrls.length) {
+        console.warn('⚠️ 중복된 URL이 제거되었습니다');
+    }
+    
     // API 키 확인
     const apiSettings = getApiSettings();
     if (!apiSettings.provider || !apiSettings.key) {
@@ -1608,7 +1632,7 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
         try {
             // 워드프레스 형식 정보 추가
             let requestBody = {
-                urls: selectedNewsUrls,
+                urls: uniqueUrls,  // 중복 제거된 URL 사용
                 api_provider: apiSettings.provider,
                 api_key: apiSettings.key,
                 content_type: contentType
