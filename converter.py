@@ -773,7 +773,8 @@ Article: {content}"""
 
 **🚨🚨🚨 최우선 필수 규칙 - 출처 표기 🚨🚨🚨**
 ✅ **제목 다음 줄에 반드시 출처 표기**
-   - 형식: (출처: 언론사명)
+   - 형식: (출처: 언론사명) 
+   - 독립된 줄로 작성 (제목과 본문 사이)
    - 예시: 
      🚨 트럼프 관세 위협에도 주식시장이 꿈쩍 않는 이유
      (출처: Bloomberg)
@@ -842,7 +843,41 @@ Article: {content}"""
 280자 내외로 핵심을 압축하여 작성하세요. 각 문장은 불렛 포인트(•)로 시작하고 줄바꿈으로 구분하며, 간결한 명사형 종결어미(~임, ~음, ~함)를 사용하세요."""
         
         response = self.call_api(prompt, max_tokens=500)
-        cleaned_response = self.clean_response(response)
+        response_text = response if isinstance(response, str) else str(response)
+        cleaned_response = self.clean_response(response_text)
+        
+        # X Short Form 전용 포맷팅 개선
+        # (출처: ...) 패턴이 제목과 분리되어 있는지 확인
+        lines = cleaned_response.split('\n')
+        formatted_lines = []
+        
+        for i, line in enumerate(lines):
+            # 제목 라인 처리 (이모지로 시작하는 경우)
+            if i == 0 and any(line.startswith(emoji) for emoji in ['🚨', '📈', '📊', '🎯', '💡', '🚀', '🔍', '📌', '⚡️', '🌟', '💰', '📱', '🏆', '🎮', '🌍', '🛡️']):
+                # 제목에 출처가 붙어있다면 분리
+                if '(출처:' in line:
+                    title_part = line.split('(출처:')[0].strip()
+                    source_part = '(출처:' + line.split('(출처:')[1]
+                    formatted_lines.append(title_part)
+                    formatted_lines.append(source_part)
+                else:
+                    formatted_lines.append(line)
+            # 출처 라인이 제목과 붙어있는 경우 분리
+            elif '(출처:' in line and i < 3:
+                parts = line.split('(출처:')
+                if len(parts[0].strip()) > 0:
+                    formatted_lines.append(parts[0].strip())
+                formatted_lines.append('(출처:' + parts[1])
+            # 불렛 포인트 라인 처리
+            elif line.strip().startswith('•'):
+                formatted_lines.append(line)
+            else:
+                formatted_lines.append(line)
+        
+        cleaned_response = '\n'.join(formatted_lines)
+        
+        # 단락 간격 조정 (2줄 → 1줄)
+        cleaned_response = re.sub(r'\n{2,}', '\n', cleaned_response)
         
         # 280자 체크 및 필요시 자동 조정
         char_count = len(cleaned_response)
@@ -861,7 +896,7 @@ Article: {content}"""
             if hashtag_line:
                 # 본문만 축약
                 shortened_main = '\n'.join(main_content)[:250] + '...'
-                cleaned_response = shortened_main + '\n\n' + hashtag_line
+                cleaned_response = shortened_main + '\n' + hashtag_line
             else:
                 cleaned_response = cleaned_response[:280] + '...'
         
