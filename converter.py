@@ -847,37 +847,66 @@ Article: {content}"""
         cleaned_response = self.clean_response(response_text)
         
         # X Short Form 전용 포맷팅 개선
-        # (출처: ...) 패턴이 제목과 분리되어 있는지 확인
+        # 구조: 제목 → 출처 → 빈줄 → 본문 → 빈줄 → 해시태그
+        
+        # 먼저 각 구성요소를 분리
+        title = ""
+        source = ""
+        body_lines = []
+        hashtags = ""
+        
         lines = cleaned_response.split('\n')
-        formatted_lines = []
         
         for i, line in enumerate(lines):
-            # 제목 라인 처리 (이모지로 시작하는 경우)
-            if i == 0 and any(line.startswith(emoji) for emoji in ['🚨', '📈', '📊', '🎯', '💡', '🚀', '🔍', '📌', '⚡️', '🌟', '💰', '📱', '🏆', '🎮', '🌍', '🛡️']):
+            line = line.strip()
+            if not line:
+                continue
+                
+            # 제목 (이모지로 시작하는 첫 줄)
+            if not title and any(line.startswith(emoji) for emoji in ['🚨', '📈', '📊', '🎯', '💡', '🚀', '🔍', '📌', '⚡️', '🌟', '💰', '📱', '🏆', '🎮', '🌍', '🛡️']):
                 # 제목에 출처가 붙어있다면 분리
                 if '(출처:' in line:
-                    title_part = line.split('(출처:')[0].strip()
-                    source_part = '(출처:' + line.split('(출처:')[1]
-                    formatted_lines.append(title_part)
-                    formatted_lines.append(source_part)
+                    title = line.split('(출처:')[0].strip()
+                    source = '(출처:' + line.split('(출처:')[1]
                 else:
-                    formatted_lines.append(line)
-            # 출처 라인이 제목과 붙어있는 경우 분리
-            elif '(출처:' in line and i < 3:
-                parts = line.split('(출처:')
-                if len(parts[0].strip()) > 0:
-                    formatted_lines.append(parts[0].strip())
-                formatted_lines.append('(출처:' + parts[1])
-            # 불렛 포인트 라인 처리
-            elif line.strip().startswith('•'):
-                formatted_lines.append(line)
-            else:
-                formatted_lines.append(line)
+                    title = line
+            # 출처 라인
+            elif not source and '(출처:' in line:
+                source = line if line.startswith('(출처:') else '(출처:' + line.split('(출처:')[1]
+            # 해시태그 라인
+            elif line.startswith('#') and line.count('#') >= 2:
+                hashtags = line
+            # 불렛 포인트 본문
+            elif line.startswith('•'):
+                body_lines.append(line)
+            # 기타 본문 내용
+            elif not title:
+                title = line
+            elif not line.startswith('#'):
+                body_lines.append(line)
         
-        cleaned_response = '\n'.join(formatted_lines)
+        # 포맷팅된 콘텐츠 재구성
+        formatted_parts = []
         
-        # 단락 간격 조정 (2줄 → 1줄)
-        cleaned_response = re.sub(r'\n{2,}', '\n', cleaned_response)
+        # 1. 제목
+        if title:
+            formatted_parts.append(title)
+        
+        # 2. 출처 (제목 바로 다음 줄)
+        if source:
+            formatted_parts.append(source)
+        
+        # 3. 빈 줄 + 본문
+        if body_lines:
+            formatted_parts.append("")  # 빈 줄
+            formatted_parts.extend(body_lines)
+        
+        # 4. 빈 줄 + 해시태그
+        if hashtags:
+            formatted_parts.append("")  # 빈 줄
+            formatted_parts.append(hashtags)
+        
+        cleaned_response = '\n'.join(formatted_parts)
         
         # 280자 체크 및 필요시 자동 조정
         char_count = len(cleaned_response)
