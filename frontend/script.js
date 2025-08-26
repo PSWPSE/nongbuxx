@@ -8,7 +8,20 @@ let currentBatchJobId = null;
 let currentBatchData = null;
 let extractedNews = [];
 let selectedNewsUrls = [];
-let sessionContent = []; // 현재 세션에서 생성한 콘텐츠만 관리
+let _sessionContent = []; // 내부 저장소
+// sessionContent getter/setter로 변경 추적
+let sessionContent = new Proxy(_sessionContent, {
+    set: function(target, property, value) {
+        if (property === 'length' && value === 0) {
+            console.warn('⚠️ sessionContent가 초기화되려고 함!', new Error().stack);
+        }
+        target[property] = value;
+        return true;
+    },
+    get: function(target, property) {
+        return target[property];
+    }
+});
 let currentTheme = 'auto';
 let urlInputCount = 1;
 const maxUrlInputs = 20;
@@ -1655,17 +1668,20 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                     기존sessionContent: sessionContent.length
                 });
                 
-                successfulResults.forEach(item => {
+                successfulResults.forEach((item, idx) => {
                     // content_type 결정: 백엔드에서 받은 값 우선, 없으면 함수 파라미터 사용
                     const itemContentType = item.content_type || contentType || 'standard';
-                    console.log('📊 콘텐츠 타입 확인:', {
+                    const newId = `content_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    console.log(`📊 [${idx + 1}/${successfulResults.length}] 콘텐츠 추가 중:`, {
+                        새ID: newId,
                         item_content_type: item.content_type,
                         param_contentType: contentType,
                         final: itemContentType
                     });
                     
                     sessionContent.push({
-                        id: `content_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        id: newId,
                         content: item.content,
                         title: item.title || 'Generated Content',
                         created_at: new Date().toISOString(),
@@ -1858,7 +1874,11 @@ async function pollBatchJobStatus(jobId) {
 // 복잡한 서버 로드 기능 제거됨 - 현재 세션만 관리
 
 function showSessionContent() {
-    console.log('📋 세션 콘텐츠 표시');
+    console.log('📋 [showSessionContent] 호출됨:', {
+        호출시점: new Date().toISOString(),
+        현재sessionContent개수: sessionContent.length,
+        호출스택: new Error().stack.split('\n')[2]
+    });
     hideAllSections();
     const contentSection = document.getElementById('generatedContentListSection');
     if (contentSection) {
@@ -2001,6 +2021,18 @@ function displaySessionContent() {
         렌더링된개수: sortedContent.length,
         HTML생성완료: true
     });
+    
+    // 실제로 DOM에 렌더링된 개수 확인
+    setTimeout(() => {
+        const renderedItems = document.querySelectorAll('#generatedContentList .content-item');
+        console.log('🔍 [DOM 확인] 실제 화면에 표시된 콘텐츠 개수:', renderedItems.length);
+        if (renderedItems.length !== sortedContent.length) {
+            console.error('⚠️ 렌더링 불일치!', {
+                예상개수: sortedContent.length,
+                실제개수: renderedItems.length
+            });
+        }
+    }, 100);
 }
 
 // 콘텐츠 미리보기 모달 함수들
