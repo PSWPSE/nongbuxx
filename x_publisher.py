@@ -323,8 +323,11 @@ class XPublisher:
         # 마크다운 링크 제거 (텍스트만 유지)
         content = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', content)
         
-        # 과도한 줄바꿈 정리 (최대 2줄)
-        content = re.sub(r'\n{3,}', '\n\n', content)
+        # (출처: ...) 패턴을 독립 라인으로
+        content = re.sub(r'([^(\n]+)\s*(\(출처:[^)]+\))', r'\1\n\2', content)
+        
+        # 과도한 줄바꿈 정리 (최대 1줄)
+        content = re.sub(r'\n{2,}', '\n', content)
         
         # 불필요한 공백 제거
         content = content.strip()

@@ -4753,17 +4753,20 @@ async function copySessionContent(index) {
         let formattedContent = item.content;
         
         // 줄바꿈이 제대로 없는 경우 포맷팅 추가
-        if (!formattedContent.includes('\n\n')) {
-            // ▶ 앞뒤로 줄바꿈 추가
-            formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n\n$2');
+        if (!formattedContent.includes('\n')) {
+            // (출처: ...) 패턴을 독립 라인으로
+            formattedContent = formattedContent.replace(/([^(\n]+)\s*(\(출처:[^)]+\))/g, '$1\n$2');
+            
+            // ▶ 앞뒤로 줄바꿈 추가 (1줄만)
+            formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n$2');
             formattedContent = formattedContent.replace(/(▶[^\n]+)/g, '$1\n');
             
             // 불렛포인트 줄바꿈
             formattedContent = formattedContent.replace(/([:\n])\s*(•)/g, '$1\n$2');
             formattedContent = formattedContent.replace(/(•[^•\n]+)(?=•)/g, '$1\n');
             
-            // 해시태그 앞 줄바꿈
-            formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
+            // 해시태그 앞 줄바꿈 (1줄만)
+            formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n$3');
         }
         
         await navigator.clipboard.writeText(formattedContent);
@@ -5467,17 +5470,20 @@ async function copyContent(contentId) {
         let formattedContent = content.content;
         
         // 줄바꿈이 제대로 없는 경우 포맷팅 추가
-        if (!formattedContent.includes('\n\n')) {
-            // ▶ 앞뒤로 줄바꿈 추가
-            formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n\n$2');
+        if (!formattedContent.includes('\n')) {
+            // (출처: ...) 패턴을 독립 라인으로
+            formattedContent = formattedContent.replace(/([^(\n]+)\s*(\(출처:[^)]+\))/g, '$1\n$2');
+            
+            // ▶ 앞뒤로 줄바꿈 추가 (1줄만)
+            formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n$2');
             formattedContent = formattedContent.replace(/(▶[^\n]+)/g, '$1\n');
             
             // 불렛포인트 줄바꿈
             formattedContent = formattedContent.replace(/([:\n])\s*(•)/g, '$1\n$2');
             formattedContent = formattedContent.replace(/(•[^•\n]+)(?=•)/g, '$1\n');
             
-            // 해시태그 앞 줄바꿈
-            formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
+            // 해시태그 앞 줄바꿈 (1줄만)
+            formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n$3');
         }
         
         await navigator.clipboard.writeText(formattedContent);
@@ -5968,8 +5974,11 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
             // HTML 태그 제거
             cleanContent = cleanContent.replace(/<[^>]*>/g, '');
             
-            // 과도한 줄바꿈 정리 (최대 2줄)
-            cleanContent = cleanContent.replace(/\n{3,}/g, '\n\n');
+            // (출처: ...) 패턴을 독립 라인으로
+            cleanContent = cleanContent.replace(/([^(\n]+)\s*(\(출처:[^)]+\))/g, '$1\n$2');
+            
+            // 과도한 줄바꿈 정리 (최대 1줄)
+            cleanContent = cleanContent.replace(/\n{2,}/g, '\n');
             
             // 섹션 구분자(▶) 앞에 줄바꿈 추가로 가독성 향상
             cleanContent = cleanContent.replace(/([^\n])(\n▶)/g, '$1\n$2');
