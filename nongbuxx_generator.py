@@ -225,6 +225,14 @@ class NongbuxxGenerator:
             if field in cleaned_content and cleaned_content[field]:
                 content = cleaned_content[field]
                 
+                # content가 딕셔너리인 경우 text 필드 추출
+                if field == 'content' and isinstance(content, dict):
+                    content = content.get('text', '')
+                
+                # 문자열이 아닌 경우 건너뛰기
+                if not isinstance(content, str):
+                    continue
+                
                 # 정규식 패턴으로 완전 제거
                 for pattern in removal_patterns:
                     content = re.sub(pattern, '', content, flags=re.IGNORECASE)
@@ -233,7 +241,11 @@ class NongbuxxGenerator:
                 content = re.sub(r'\s+', ' ', content)
                 content = content.strip()
                 
-                cleaned_content[field] = content
+                # content 필드가 원래 딕셔너리였으면 딕셔너리 형태로 다시 저장
+                if field == 'content' and isinstance(cleaned_content[field], dict):
+                    cleaned_content[field]['text'] = content
+                else:
+                    cleaned_content[field] = content
         
         if cleaned_content != extracted_content:
             print("🚫 Zacks/Automated Insights 관련 메시지 제거됨")
