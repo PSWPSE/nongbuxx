@@ -4755,6 +4755,10 @@ async function copySessionContent(index) {
         // X Short Form 포맷팅 개선
         // 구조: 제목 → 출처 → 빈줄 → 본문 → 빈줄 → 해시태그
         
+        // 먼저 한 줄로 붙어있는 불렛포인트들을 분리
+        formattedContent = formattedContent.replace(/(•[^•\n]+)(•)/g, '$1\n$2');
+        formattedContent = formattedContent.replace(/(•[^•\n]+)(•)/g, '$1\n$2'); // 두 번 실행
+        
         // X 타입인지 확인 (Short Form)
         const isXType = content.content_type === 'x' || content.filename?.includes('x_twitter');
         
@@ -5533,6 +5537,10 @@ async function copyContent(contentId) {
         
         // X Short Form 포맷팅 개선
         // 구조: 제목 → 출처 → 빈줄 → 본문 → 빈줄 → 해시태그
+        
+        // 먼저 한 줄로 붙어있는 불렛포인트들을 분리
+        formattedContent = formattedContent.replace(/(•[^•\n]+)(•)/g, '$1\n$2');
+        formattedContent = formattedContent.replace(/(•[^•\n]+)(•)/g, '$1\n$2'); // 두 번 실행
         
         // X 타입인지 확인 (Short Form)
         const isXType = content.content_type === 'x' || content.filename?.includes('x_twitter');

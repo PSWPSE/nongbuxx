@@ -85,7 +85,10 @@ class NewsConverter:
         text = re.sub(r'([^\n])\s*(▶)', r'\1\n\2', text)  # ▶ 앞에 1줄 줄바꿈
         text = re.sub(r'(▶[^\n]+)', r'\1\n', text)  # ▶ 뒤에 줄바꿈
         
-        # 불렛 포인트 처리
+        # 불렛 포인트 처리 - 더 강력하게
+        # 연속된 불렛포인트를 확실히 분리
+        text = re.sub(r'(•)([^•\n]+)(•)', r'\1\2\n\3', text)  # 불렛 사이 줄바꿈
+        text = re.sub(r'(•[^•\n]+)(•)', r'\1\n\2', text)  # 추가 처리
         text = re.sub(r'([:\n])\s*(•)', r'\1\n\2', text)  # 콜론이나 줄바꿈 뒤 불렛포인트
         text = re.sub(r'(•[^•\n]+)(?=•)', r'\1\n', text)  # 불렛포인트 간 줄바꿈
         
@@ -896,17 +899,24 @@ Article: {content}"""
         if source:
             formatted_parts.append(source)
         
-        # 3. 빈 줄 + 본문
+        # 3. 빈 줄 + 본문 (각 불렛포인트를 개별 줄로)
         if body_lines:
             formatted_parts.append("")  # 빈 줄
-            formatted_parts.extend(body_lines)
+            for line in body_lines:
+                # 각 불렛포인트가 확실히 새 줄에 오도록
+                if line.strip():
+                    formatted_parts.append(line.strip())
         
         # 4. 빈 줄 + 해시태그
         if hashtags:
             formatted_parts.append("")  # 빈 줄
             formatted_parts.append(hashtags)
         
+        # 줄바꿈이 확실히 적용되도록
         cleaned_response = '\n'.join(formatted_parts)
+        
+        # 혹시 남아있는 연속된 불렛포인트를 줄바꿈으로 분리
+        cleaned_response = re.sub(r'(•[^•\n]+)(•)', r'\1\n\2', cleaned_response)
         
         # 280자 체크 및 필요시 자동 조정
         char_count = len(cleaned_response)
