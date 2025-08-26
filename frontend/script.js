@@ -1649,6 +1649,12 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                 
                 // 성공한 결과만 세션 콘텐츠에 추가
                 const successfulResults = result.data.results.filter(item => item.success);
+                console.log('🔍 [batch-generate] 생성 결과:', {
+                    전체결과: result.data.results.length,
+                    성공결과: successfulResults.length,
+                    기존sessionContent: sessionContent.length
+                });
+                
                 successfulResults.forEach(item => {
                     // content_type 결정: 백엔드에서 받은 값 우선, 없으면 함수 파라미터 사용
                     const itemContentType = item.content_type || contentType || 'standard';
@@ -1667,6 +1673,11 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                         content_type: itemContentType,
                         processing_time: processingTime
                     });
+                });
+                
+                console.log('✅ [batch-generate] sessionContent 추가 완료:', {
+                    최종sessionContent개수: sessionContent.length,
+                    추가된개수: successfulResults.length
                 });
                 
                 // 배지 업데이트
@@ -1857,6 +1868,11 @@ function showSessionContent() {
 }
 
 function displaySessionContent() {
+    console.log('📋 [displaySessionContent] 시작:', {
+        sessionContent개수: sessionContent.length,
+        sessionContent내용: sessionContent
+    });
+    
     const contentListElement = document.getElementById('generatedContentList');
     if (!contentListElement) {
         console.error('❌ generatedContentList 요소 없음');
@@ -1980,6 +1996,11 @@ function displaySessionContent() {
             </div>
         `;
     }).join('');
+    
+    console.log('✅ [displaySessionContent] 렌더링 완료:', {
+        렌더링된개수: sortedContent.length,
+        HTML생성완료: true
+    });
 }
 
 // 콘텐츠 미리보기 모달 함수들
