@@ -4822,22 +4822,29 @@ async function copySessionContent(index) {
             
             formattedContent = parts.join('\n');
         } else {
-            // 기존 일반 포맷팅 (Normal Form, Blog, Threads)
-            if (!formattedContent.includes('\n')) {
-                // (출처: ...) 패턴을 독립 라인으로
-                formattedContent = formattedContent.replace(/([^(\n]+)\s*(\(출처:[^)]+\))/g, '$1\n$2');
-                
-                // ▶ 앞뒤로 줄바꿈 추가 (1줄만)
-                formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n$2');
-                formattedContent = formattedContent.replace(/(▶[^\n]+)/g, '$1\n');
-                
-                // 불렛포인트 줄바꿈
-                formattedContent = formattedContent.replace(/([:\n])\s*(•)/g, '$1\n$2');
-                formattedContent = formattedContent.replace(/(•[^•\n]+)(?=•)/g, '$1\n');
-                
-                // 해시태그 앞 줄바꿈 (1줄만)
-                formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n$3');
-            }
+            // Normal Form 포맷팅 (▶ 섹션 구분자가 있는 경우)
+            // 출처 독립 라인
+            formattedContent = formattedContent.replace(/([^(\n]+)\s*(\(출처:[^)]+\))/g, '$1\n$2');
+            
+            // ▶ 섹션 구분자 포맷팅
+            // ▶ 앞에 빈 줄 추가 (이미 없는 경우)
+            formattedContent = formattedContent.replace(/([^\n])(\n?)(▶)/g, function(match, p1, p2, p3) {
+                if (p2 === '\n') {
+                    return p1 + '\n\n' + p3;
+                } else {
+                    return p1 + '\n\n' + p3;
+                }
+            });
+            
+            // ▶ 뒤에 줄바꿈 확실히
+            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)([^\n])/g, '$1\n$2');
+            
+            // 불렛포인트 각각 새 줄에
+            formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
+            formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)$/gm, '$1 $2');
+            
+            // 해시태그 앞에 빈 줄 추가
+            formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
         }
         
         await navigator.clipboard.writeText(formattedContent);
@@ -5472,7 +5479,26 @@ function copySimpleContent(index) {
             return;
         }
         
-        navigator.clipboard.writeText(content.content).then(() => {
+        // 포맷팅 보장
+        let formattedContent = content.content;
+        
+        // Normal Form 포맷팅 처리 (▶ 섹션 구분자가 있는 경우)
+        if (formattedContent.includes('▶')) {
+            // 출처 독립 라인
+            formattedContent = formattedContent.replace(/([^(\n]+)\s*(\(출처:[^)]+\))/g, '$1\n$2');
+            
+            // ▶ 섹션 구분자 앞뒤 줄바꿈
+            formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n\n$2');
+            formattedContent = formattedContent.replace(/(▶[^\n]+)([^\n])/g, '$1\n$2');
+            
+            // 불렛포인트 줄바꿈
+            formattedContent = formattedContent.replace(/([•])\s*([^•\n]+)(?=[•])/g, '$1 $2\n');
+            
+            // 해시태그 앞 줄바꿈
+            formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
+        }
+        
+        navigator.clipboard.writeText(formattedContent).then(() => {
             showToast('콘텐츠가 클립보드에 복사되었습니다!', 'success');
         }).catch(() => {
             showToast('복사에 실패했습니다.', 'error');
@@ -5610,22 +5636,29 @@ async function copyContent(contentId) {
             
             formattedContent = parts.join('\n');
         } else {
-            // 기존 일반 포맷팅 (Normal Form, Blog, Threads)
-            if (!formattedContent.includes('\n')) {
-                // (출처: ...) 패턴을 독립 라인으로
-                formattedContent = formattedContent.replace(/([^(\n]+)\s*(\(출처:[^)]+\))/g, '$1\n$2');
-                
-                // ▶ 앞뒤로 줄바꿈 추가 (1줄만)
-                formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n$2');
-                formattedContent = formattedContent.replace(/(▶[^\n]+)/g, '$1\n');
-                
-                // 불렛포인트 줄바꿈
-                formattedContent = formattedContent.replace(/([:\n])\s*(•)/g, '$1\n$2');
-                formattedContent = formattedContent.replace(/(•[^•\n]+)(?=•)/g, '$1\n');
-                
-                // 해시태그 앞 줄바꿈 (1줄만)
-                formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n$3');
-            }
+            // Normal Form 포맷팅 (▶ 섹션 구분자가 있는 경우)
+            // 출처 독립 라인
+            formattedContent = formattedContent.replace(/([^(\n]+)\s*(\(출처:[^)]+\))/g, '$1\n$2');
+            
+            // ▶ 섹션 구분자 포맷팅
+            // ▶ 앞에 빈 줄 추가 (이미 없는 경우)
+            formattedContent = formattedContent.replace(/([^\n])(\n?)(▶)/g, function(match, p1, p2, p3) {
+                if (p2 === '\n') {
+                    return p1 + '\n\n' + p3;
+                } else {
+                    return p1 + '\n\n' + p3;
+                }
+            });
+            
+            // ▶ 뒤에 줄바꿈 확실히
+            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)([^\n])/g, '$1\n$2');
+            
+            // 불렛포인트 각각 새 줄에
+            formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
+            formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)$/gm, '$1 $2');
+            
+            // 해시태그 앞에 빈 줄 추가
+            formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
         }
         
         await navigator.clipboard.writeText(formattedContent);
