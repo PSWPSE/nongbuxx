@@ -916,8 +916,30 @@ Article: {content}"""
         # 줄바꿈이 확실히 적용되도록
         cleaned_response = '\n'.join(formatted_parts)
         
+        # 디버깅: 포맷팅 전후 상태 확인
+        print(f"[X Short Form Debug] Before final formatting:")
+        print(f"Title: {title}")
+        print(f"Source: {source}")
+        print(f"Body lines: {body_lines}")
+        print(f"Hashtags: {hashtags}")
+        print(f"Formatted parts: {formatted_parts}")
+        
         # 혹시 남아있는 연속된 불렛포인트를 줄바꿈으로 분리
         cleaned_response = re.sub(r'(•[^•\n]+)(•)', r'\1\n\2', cleaned_response)
+        
+        # 추가 포맷팅 보장 - 출처 뒤에 공백이 붙어서 불렛포인트가 이어지는 경우
+        cleaned_response = re.sub(r'(\(출처:[^)]+\))\s*(•)', r'\1\n\n\2', cleaned_response)
+        
+        # 해시태그 앞에 빈 줄 확실히 추가
+        if '#' in cleaned_response and cleaned_response.count('#') >= 2:
+            lines = cleaned_response.split('\n')
+            for i in range(len(lines)-1, -1, -1):
+                if lines[i].strip().startswith('#') and lines[i].count('#') >= 2:
+                    # 해시태그 줄 찾음
+                    if i > 0 and lines[i-1].strip() != '':
+                        lines.insert(i, '')
+                    break
+            cleaned_response = '\n'.join(lines)
         
         # 280자 체크 및 필요시 자동 조정
         char_count = len(cleaned_response)
