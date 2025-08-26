@@ -3458,16 +3458,7 @@ textarea:focus-visible {
     box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
 }
 
-.info-box::before {
-    content: '💡';
-    position: absolute;
-    top: -10px;
-    left: 20px;
-    background: var(--bg-card);
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 1.2rem;
-}
+
 
 .info-box h4 {
     margin-top: 0;

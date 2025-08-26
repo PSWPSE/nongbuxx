@@ -1208,12 +1208,6 @@ function showNewsSelectionSection() {
         elements.newsExtractionInfo.innerHTML = `
             <h3>뉴스 추출 완료</h3>
             <p>총 ${extractedNews.length}개의 뉴스를 추출했습니다. 콘텐츠로 변환할 뉴스를 선택해주세요.</p>
-            ${extractedNews.length > 20 ? `
-                <div class="news-limit-notice">
-                    <i class="fas fa-info-circle"></i>
-                    <span>💡 20개 이상 선택 시 자동으로 처음 20개만 처리됩니다.</span>
-                </div>
-            ` : ''}
             ${promotionalInfo}
             ${sourceStatsHtml}
         `;
