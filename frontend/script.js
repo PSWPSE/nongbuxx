@@ -1546,10 +1546,10 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
         hideAllSections();
         showProgressSection();
         
-        // 🆕 새로운 배치 생성 시작 - 기존 결과 초기화
-        sessionContent = []; // 기존 세션 콘텐츠 모두 초기화
-        updateGeneratedContentBadge(); // 배지 0으로 업데이트
-        console.log('🧹 새로운 배치 생성 시작 - 기존 콘텐츠 결과 초기화 완료');
+        // 🆕 새로운 배치 생성 시작 - 기존 결과 유지
+        // sessionContent = []; // 기존 세션 콘텐츠 유지 (초기화하지 않음)
+        // updateGeneratedContentBadge(); // 배지 업데이트 (초기화하지 않음)
+        console.log('🚀 새로운 배치 생성 시작 - 기존 콘텐츠 유지하면서 추가');
         
         // 콘텐츠 타입에 따른 진행률 표시
         const progressTitle = document.getElementById('progressTitle');
