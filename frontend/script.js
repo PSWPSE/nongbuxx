@@ -2993,29 +2993,26 @@ function clearUserPreferences() {
 
 async function loadAvailableSources() {
     try {
-        // 계층적 구조 정보 로드 - extractable 엔드포인트 사용
-        const structuredResponse = await fetch(`${API_BASE_URL}/api/sources/extractable`);
-        const structuredResult = await structuredResponse.json();
+        // extractable 엔드포인트 사용
+        const response = await fetch(`${API_BASE_URL}/api/sources/extractable`);
         
-        if (structuredResult.success && structuredResult.data) {
-            // 전역 변수에 저장
-            // extractable 엔드포인트는 sources 배열을 직접 반환
-            availableSources = structuredResult.data.sources || structuredResult.data || [];
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.sources) {
+            // sources 배열 저장
+            availableSources = result.data.sources;
             
-            // 부모 출처와 독립 출처 분류
+            // 부모 출처와 독립 출처 초기화
             parentSources = [];
             standaloneSources = [];
             
-            // availableSources에서 부모/독립 출처 분류
-            const parentIds = new Set();
+            // 독립 출처 분류 (parent_id가 없는 출처들)
             availableSources.forEach(source => {
-                if (source.parent_id) {
-                    parentIds.add(source.parent_id);
-                }
-            });
-            
-            availableSources.forEach(source => {
-                if (!source.parent_id && !parentIds.has(source.id)) {
+                if (!source.parent_id) {
                     standaloneSources.push(source);
                 }
             });
