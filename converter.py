@@ -92,8 +92,11 @@ class NewsConverter:
         text = re.sub(r'([:\n])\s*(•)', r'\1\n\2', text)  # 콜론이나 줄바꿈 뒤 불렛포인트
         text = re.sub(r'(•[^•\n]+)(?=•)', r'\1\n', text)  # 불렛포인트 간 줄바꿈
         
-        # 해시태그 처리 (마지막 해시태그 섹션 앞에 1줄 줄바꿈)
-        text = re.sub(r'([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$', r'\1\n\3', text)
+        # 해시태그 처리 (마지막 해시태그 섹션 앞에 2줄 줄바꿈)
+        text = re.sub(r'([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$', r'\1\n\n\3', text)
+        
+        # 해시태그가 불렛포인트 바로 뒤에 붙어있는 경우
+        text = re.sub(r'(•[^#\n]+)\s*(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)+)', r'\1\n\n\2', text)
         
         # 이모지가 있는 제목 뒤 줄바꿈 추가
         text = re.sub(r'(^[^\n]*[📈📊🎯💡🚀🔍📌⚡️🌟💰📱🏆🎮🌍🛡️][^\n]*)', r'\1\n', text, flags=re.MULTILINE)
@@ -916,14 +919,6 @@ Article: {content}"""
         # 줄바꿈이 확실히 적용되도록
         cleaned_response = '\n'.join(formatted_parts)
         
-        # 디버깅: 포맷팅 전후 상태 확인
-        print(f"[X Short Form Debug] Before final formatting:")
-        print(f"Title: {title}")
-        print(f"Source: {source}")
-        print(f"Body lines: {body_lines}")
-        print(f"Hashtags: {hashtags}")
-        print(f"Formatted parts: {formatted_parts}")
-        
         # 혹시 남아있는 연속된 불렛포인트를 줄바꿈으로 분리
         cleaned_response = re.sub(r'(•[^•\n]+)(•)', r'\1\n\2', cleaned_response)
         
@@ -931,15 +926,25 @@ Article: {content}"""
         cleaned_response = re.sub(r'(\(출처:[^)]+\))\s*(•)', r'\1\n\n\2', cleaned_response)
         
         # 해시태그 앞에 빈 줄 확실히 추가
-        if '#' in cleaned_response and cleaned_response.count('#') >= 2:
+        # 먼저 해시태그가 본문과 붙어있는 경우 분리
+        cleaned_response = re.sub(r'([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)+)', r'\1\n\n\3', cleaned_response)
+        
+        # 해시태그 줄 찾아서 앞에 빈 줄 확인
+        if '#' in cleaned_response:
             lines = cleaned_response.split('\n')
-            for i in range(len(lines)-1, -1, -1):
-                if lines[i].strip().startswith('#') and lines[i].count('#') >= 2:
-                    # 해시태그 줄 찾음
-                    if i > 0 and lines[i-1].strip() != '':
-                        lines.insert(i, '')
-                    break
-            cleaned_response = '\n'.join(lines)
+            result_lines = []
+            
+            for i, line in enumerate(lines):
+                # 해시태그 줄인지 확인 (2개 이상의 해시태그)
+                if line.strip().startswith('#') and line.count('#') >= 2:
+                    # 이전 줄이 빈 줄이 아니면 빈 줄 추가
+                    if result_lines and result_lines[-1].strip() != '':
+                        result_lines.append('')
+                    result_lines.append(line)
+                else:
+                    result_lines.append(line)
+            
+            cleaned_response = '\n'.join(result_lines)
         
         # 280자 체크 및 필요시 자동 조정
         char_count = len(cleaned_response)

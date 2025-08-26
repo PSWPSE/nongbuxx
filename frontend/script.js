@@ -4813,7 +4813,10 @@ async function copySessionContent(index) {
                 parts = parts.concat(bodyLines);
             }
             if (hashtags) {
-                parts.push("");  // 빈 줄
+                // 해시태그 앞에 반드시 빈 줄 추가
+                if (parts.length > 0 && parts[parts.length - 1].trim() !== '') {
+                    parts.push("");  // 빈 줄
+                }
                 parts.push(hashtags);
             }
             
@@ -5598,7 +5601,10 @@ async function copyContent(contentId) {
                 parts = parts.concat(bodyLines);
             }
             if (hashtags) {
-                parts.push("");  // 빈 줄
+                // 해시태그 앞에 반드시 빈 줄 추가
+                if (parts.length > 0 && parts[parts.length - 1].trim() !== '') {
+                    parts.push("");  // 빈 줄
+                }
                 parts.push(hashtags);
             }
             
@@ -6161,7 +6167,10 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
                 parts = parts.concat(bodyLines);
             }
             if (hashtags) {
-                parts.push("");  // 빈 줄
+                // 해시태그 앞에 반드시 빈 줄 추가
+                if (parts.length > 0 && parts[parts.length - 1].trim() !== '') {
+                    parts.push("");  // 빈 줄
+                }
                 parts.push(hashtags);
             }
             
