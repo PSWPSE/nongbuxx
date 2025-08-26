@@ -5744,6 +5744,24 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
         // 저장된 인증 정보 자동 불러오기
         window.loadXCredentials();
         
+        // 버튼 초기 상태 설정 (인증 확인 전까지 비활성화)
+        if (xModalElements.publishBtn) {
+            xModalElements.publishBtn.disabled = true;
+        }
+        
+        // 인증 정보가 있으면 자동으로 인증 확인 후 버튼 활성화
+        setTimeout(async () => {
+            if (xModalElements.consumerKey && xModalElements.consumerKey.value &&
+                xModalElements.consumerSecret && xModalElements.consumerSecret.value &&
+                xModalElements.accessToken && xModalElements.accessToken.value &&
+                xModalElements.accessTokenSecret && xModalElements.accessTokenSecret.value) {
+                const isValid = await window.validateXCredentials();
+                if (isValid && xModalElements.publishBtn) {
+                    xModalElements.publishBtn.disabled = false;
+                }
+            }
+        }, 100);
+        
         // 콘텐츠 설정
         if (xModalElements.contentTextarea && content) {
             // X 게시용 포맷팅
@@ -5908,9 +5926,12 @@ window.loadXCredentials = function() {
                 contentSection.style.pointerEvents = 'auto';
             }
             
-            // 자동으로 인증 확인 (백그라운드에서)
-            setTimeout(() => {
-                window.validateXCredentials();
+            // 자동으로 인증 확인하고 버튼 활성화
+            setTimeout(async () => {
+                const isValid = await window.validateXCredentials();
+                if (isValid && xModalElements.publishBtn) {
+                    xModalElements.publishBtn.disabled = false;
+                }
             }, 500);
             
             return true;
