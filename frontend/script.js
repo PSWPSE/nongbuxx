@@ -1776,9 +1776,9 @@ async function pollBatchJobStatus(jobId) {
                 generatedContentData = result.data.results;
                 
                 // 🚨 데이터 동기화 개선
-                // sessionContent 업데이트
+                // sessionContent에 추가 (덮어쓰지 않음)
                 if (result.data.results && result.data.results.length > 0) {
-                    sessionContent = result.data.results.map((item, index) => {
+                    const newContent = result.data.results.map((item, index) => {
                         // content_type 확인 및 로깅
                         const finalContentType = item.content_type || 'standard';
                         console.log(`📊 [pollBatchJobStatus] 콘텐츠 ${index} 타입:`, {
@@ -1797,7 +1797,12 @@ async function pollBatchJobStatus(jobId) {
                             success: item.success
                         };
                     });
-                    console.log('✅ sessionContent 업데이트 완료:', sessionContent.length);
+                    // 기존 sessionContent에 새 콘텐츠 추가
+                    sessionContent.push(...newContent);
+                    console.log('✅ sessionContent에 추가 완료:', {
+                        새로추가: newContent.length,
+                        전체개수: sessionContent.length
+                    });
                 }
                 
                 // generatedContentList 업데이트
@@ -2433,7 +2438,8 @@ function resetAllFeatures() {
     currentBatchData = null;
     extractedNews = [];
     selectedNewsUrls = [];
-    sessionContent = []; // 세션 콘텐츠 초기화
+    // sessionContent는 초기화하지 않음 - 생성된 콘텐츠 유지
+    // sessionContent = [];
     
     // 모든 섹션 숨기기
     hideAllSections();
