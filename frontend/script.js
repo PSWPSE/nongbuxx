@@ -4805,9 +4805,11 @@ async function copySessionContent(index) {
             // 재구성
             let parts = [];
             if (title) parts.push(title);
-            if (source) parts.push(source);
+            if (source) {
+                parts.push(source);
+                parts.push("");  // 출처 다음 빈 줄
+            }
             if (bodyLines.length > 0) {
-                parts.push("");  // 빈 줄
                 parts = parts.concat(bodyLines);
             }
             if (hashtags) {
@@ -5588,9 +5590,11 @@ async function copyContent(contentId) {
             // 재구성
             let parts = [];
             if (title) parts.push(title);
-            if (source) parts.push(source);
+            if (source) {
+                parts.push(source);
+                parts.push("");  // 출처 다음 빈 줄
+            }
             if (bodyLines.length > 0) {
-                parts.push("");  // 빈 줄
                 parts = parts.concat(bodyLines);
             }
             if (hashtags) {
@@ -6149,9 +6153,11 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
             // 재구성
             let parts = [];
             if (title) parts.push(title);
-            if (source) parts.push(source);
+            if (source) {
+                parts.push(source);
+                parts.push("");  // 출처 다음 빈 줄
+            }
             if (bodyLines.length > 0) {
-                parts.push("");  // 빈 줄
                 parts = parts.concat(bodyLines);
             }
             if (hashtags) {

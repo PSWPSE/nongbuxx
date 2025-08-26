@@ -898,10 +898,11 @@ Article: {content}"""
         # 2. 출처 (제목 바로 다음 줄)
         if source:
             formatted_parts.append(source)
+            # 출처 다음에 무조건 빈 줄 추가
+            formatted_parts.append("")
         
-        # 3. 빈 줄 + 본문 (각 불렛포인트를 개별 줄로)
+        # 3. 본문 (각 불렛포인트를 개별 줄로)
         if body_lines:
-            formatted_parts.append("")  # 빈 줄
             for line in body_lines:
                 # 각 불렛포인트가 확실히 새 줄에 오도록
                 if line.strip():
