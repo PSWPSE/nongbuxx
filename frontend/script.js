@@ -811,7 +811,6 @@ async function pollJobStatus(jobId) {
             currentData = result.data;
             setTimeout(() => {
                 showResultSection();
-                showToast('콘텐츠 생성이 완료되었습니다!', 'success');
             }, 500); // 프로그레스 완료 애니메이션 후 결과 표시
         } else if (result.status === 'failed') {
             stopProgressSimulation();
@@ -1900,7 +1899,6 @@ async function pollBatchJobStatus(jobId) {
                 
                 setTimeout(() => {
                     showResultSection();
-                    showToast('일괄 콘텐츠 생성이 완료되었습니다!', 'success');
                 }, 500); // 프로그레스 완료 애니메이션 후 결과 표시
             } else {
                 // data가 없는 경우 에러 처리
