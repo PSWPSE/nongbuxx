@@ -2332,7 +2332,7 @@ function setupContentPreviewModalEvents(item, index) {
                 }
                 
                 await navigator.clipboard.writeText(content);
-                showToast('클립보드에 복사되었습니다.', 'success');
+                // 토스트 메시지 제거
                 
             } catch (error) {
                 console.error('❌ 복사 실패:', error);
@@ -2459,7 +2459,7 @@ async function copyGeneratedContent(index) {
         }
         
         await navigator.clipboard.writeText(content);
-        showToast('클립보드에 복사되었습니다.', 'success');
+        // 토스트 메시지 제거
     } catch (error) {
         console.error('복사 오류:', error);
         showToast('복사 중 오류가 발생했습니다.', 'error');
@@ -2597,7 +2597,7 @@ async function copyToClipboard() {
     
     try {
         await navigator.clipboard.writeText(currentData.content);
-        showToast('클립보드에 복사되었습니다.', 'success');
+        // 토스트 메시지 제거
     } catch (error) {
         console.error('복사 오류:', error);
         showToast('복사 중 오류가 발생했습니다.', 'error');
@@ -4860,7 +4860,7 @@ async function copySessionContent(index) {
         }
         
         await navigator.clipboard.writeText(formattedContent);
-        showToast('클립보드에 복사되었습니다!', 'success');
+        // 토스트 메시지 제거
     } catch (error) {
         console.error('복사 에러:', error);
         showToast('복사 중 오류가 발생했습니다.', 'error');
@@ -4884,7 +4884,7 @@ async function downloadSessionContent(index) {
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
-        showToast('다운로드가 완료되었습니다!', 'success');
+        // 토스트 메시지 제거
     } catch (error) {
         console.error('다운로드 에러:', error);
         showToast('다운로드 중 오류가 발생했습니다.', 'error');
@@ -5193,7 +5193,7 @@ async function copyContentForced(filename) {
             }
             
             await navigator.clipboard.writeText(formattedContent);
-            showToast('클립보드에 복사되었습니다!', 'success');
+            // 토스트 메시지 제거
         }
     } catch (error) {
         console.error('복사 에러:', error);
@@ -5511,7 +5511,7 @@ function copySimpleContent(index) {
         }
         
         navigator.clipboard.writeText(formattedContent).then(() => {
-            showToast('콘텐츠가 클립보드에 복사되었습니다!', 'success');
+            // 토스트 메시지 제거
         }).catch(() => {
             showToast('복사에 실패했습니다.', 'error');
         });
@@ -5674,7 +5674,7 @@ async function copyContent(contentId) {
         }
         
         await navigator.clipboard.writeText(formattedContent);
-        showToast('콘텐츠가 클립보드에 복사되었습니다!', 'success');
+        // 토스트 메시지 제거
     } catch (error) {
         showToast('복사에 실패했습니다.', 'error');
     }
@@ -5989,7 +5989,7 @@ async function copyEnhancedBlogContent(groupBaseName) {
                 wordpress: '워드프레스'
             };
             
-            showToast(`${platformNames[selectedType]} 콘텐츠가 클립보드에 복사되었습니다.`, 'success');
+            // 토스트 메시지 제거
         } else {
             showToast('콘텐츠 복사에 실패했습니다.', 'error');
         }
