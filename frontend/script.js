@@ -4848,8 +4848,8 @@ async function copySessionContent(index) {
                 }
             });
             
-            // ▶ 뒤에 줄바꿈 확실히
-            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)([^\n])/g, '$1\n$2');
+            // ▶ 뒤에 빈 줄 추가 (제목과 내용 사이)
+            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\n?([^\n])/g, '$1\n\n$2');
             
             // 불렛포인트 각각 새 줄에
             formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
@@ -5501,7 +5501,7 @@ function copySimpleContent(index) {
             
             // ▶ 섹션 구분자 앞뒤 줄바꿈
             formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n\n$2');
-            formattedContent = formattedContent.replace(/(▶[^\n]+)([^\n])/g, '$1\n$2');
+            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\n?([^\n])/g, '$1\n\n$2');
             
             // 불렛포인트 줄바꿈
             formattedContent = formattedContent.replace(/([•])\s*([^•\n]+)(?=[•])/g, '$1 $2\n');
@@ -5662,8 +5662,8 @@ async function copyContent(contentId) {
                 }
             });
             
-            // ▶ 뒤에 줄바꿈 확실히
-            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)([^\n])/g, '$1\n$2');
+            // ▶ 뒤에 빈 줄 추가 (제목과 내용 사이)
+            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\n?([^\n])/g, '$1\n\n$2');
             
             // 불렛포인트 각각 새 줄에
             formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
@@ -6161,65 +6161,94 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
             // HTML 태그 제거
             cleanContent = cleanContent.replace(/<[^>]*>/g, '');
             
-            // X Short Form 포맷팅 구조화
-            // 구조: 제목 → 출처 → 빈줄 → 본문 → 빈줄 → 해시태그
-            const lines = cleanContent.split('\n').filter(line => line.trim());
-            let title = "";
-            let source = "";
-            let bodyLines = [];
-            let hashtags = "";
+            // Normal Form인지 Short Form인지 판별
+            const isNormalForm = cleanContent.includes('▶');
             
-            lines.forEach(line => {
-                const trimmedLine = line.trim();
+            if (isNormalForm) {
+                // Normal Form 포맷팅 (▶ 섹션 구분자가 있는 경우)
+                // 출처 독립 라인
+                cleanContent = cleanContent.replace(/([^(\n]+)\s*(\(출처:[^)]+\))/g, '$1\n$2');
                 
-                // 제목 (다양한 이모지로 시작)
-                if (!title && /^[🚨📈📉📊💰💵💴💶🏢🏭🛍️🏦🚀💡🔬🤖💻⚠️🔥💥🇺🇸🇨🇳🇯🇵🇰🇷🇪🇺🎯⚡🌍📱🏆🎮🛡️📌🔍🌟]/.test(trimmedLine)) {
-                    if (trimmedLine.includes('(출처:')) {
-                        title = trimmedLine.split('(출처:')[0].trim();
-                        source = '(출처:' + trimmedLine.split('(출처:')[1];
+                // ▶ 섹션 구분자 포맷팅
+                // ▶ 앞에 빈 줄 추가
+                cleanContent = cleanContent.replace(/([^\n])(\n?)(▶)/g, function(match, p1, p2, p3) {
+                    if (p2 === '\n') {
+                        return p1 + '\n\n' + p3;
                     } else {
-                        title = trimmedLine;
+                        return p1 + '\n\n' + p3;
                     }
+                });
+                
+                // ▶ 뒤에 빈 줄 추가 (제목과 내용 사이)
+                cleanContent = cleanContent.replace(/(▶[^\n:]+:?)\n?([^\n])/g, '$1\n\n$2');
+                
+                // 불렛포인트 각각 새 줄에
+                cleanContent = cleanContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
+                cleanContent = cleanContent.replace(/(•)\s*([^•\n]+)$/gm, '$1 $2');
+                
+                // 해시태그 앞에 빈 줄 추가
+                cleanContent = cleanContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
+            } else {
+                // X Short Form 포맷팅 구조화
+                // 구조: 제목 → 출처 → 빈줄 → 본문 → 빈줄 → 해시태그
+                const lines = cleanContent.split('\n').filter(line => line.trim());
+                let title = "";
+                let source = "";
+                let bodyLines = [];
+                let hashtags = "";
+                
+                lines.forEach(line => {
+                    const trimmedLine = line.trim();
+                    
+                    // 제목 (다양한 이모지로 시작)
+                    if (!title && /^[🚨📈📉📊💰💵💴💶🏢🏭🛍️🏦🚀💡🔬🤖💻⚠️🔥💥🇺🇸🇨🇳🇯🇵🇰🇷🇪🇺🎯⚡🌍📱🏆🎮🛡️📌🔍🌟]/.test(trimmedLine)) {
+                        if (trimmedLine.includes('(출처:')) {
+                            title = trimmedLine.split('(출처:')[0].trim();
+                            source = '(출처:' + trimmedLine.split('(출처:')[1];
+                        } else {
+                            title = trimmedLine;
+                        }
+                    }
+                    // 출처
+                    else if (!source && trimmedLine.includes('(출처:')) {
+                        source = trimmedLine.startsWith('(출처:') ? trimmedLine : '(출처:' + trimmedLine.split('(출처:')[1];
+                    }
+                    // 해시태그
+                    else if (trimmedLine.startsWith('#') && (trimmedLine.match(/#/g) || []).length >= 2) {
+                        hashtags = trimmedLine;
+                    }
+                    // 불렛 포인트 본문
+                    else if (trimmedLine.startsWith('•')) {
+                        bodyLines.push(trimmedLine);
+                    }
+                    // 기타 내용
+                    else if (!title) {
+                        title = trimmedLine;
+                    } else if (!trimmedLine.startsWith('#')) {
+                        bodyLines.push(trimmedLine);
+                    }
+                });
+                
+                // 재구성
+                let parts = [];
+                if (title) parts.push(title);
+                if (source) {
+                    parts.push(source);
+                    parts.push("");  // 출처 다음 빈 줄
                 }
-                // 출처
-                else if (!source && trimmedLine.includes('(출처:')) {
-                    source = trimmedLine.startsWith('(출처:') ? trimmedLine : '(출처:' + trimmedLine.split('(출처:')[1];
+                if (bodyLines.length > 0) {
+                    parts = parts.concat(bodyLines);
                 }
-                // 해시태그
-                else if (trimmedLine.startsWith('#') && (trimmedLine.match(/#/g) || []).length >= 2) {
-                    hashtags = trimmedLine;
+                if (hashtags) {
+                    // 해시태그 앞에 반드시 빈 줄 추가
+                    if (parts.length > 0 && parts[parts.length - 1].trim() !== '') {
+                        parts.push("");  // 빈 줄
+                    }
+                    parts.push(hashtags);
                 }
-                // 불렛 포인트나 섹션 구분자 본문
-                else if (trimmedLine.startsWith('•') || trimmedLine.startsWith('▶')) {
-                    bodyLines.push(trimmedLine);
-                }
-                // 기타 내용
-                else if (!title) {
-                    title = trimmedLine;
-                } else if (!trimmedLine.startsWith('#')) {
-                    bodyLines.push(trimmedLine);
-                }
-            });
-            
-            // 재구성
-            let parts = [];
-            if (title) parts.push(title);
-            if (source) {
-                parts.push(source);
-                parts.push("");  // 출처 다음 빈 줄
+                
+                cleanContent = parts.join('\n');
             }
-            if (bodyLines.length > 0) {
-                parts = parts.concat(bodyLines);
-            }
-            if (hashtags) {
-                // 해시태그 앞에 반드시 빈 줄 추가
-                if (parts.length > 0 && parts[parts.length - 1].trim() !== '') {
-                    parts.push("");  // 빈 줄
-                }
-                parts.push(hashtags);
-            }
-            
-            cleanContent = parts.join('\n');
             
             // 해시태그는 마지막에 위치하도록 (이미 되어있음)
             // 앞뒤 공백 정리
