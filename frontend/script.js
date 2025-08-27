@@ -4848,8 +4848,8 @@ async function copySessionContent(index) {
                 }
             });
             
-            // ▶ 뒤에 빈 줄 추가 (제목과 내용 사이)
-            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\n?([^\n])/g, '$1\n\n$2');
+            // ▶ 뒤에 정확히 1줄만 (제목과 내용 사이)
+            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\s*\n*/g, '$1\n');
             
             // 불렛포인트 각각 새 줄에
             formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
@@ -5501,7 +5501,7 @@ function copySimpleContent(index) {
             
             // ▶ 섹션 구분자 앞뒤 줄바꿈
             formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n\n$2');
-            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\n?([^\n])/g, '$1\n\n$2');
+            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\s*\n*/g, '$1\n');
             
             // 불렛포인트 줄바꿈
             formattedContent = formattedContent.replace(/([•])\s*([^•\n]+)(?=[•])/g, '$1 $2\n');
@@ -5662,8 +5662,8 @@ async function copyContent(contentId) {
                 }
             });
             
-            // ▶ 뒤에 빈 줄 추가 (제목과 내용 사이)
-            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\n?([^\n])/g, '$1\n\n$2');
+            // ▶ 뒤에 정확히 1줄만 (제목과 내용 사이)
+            formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\s*\n*/g, '$1\n');
             
             // 불렛포인트 각각 새 줄에
             formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
@@ -6179,8 +6179,8 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
                     }
                 });
                 
-                // ▶ 뒤에 빈 줄 추가 (제목과 내용 사이)
-                cleanContent = cleanContent.replace(/(▶[^\n:]+:?)\n?([^\n])/g, '$1\n\n$2');
+                // ▶ 뒤에 정확히 1줄만 (제목과 내용 사이)
+                cleanContent = cleanContent.replace(/(▶[^\n:]+:?)\s*\n*/g, '$1\n');
                 
                 // 불렛포인트 각각 새 줄에
                 cleanContent = cleanContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
