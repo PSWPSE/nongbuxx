@@ -150,6 +150,19 @@ const XCrawler = {
         document.getElementById('manualPublishBtn')?.addEventListener('click', () => {
             this.publishToX();
         });
+        
+        // 대시보드 새로고침 버튼
+        document.getElementById('refreshDashboardBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('refreshDashboardBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '🔄 새로고침 중...';
+                await this.updateDashboard();
+                btn.disabled = false;
+                btn.textContent = '🔄 새로고침';
+                this.showNotification('대시보드가 업데이트되었습니다', 'info');
+            }
+        });
     },
     
     // 마지막 수집 결과 저장
@@ -903,12 +916,8 @@ const XCrawler = {
     // 대시보드
     initDashboard() {
         this.updateDashboard();
-        // 1분마다 대시보드 업데이트
-        setInterval(() => {
-            if (this.currentSection === 'dashboard') {
-                this.updateDashboard();
-            }
-        }, 60000);
+        // 자동 업데이트 제거 - 수동 새로고침 또는 이벤트 발생 시만 업데이트
+        // API 호출 절약을 위해 주기적 업데이트 비활성화
     },
     
     // 한국 시간 포맷팅

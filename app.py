@@ -489,14 +489,8 @@ def publish_to_x():
             access_token_secret=access_token_secret
         )
         
-        # 인증 확인
-        auth_result = publisher.verify_credentials()
-        if not auth_result['success']:
-            return jsonify({
-                'success': False,
-                'error': 'X API 인증 실패: ' + auth_result.get('error', '알 수 없는 오류'),
-                'code': 'AUTH_FAILED'
-            }), 401
+        # 인증 확인 제거 - post_tweet에서 자동으로 처리됨
+        # verify_credentials() 호출 제거로 API 1회 절약
         
         # 콘텐츠 포맷팅
         formatted_content = publisher.format_content_for_x(content)
@@ -519,8 +513,7 @@ def publish_to_x():
             return jsonify({
                 'success': True,
                 'data': result,
-                'message': 'X에 성공적으로 게시되었습니다',
-                'user': auth_result['user']
+                'message': 'X에 성공적으로 게시되었습니다'
             }), 200
         else:
             logger.error(f"X 게시 실패: {result.get('error', '알 수 없는 오류')}")
