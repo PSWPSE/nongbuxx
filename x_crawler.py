@@ -152,41 +152,41 @@ class XCrawler:
                     user_id = cached['user_id']
                     logger.info(f"📦 캐시된 사용자 정보 사용: @{username}")
             
-            # Free Tier API 제한으로 인해 검색 API 사용
-            # 사용자별 트윗 검색 (v2 Search API - Free Tier 지원)
+            # Free Tier는 대부분의 API에 제한이 있음
+            # 더미 데이터로 테스트 (실제 API 호출 대신)
             tweets = []
-            try:
-                # 검색 쿼리 생성 (from:username 형식)
-                query = f"from:{username} -is:reply -is:retweet"
-                
-                # API 호출 최적화: count 설정
-                actual_count = min(count, 10)  # Free Tier는 더 제한적
-                
-                # Search API 사용 (Free Tier 지원)
-                search_results = self.x_client.search_recent_tweets(
-                    query=query,
-                    max_results=actual_count,
-                    tweet_fields=['created_at', 'author_id', 'public_metrics']
-                )
-                
-                if search_results and hasattr(search_results, 'data') and search_results.data:
-                    for tweet in search_results.data:
-                        # 시간 필터 적용
-                        tweet_time = tweet.created_at.replace(tzinfo=pytz.UTC)
-                        if tweet_time < since_time.replace(tzinfo=pytz.UTC):
-                            continue
-                        
-                        metrics = tweet.public_metrics
-                        tweets.append({
-                            'id': tweet.id,
-                            'author': username,
-                            'text': tweet.text,
-                            'created_at': tweet_time.astimezone(KST).isoformat(),
-                            'likes': metrics.get('like_count', 0),
-                            'retweets': metrics.get('retweet_count', 0),
-                            'url': f'https://twitter.com/{username}/status/{tweet.id}',
-                            'engagement': metrics.get('like_count', 0) + metrics.get('retweet_count', 0)
-                        })
+            
+            # Free Tier 제한 안내
+            logger.warning(f"⚠️ X API Free Tier는 타임라인 및 검색 API 접근이 제한됩니다.")
+            logger.warning(f"⚠️ Basic Tier ($100/월) 이상이 필요합니다.")
+            
+            # 테스트용 샘플 데이터 생성
+            if username.lower() in ['nongbudaddy', 'elonmusk', 'test']:
+                # 테스트용 샘플 트윗 생성
+                sample_tweets = [
+                    {
+                        'id': f'sample_{datetime.now().timestamp():.0f}_1',
+                        'author': username,
+                        'text': f"[테스트] {username}의 최신 트윗입니다. Free Tier에서는 실제 트윗을 가져올 수 없습니다. #테스트 #XCrawler",
+                        'created_at': datetime.now(KST).isoformat(),
+                        'likes': 10,
+                        'retweets': 5,
+                        'url': f'https://twitter.com/{username}/status/sample1',
+                        'engagement': 15
+                    },
+                    {
+                        'id': f'sample_{datetime.now().timestamp():.0f}_2',
+                        'author': username,
+                        'text': f"[테스트] Basic Tier로 업그레이드하면 실제 트윗 수집이 가능합니다. #XAPI #업그레이드",
+                        'created_at': (datetime.now(KST) - timedelta(hours=1)).isoformat(),
+                        'likes': 20,
+                        'retweets': 10,
+                        'url': f'https://twitter.com/{username}/status/sample2',
+                        'engagement': 30
+                    }
+                ]
+                tweets = sample_tweets
+                logger.info(f"📋 테스트 데이터 생성: @{username} - {len(tweets)}개")
                 
                 logger.info(f"✅ {username}: {len(tweets)}개 포스트 수집 완료")
                 
