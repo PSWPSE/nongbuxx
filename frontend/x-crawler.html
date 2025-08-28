@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="./styles.css">
     <link rel="stylesheet" href="./x-crawler.css">
     <link rel="stylesheet" href="./x-crawler-stats.css">
+    <link rel="stylesheet" href="./x-dashboard-compact.css">
 </head>
 <body>
     <div class="x-crawler-container">
@@ -77,34 +78,32 @@
                     </button>
                 </h2>
                 
-                <!-- Status Cards -->
-                <div class="status-cards">
-                    <div class="status-card">
-                        <div class="status-icon collecting">
-                            <i class="fas fa-download"></i>
-                        </div>
-                        <div class="status-info">
-                            <h3>수집 예정</h3>
-                            <p class="status-count">3</p>
-                        </div>
+                <!-- Compact Status Bar -->
+                <div class="compact-status-bar">
+                    <div class="status-item">
+                        <span class="status-icon">📥</span>
+                        <span class="status-value" id="statusCollected">0</span>
+                        <span class="status-label">수집</span>
                     </div>
-                    <div class="status-card">
-                        <div class="status-icon pending">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="status-info">
-                            <h3>게시 대기</h3>
-                            <p class="status-count">2</p>
-                        </div>
+                    <div class="status-item">
+                        <span class="status-icon">⏳</span>
+                        <span class="status-value" id="statusPending">0</span>
+                        <span class="status-label">대기</span>
                     </div>
-                    <div class="status-card">
-                        <div class="status-icon completed">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="status-info">
-                            <h3>완료</h3>
-                            <p class="status-count">5</p>
-                        </div>
+                    <div class="status-item">
+                        <span class="status-icon">✅</span>
+                        <span class="status-value" id="statusPublished">0</span>
+                        <span class="status-label">게시</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">📊</span>
+                        <span class="status-value" id="statusSuccessRate">100%</span>
+                        <span class="status-label">성공률</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon" id="apiStatusIcon">🟢</span>
+                        <span class="status-value" id="apiStatusText">정상</span>
+                        <span class="status-label">API</span>
                     </div>
                 </div>
 
@@ -151,21 +150,19 @@
                     </div>
                 </div>
 
-                <!-- Content Queue -->
-                <div class="content-queue">
-                    <h3>게시 대기 큐</h3>
-                    <div class="queue-items">
-                        <div class="queue-item">
-                            <div class="queue-time">10:00</div>
-                            <div class="queue-content">
-                                <h4>📱 오늘의 테크 리더 인사이트</h4>
-                                <p>일론: Starship 발사 성공 / 순다르: Gemini 2.0 발표</p>
-                            </div>
-                            <div class="queue-actions">
-                                <button class="btn-small">미리보기</button>
-                                <button class="btn-small">수정</button>
-                            </div>
-                        </div>
+                <!-- Content Queue (Emphasized) -->
+                <div class="content-queue-primary">
+                    <h3 class="queue-header">
+                        <span class="queue-title">📋 게시 대기 큐</span>
+                        <span class="queue-count" id="queueCount">0개 대기중</span>
+                    </h3>
+                    <div class="queue-items" id="queueItems">
+                        <!-- 동적으로 생성됨 -->
+                    </div>
+                    <div class="queue-empty" id="queueEmpty" style="display: none;">
+                        <i class="fas fa-inbox"></i>
+                        <p>대기 중인 콘텐츠가 없습니다</p>
+                        <button class="btn btn-primary" onclick="XCrawler.collectPosts()">수집 시작하기</button>
                     </div>
                 </div>
             </section>

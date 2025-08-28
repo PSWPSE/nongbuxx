@@ -255,6 +255,7 @@ const XCrawler = {
                 // 대시보드 업데이트
                 if (this.currentSection === 'dashboard') {
                     this.updateDashboard();
+                    this.updateQueue(); // 큐 업데이트 추가
                 }
                 
                 // 수집된 포스트 표시 (선택적)
@@ -1036,61 +1037,40 @@ const XCrawler = {
     },
     
     updateStatusCards(stats) {
-        // 개선된 통계 표시
+        // 컴팩트 상태바 업데이트
         const overview = stats?.overview || {};
         const last24h = stats?.last_24h || {};
         const apiStatus = stats?.api_status || {};
         
-        // 수집 예정 -> 총 수집량
-        const collectingCount = document.querySelector('.status-card:nth-child(1) .status-count');
-        if (collectingCount) {
-            collectingCount.textContent = overview.total_collected || 0;
-            // 성공률 표시
-            const card = collectingCount.closest('.status-card');
-            const label = card.querySelector('.status-label');
-            if (label) {
-                label.innerHTML = `수집됨 <small>(성공률 ${last24h.success_rate || 100}%)</small>`;
-            }
-        }
+        // 컴팩트 상태바 요소 업데이트
+        const collectedEl = document.getElementById('statusCollected');
+        if (collectedEl) collectedEl.textContent = overview.total_collected || 0;
         
-        // 게시 대기 -> 총 게시량
-        const pendingCount = document.querySelector('.status-card:nth-child(2) .status-count');
-        if (pendingCount) {
-            pendingCount.textContent = overview.total_published || 0;
-            // 오늘 게시량 표시
-            const card = pendingCount.closest('.status-card');
-            const label = card.querySelector('.status-label');
-            if (label) {
-                label.innerHTML = `게시됨 <small>(오늘 ${last24h.publishes || 0}개)</small>`;
-            }
-        }
+        const pendingEl = document.getElementById('statusPending');
+        if (pendingEl) pendingEl.textContent = this.publishQueue?.length || 0;
         
-        // 완료 -> 인플루언서 수
-        const completedCount = document.querySelector('.status-card:nth-child(3) .status-count');
-        if (completedCount) {
-            completedCount.textContent = overview.influencers_count || 0;
-            const card = completedCount.closest('.status-card');
-            const label = card.querySelector('.status-label');
-            if (label) {
-                label.textContent = '인플루언서';
-            }
-        }
+        const publishedEl = document.getElementById('statusPublished');
+        if (publishedEl) publishedEl.textContent = overview.total_published || 0;
         
-        // 4번째 카드 -> API 상태
-        const fourthCard = document.querySelector('.status-card:nth-child(4) .status-count');
-        if (fourthCard) {
-            const xConnected = apiStatus.x_api?.connected;
-            const aiConnected = apiStatus.ai_api?.connected;
-            
+        const successRateEl = document.getElementById('statusSuccessRate');
+        if (successRateEl) successRateEl.textContent = (last24h.success_rate || 100) + '%';
+        
+        // API 상태
+        const xConnected = apiStatus.x_api?.connected;
+        const aiConnected = apiStatus.ai_api?.connected;
+        const apiIcon = document.getElementById('apiStatusIcon');
+        const apiText = document.getElementById('apiStatusText');
+        
+        if (apiIcon && apiText) {
             if (xConnected && aiConnected) {
-                fourthCard.innerHTML = '🟢';
-                fourthCard.parentElement.querySelector('.status-label').textContent = 'API 정상';
+                apiIcon.textContent = '🟢';
+                apiText.textContent = '정상';
             } else if (xConnected || aiConnected) {
-                fourthCard.innerHTML = '🟡';
-                fourthCard.parentElement.querySelector('.status-label').textContent = 'API 부분 연결';
+                apiIcon.textContent = '🟡';
+                apiText.textContent = '부분';
             } else {
-                fourthCard.innerHTML = '🔴';
-                fourthCard.parentElement.querySelector('.status-label').textContent = 'API 오프라인';
+                apiIcon.textContent = '🔴';
+                apiText.textContent = '오프';
             }
         }
     },
@@ -1125,7 +1105,44 @@ const XCrawler = {
     },
     
     updateQueue(stats) {
-        // 게시 큐 업데이트 (추후 구현)
+        const container = document.getElementById('queueItems');
+        const emptyState = document.getElementById('queueEmpty');
+        const queueCount = document.getElementById('queueCount');
+        
+        if (!container) return;
+        
+        // 대기 중인 콘텐츠 표시 (lastCollectionResult 사용)
+        if (this.lastCollectionResult && this.lastCollectionResult.summary) {
+            container.style.display = 'block';
+            if (emptyState) emptyState.style.display = 'none';
+            if (queueCount) queueCount.textContent = '1개 대기중';
+            
+            const summary = this.lastCollectionResult.summary;
+            const hashtags = this.lastCollectionResult.hashtags || [];
+            const preview = summary.substring(0, 100) + '...';
+            
+            container.innerHTML = `
+                <div class="queue-item">
+                    <div class="queue-time">즉시</div>
+                    <div class="queue-content">
+                        <h4>📱 AI 요약 콘텐츠</h4>
+                        <p>${preview}</p>
+                    </div>
+                    <div class="queue-actions">
+                        <button onclick="XCrawler.publishToX()">게시</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            container.style.display = 'none';
+            if (emptyState) {
+                emptyState.style.display = 'flex';
+                emptyState.style.flexDirection = 'column';
+                emptyState.style.alignItems = 'center';
+                emptyState.style.padding = '2rem';
+            }
+            if (queueCount) queueCount.textContent = '0개 대기중';
+        }
     },
     
     // 통계

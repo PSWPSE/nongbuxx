@@ -1,0 +1,294 @@
+/* 컴팩트 대시보드 스타일 */
+
+/* 컴팩트 상태바 */
+.compact-status-bar {
+    display: flex;
+    gap: 1rem;
+    background: linear-gradient(135deg, #15202b 0%, #192734 100%);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #38444d;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.status-icon {
+    font-size: 1.2rem;
+}
+
+.status-value {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #1da1f2;
+}
+
+.status-label {
+    color: #8899a6;
+    font-size: 0.85rem;
+    margin-left: auto;
+}
+
+/* 큐 섹션 강조 */
+.content-queue-primary {
+    background: #15202b;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    border: 2px solid #1da1f2;
+    box-shadow: 0 4px 12px rgba(29, 161, 242, 0.1);
+}
+
+.queue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #38444d;
+}
+
+.queue-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.queue-count {
+    background: #1da1f2;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* 큐 아이템 */
+.queue-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.queue-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid #38444d;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.queue-item:hover {
+    background: rgba(29, 161, 242, 0.1);
+    border-color: #1da1f2;
+    transform: translateX(4px);
+}
+
+.queue-time {
+    background: #192734;
+    color: #1da1f2;
+    padding: 0.5rem;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    min-width: 60px;
+    text-align: center;
+}
+
+.queue-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.queue-content h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-content p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #8899a6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.queue-actions button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    background: transparent;
+    border: 1px solid #38444d;
+    color: #8899a6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.queue-actions button:hover {
+    background: #1da1f2;
+    color: white;
+    border-color: #1da1f2;
+}
+
+/* 빈 큐 상태 */
+.queue-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #8899a6;
+}
+
+.queue-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.queue-empty p {
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+}
+
+/* 타임라인 컴팩트화 */
+.schedule-timeline {
+    background: #15202b;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #38444d;
+}
+
+.schedule-timeline h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: #8899a6;
+}
+
+.timeline-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.timeline-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.timeline-item .time {
+    color: #1da1f2;
+    font-weight: 500;
+    min-width: 50px;
+}
+
+.timeline-item .status {
+    font-size: 1rem;
+}
+
+.timeline-item .description {
+    color: #8899a6;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 수동 액션 버튼 컴팩트화 */
+.manual-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-large {
+    padding: 0.75rem 1.5rem !important;
+    font-size: 0.95rem !important;
+}
+
+/* 스크롤바 스타일 */
+.queue-items::-webkit-scrollbar,
+.timeline-items::-webkit-scrollbar {
+    width: 6px;
+}
+
+.queue-items::-webkit-scrollbar-track,
+.timeline-items::-webkit-scrollbar-track {
+    background: #192734;
+    border-radius: 3px;
+}
+
+.queue-items::-webkit-scrollbar-thumb,
+.timeline-items::-webkit-scrollbar-thumb {
+    background: #38444d;
+    border-radius: 3px;
+}
+
+.queue-items::-webkit-scrollbar-thumb:hover,
+.timeline-items::-webkit-scrollbar-thumb:hover {
+    background: #4a5568;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .compact-status-bar {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .status-item {
+        flex: 1 1 calc(50% - 0.25rem);
+        min-width: 140px;
+    }
+    
+    .queue-items {
+        max-height: 300px;
+    }
+    
+    .manual-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .action-buttons {
+        width: 100%;
+    }
+    
+    .action-buttons button {
+        flex: 1;
+    }
+}
