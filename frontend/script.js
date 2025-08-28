@@ -6595,6 +6595,48 @@ window.saveXCredentials = async function() {
     }
 }
 
+// X API 인증 캐시 키
+const X_AUTH_CACHE_KEY = 'x_auth_cache';
+const X_AUTH_CACHE_TTL = 900000; // 15분 (밀리초)
+
+// 캐시된 인증 정보 가져오기
+window.getCachedXAuth = function() {
+    try {
+        const cached = localStorage.getItem(X_AUTH_CACHE_KEY);
+        if (cached) {
+            const data = JSON.parse(cached);
+            const now = Date.now();
+            
+            // 캐시 만료 확인
+            if (data.timestamp && (now - data.timestamp) < X_AUTH_CACHE_TTL) {
+                console.log('📦 캐시된 인증 정보 사용 (남은 시간: ' + 
+                    Math.round((X_AUTH_CACHE_TTL - (now - data.timestamp)) / 60000) + '분)');
+                return data;
+            } else {
+                console.log('⏰ 캐시 만료됨');
+                localStorage.removeItem(X_AUTH_CACHE_KEY);
+            }
+        }
+    } catch (error) {
+        console.error('캐시 읽기 실패:', error);
+    }
+    return null;
+}
+
+// 인증 정보 캐싱
+window.cacheXAuth = function(authData) {
+    try {
+        const cacheData = {
+            ...authData,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(X_AUTH_CACHE_KEY, JSON.stringify(cacheData));
+        console.log('💾 인증 정보 캐시 저장됨');
+    } catch (error) {
+        console.error('캐시 저장 실패:', error);
+    }
+}
+
 // X API 인증 정보 불러오기  
 window.loadXCredentials = function() {
     try {
@@ -6606,12 +6648,22 @@ window.loadXCredentials = function() {
             if (xModalElements.accessToken) xModalElements.accessToken.value = credentials.access_token || '';
             if (xModalElements.accessTokenSecret) xModalElements.accessTokenSecret.value = credentials.access_token_secret || '';
             
-            // API 상태 업데이트
+            // 캐시된 인증 정보 확인
+            const cachedAuth = getCachedXAuth();
+            
             const apiStatusText = document.getElementById('apiStatusText');
             const apiStatusBox = document.getElementById('apiStatusBox');
             const apiFormSection = document.getElementById('apiFormSection');
             
-            if (apiStatusText) {
+            if (cachedAuth && cachedAuth.user) {
+                // 캐시된 정보로 UI 업데이트 (API 호출 없음)
+                if (apiStatusText) {
+                    const remainingMinutes = Math.round((X_AUTH_CACHE_TTL - (Date.now() - cachedAuth.timestamp)) / 60000);
+                    apiStatusText.innerHTML = `✅ @${cachedAuth.user.username}로 인증됨 (캐시 유효: ${remainingMinutes}분)`;
+                }
+                console.log('✅ 캐시된 인증 정보로 UI 업데이트 완료 (API 호출 없음)');
+            } else if (apiStatusText) {
+                // 캐시 없음 - 키만 있으면 버튼 활성화
                 apiStatusText.innerHTML = '✅ 인증 정보가 저장되어 있습니다. 바로 사용 가능합니다!';
             }
             
@@ -6644,9 +6696,26 @@ window.loadXCredentials = function() {
     }
 }
 
-// X API 인증 확인
+// X API 인증 확인 (캐싱 적용)
 window.validateXCredentials = async function() {
     console.log('🔐 validateXCredentials 시작');
+    
+    // 먼저 캐시 확인
+    const cachedAuth = getCachedXAuth();
+    if (cachedAuth && cachedAuth.user) {
+        const remainingMinutes = Math.round((X_AUTH_CACHE_TTL - (Date.now() - cachedAuth.timestamp)) / 60000);
+        console.log(`📦 캐시된 인증 사용 (남은 시간: ${remainingMinutes}분)`);
+        
+        showValidationResult(`✅ @${cachedAuth.user.username}로 인증됨 (캐시, ${remainingMinutes}분 남음)`, 'success');
+        
+        if (xModalElements.publishBtn) {
+            xModalElements.publishBtn.disabled = false;
+        }
+        
+        return true;
+    }
+    
+    console.log('📌 캐시 없음 - API 호출 필요');
     console.log('📌 현재 publishBtn:', xModalElements.publishBtn);
     console.log('📌 현재 publishBtn disabled:', xModalElements.publishBtn?.disabled);
     
@@ -6685,15 +6754,15 @@ window.validateXCredentials = async function() {
         const result = await response.json();
         
         if (result.success) {
-            showValidationResult(`✅ 인증 성공! @${result.user.username}로 로그인되었습니다.`, 'success');
-            console.log('✅ 인증 성공! publishBtn 활성화 시도');
-            console.log('📌 publishBtn 존재:', !!xModalElements.publishBtn);
+            // 성공 시 캐시 저장
+            cacheXAuth(result);
+            
+            showValidationResult(`✅ 인증 성공! @${result.user.username}로 로그인되었습니다. (15분간 캐시됨)`, 'success');
+            console.log('✅ 인증 성공 및 캐시 저장');
+            
             if (xModalElements.publishBtn) {
                 xModalElements.publishBtn.disabled = false;
-                console.log('✅ publishBtn disabled = false 설정 완료');
-                console.log('📌 설정 후 disabled 상태:', xModalElements.publishBtn.disabled);
-            } else {
-                console.error('❌ publishBtn이 null입니다!');
+                console.log('✅ publishBtn 활성화 완료');
             }
             return true;
         } else {
@@ -6783,11 +6852,14 @@ window.publishToX = async function() {
         } else {
             // 429 Too Many Requests 특별 처리
             if (response.status === 429) {
+                const resetTime = new Date(Date.now() + 15 * 60 * 1000);
+                const resetTimeStr = resetTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                
                 showPublishingResult('error', { 
-                    error: 'X API 요청 제한 초과. 15분 후에 다시 시도해주세요.' 
+                    error: `X API 요청 제한 초과. ${resetTimeStr}에 다시 시도해주세요.` 
                 });
                 showToast(
-                    '⏳ X API 요청 제한 초과\n15분 후에 다시 시도해주세요.', 
+                    `⏳ X API 요청 제한 초과\n${resetTimeStr}에 다시 시도해주세요.`, 
                     'warning',
                     10000 // 10초 동안 표시
                 );

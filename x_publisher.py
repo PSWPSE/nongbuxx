@@ -32,10 +32,11 @@ class XPublisher:
         self.authenticated = False
         self.client = None
         
-        # 인증 캐싱 추가
+        # 인증 캐싱 강화
         self.last_verify_time = 0
         self.verify_cache_ttl = 900  # 15분 캐시
         self.cached_user = None
+        self.skip_verify_on_post = True  # 게시 시 인증 확인 스킵
         
         # API 호출 통계 추가
         self.api_call_stats = {
@@ -181,11 +182,12 @@ class XPublisher:
             
             if response.data:
                 tweet_id = response.data['id']
-                # 트윗 URL 생성
-                user_info = self.verify_credentials()
-                if user_info['success']:
-                    tweet_url = f"https://twitter.com/{user_info['user']['username']}/status/{tweet_id}"
+                # 트윗 URL 생성 (인증 확인 스킵)
+                if self.cached_user:
+                    # 캐시된 사용자 정보 사용
+                    tweet_url = f"https://twitter.com/{self.cached_user['username']}/status/{tweet_id}"
                 else:
+                    # 기본 URL 사용
                     tweet_url = f"https://twitter.com/i/web/status/{tweet_id}"
                 
                 return {
