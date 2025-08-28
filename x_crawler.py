@@ -70,9 +70,22 @@ class XCrawler:
             logger.error(f"❌ X API 설정 실패: {str(e)}")
             return False
     
-    def setup_ai_api(self, provider: str, api_key: str):
-        """AI API 설정"""
+    def setup_ai_api(self, config):
+        """AI API 설정 - dict 형태로 받기"""
         try:
+            # dict로 받은 경우
+            if isinstance(config, dict):
+                provider = config.get('provider')
+                api_key = config.get('api_key')
+            # 실수로 두 개의 인자로 받은 경우 (backward compatibility)
+            else:
+                provider = config
+                api_key = None
+                
+            if not provider or not api_key:
+                logger.warning("⚠️ AI API 설정 정보 부족")
+                return False
+                
             if provider == 'openai':
                 self.ai_client = OpenAI(api_key=api_key)
                 self.ai_provider = 'openai'

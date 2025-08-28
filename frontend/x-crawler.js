@@ -212,6 +212,12 @@ const XCrawler = {
         statusDiv.className = 'collection-status loading';
         statusDiv.textContent = '포스트를 수집하고 있습니다...';
         
+        // status-messages 표시
+        const statusMessages = document.querySelector('.status-messages');
+        if (statusMessages) {
+            statusMessages.style.display = 'flex';
+        }
+        
         try {
             const response = await fetch(`${this.API_BASE_URL}/api/x-crawler/collect`, {
                 method: 'POST',
@@ -266,6 +272,16 @@ const XCrawler = {
                     this.updateDashboard();
                     this.updateQueue(); // 큐 업데이트 추가
                 }
+                
+                // 10초 후 상태 메시지 숨기기
+                setTimeout(() => {
+                    const statusMessages = document.querySelector('.status-messages');
+                    if (statusMessages) {
+                        statusMessages.style.display = 'none';
+                    }
+                    statusDiv.className = 'collection-status';
+                    statusDiv.textContent = '';
+                }, 10000);
                 
                 // 수집된 포스트 표시 (선택적)
                 if (result.data.posts && result.data.posts.length > 0) {
