@@ -928,8 +928,13 @@ const XCrawler = {
                 // 상태 카드 업데이트
                 this.updateStatusCards(stats);
                 
-                // 타임라인 업데이트
-                this.updateTimeline(stats);
+                // 히스토리 업데이트
+                await this.updateHistory();
+                
+                // 타임라인 업데이트 (최근 활동)
+                if (stats.recent_activity) {
+                    this.updateTimeline(stats.recent_activity);
+                }
                 
                 // 게시 큐 업데이트
                 this.updateQueue(stats);
@@ -939,23 +944,131 @@ const XCrawler = {
         }
     },
     
+    // 히스토리 업데이트
+    async updateHistory() {
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/api/x-crawler/history`);
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                const history = result.data;
+                
+                // 타임라인에 최근 활동 표시
+                const container = document.querySelector('.timeline-items');
+                if (container) {
+                    container.innerHTML = '';
+                    
+                    // 수집 기록과 게시 기록을 합쳐서 시간순 정렬
+                    const allEvents = [];
+                    
+                    // 수집 기록 추가
+                    if (history.collections) {
+                        history.collections.forEach(item => {
+                            allEvents.push({
+                                ...item,
+                                type: 'collection',
+                                icon: '📥',
+                                description: `@${item.influencer}: ${item.posts_count}개 수집`
+                            });
+                        });
+                    }
+                    
+                    // 게시 기록 추가
+                    if (history.publishes) {
+                        history.publishes.forEach(item => {
+                            allEvents.push({
+                                ...item,
+                                type: 'publish',
+                                icon: '📤',
+                                description: '요약 게시 완료'
+                            });
+                        });
+                    }
+                    
+                    // 시간순 정렬 (최신순)
+                    allEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                    
+                    // 최근 10개만 표시
+                    allEvents.slice(0, 10).forEach(event => {
+                        const item = document.createElement('div');
+                        item.className = `timeline-item ${event.success ? 'completed' : 'failed'}`;
+                        
+                        const time = new Date(event.timestamp);
+                        item.innerHTML = `
+                            <span class="time">${time.toLocaleTimeString('ko-KR', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}</span>
+                            <span class="status">${event.icon}</span>
+                            <span class="description">${event.description}</span>
+                        `;
+                        
+                        container.appendChild(item);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('히스토리 업데이트 오류:', error);
+        }
+    },
+    
     updateStatusCards(stats) {
-        // 수집 예정
+        // 개선된 통계 표시
+        const overview = stats?.overview || {};
+        const last24h = stats?.last_24h || {};
+        const apiStatus = stats?.api_status || {};
+        
+        // 수집 예정 -> 총 수집량
         const collectingCount = document.querySelector('.status-card:nth-child(1) .status-count');
         if (collectingCount) {
-            collectingCount.textContent = stats?.scheduler?.next_schedules?.filter(s => s.type === 'collection').length || 0;
+            collectingCount.textContent = overview.total_collected || 0;
+            // 성공률 표시
+            const card = collectingCount.closest('.status-card');
+            const label = card.querySelector('.status-label');
+            if (label) {
+                label.innerHTML = `수집됨 <small>(성공률 ${last24h.success_rate || 100}%)</small>`;
+            }
         }
         
-        // 게시 대기
+        // 게시 대기 -> 총 게시량
         const pendingCount = document.querySelector('.status-card:nth-child(2) .status-count');
         if (pendingCount) {
-            pendingCount.textContent = stats?.scheduler?.queue_size || 0;
+            pendingCount.textContent = overview.total_published || 0;
+            // 오늘 게시량 표시
+            const card = pendingCount.closest('.status-card');
+            const label = card.querySelector('.status-label');
+            if (label) {
+                label.innerHTML = `게시됨 <small>(오늘 ${last24h.publishes || 0}개)</small>`;
+            }
         }
         
-        // 완료
+        // 완료 -> 인플루언서 수
         const completedCount = document.querySelector('.status-card:nth-child(3) .status-count');
         if (completedCount) {
-            completedCount.textContent = stats?.scheduler?.history_count || 0;
+            completedCount.textContent = overview.influencers_count || 0;
+            const card = completedCount.closest('.status-card');
+            const label = card.querySelector('.status-label');
+            if (label) {
+                label.textContent = '인플루언서';
+            }
+        }
+        
+        // 4번째 카드 -> API 상태
+        const fourthCard = document.querySelector('.status-card:nth-child(4) .status-count');
+        if (fourthCard) {
+            const xConnected = apiStatus.x_api?.connected;
+            const aiConnected = apiStatus.ai_api?.connected;
+            
+            if (xConnected && aiConnected) {
+                fourthCard.innerHTML = '🟢';
+                fourthCard.parentElement.querySelector('.status-label').textContent = 'API 정상';
+            } else if (xConnected || aiConnected) {
+                fourthCard.innerHTML = '🟡';
+                fourthCard.parentElement.querySelector('.status-label').textContent = 'API 부분 연결';
+            } else {
+                fourthCard.innerHTML = '🔴';
+                fourthCard.parentElement.querySelector('.status-label').textContent = 'API 오프라인';
+            }
         }
     },
     
@@ -996,10 +1109,37 @@ const XCrawler = {
     async loadStatistics() {
         try {
             const response = await fetch(`${this.API_BASE_URL}/api/x-crawler/stats`);
-            const stats = await response.json();
+            const result = await response.json();
             
-            if (stats.success) {
-                this.renderStatistics(stats.data);
+            if (result.success && result.data) {
+                const stats = result.data;
+                
+                // 24시간 통계 업데이트
+                const last24hColl = document.getElementById('last24hCollections');
+                if (last24hColl) last24hColl.textContent = stats.last_24h?.collections || 0;
+                
+                const last24hPub = document.getElementById('last24hPublishes');
+                if (last24hPub) last24hPub.textContent = stats.last_24h?.publishes || 0;
+                
+                const successRateEl = document.getElementById('successRate');
+                if (successRateEl) successRateEl.textContent = (stats.last_24h?.success_rate || 100) + '%';
+                
+                // API 상태 업데이트
+                const xConnected = stats.api_status?.x_api?.connected;
+                const aiConnected = stats.api_status?.ai_api?.connected;
+                const statusElement = document.getElementById('apiHealthStatus');
+                
+                if (statusElement) {
+                    if (xConnected && aiConnected) {
+                        statusElement.textContent = '🟢';
+                    } else if (xConnected || aiConnected) {
+                        statusElement.textContent = '🟡';
+                    } else {
+                        statusElement.textContent = '🔴';
+                    }
+                }
+                
+                this.renderStatistics(stats);
             }
         } catch (error) {
             console.error('통계 로드 오류:', error);

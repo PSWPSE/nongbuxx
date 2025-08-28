@@ -358,7 +358,27 @@
 
             <!-- Statistics Section -->
             <section id="statistics-section" class="x-section">
-                <h2 class="section-title">통계 & 히스토리</h2>
+                <h2 class="section-title">📊 통계 & 히스토리</h2>
+                
+                <!-- 실시간 통계 요약 -->
+                <div class="realtime-stats-banner">
+                    <div class="realtime-stat">
+                        <span class="label">24시간 수집</span>
+                        <span class="value" id="last24hCollections">0</span>
+                    </div>
+                    <div class="realtime-stat">
+                        <span class="label">24시간 게시</span>
+                        <span class="value" id="last24hPublishes">0</span>
+                    </div>
+                    <div class="realtime-stat">
+                        <span class="label">성공률</span>
+                        <span class="value" id="successRate">100%</span>
+                    </div>
+                    <div class="realtime-stat">
+                        <span class="label">API 상태</span>
+                        <span class="value" id="apiHealthStatus">🟢</span>
+                    </div>
+                </div>
                 
                 <div class="stats-overview">
                     <div class="stat-card">

@@ -2258,11 +2258,28 @@ def get_publish_queue():
 @app.route('/api/x-crawler/history', methods=['GET'])
 def get_collection_history():
     """수집 히스토리 조회"""
-    scheduler = get_scheduler()
-    return jsonify({
-        'success': True,
-        'data': scheduler.collection_history[-50:]  # 최근 50개
-    })
+    try:
+        crawler = get_crawler()
+        
+        # 히스토리 데이터 가져오기
+        history = {
+            'collections': crawler.collection_history[-20:],  # 최근 20개
+            'publishes': crawler.publish_history[-20:],  # 최근 20개
+            'total_collections': len(crawler.collection_history),
+            'total_publishes': len(crawler.publish_history)
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': history
+        })
+        
+    except Exception as e:
+        logger.error(f"히스토리 조회 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/x-crawler/stats', methods=['GET'])
 def get_x_crawler_stats():

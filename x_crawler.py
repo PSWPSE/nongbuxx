@@ -29,8 +29,15 @@ class XCrawler:
         """초기화"""
         self.x_client = None
         self.ai_client = None
+        self.ai_provider = None
         self.influencers = []
         self.collected_posts = []
+        self.collection_history = []  # 수집 기록
+        self.publish_history = []  # 게시 기록
+        self.api_usage = {  # API 사용량
+            'x_api': {'calls': 0, 'last_reset': datetime.now(KST)},
+            'ai_api': {'tokens': 0, 'calls': 0}
+        }
         
         logger.info("✅ X 크롤러 초기화")
     
@@ -131,16 +138,35 @@ class XCrawler:
                         'engagement': tweet.favorite_count + tweet.retweet_count
                     })
                 
-                logger.info(f"✅ {username}: {len(tweets)}개 포스트 수집 완료")
-                
-            except tweepy.errors.TooManyRequests:
-                logger.warning(f"⚠️ Rate limit 도달 - {username}")
-            except tweepy.errors.Forbidden:
-                logger.error(f"❌ 접근 권한 없음 - {username}")
-            except Exception as e:
-                logger.error(f"❌ 포스트 수집 오류 - {username}: {str(e)}")
+                            logger.info(f"✅ {username}: {len(tweets)}개 포스트 수집 완료")
             
-            return tweets
+            # API 사용량 업데이트
+            self.api_usage['x_api']['calls'] += 1
+            
+            # 수집 기록 저장
+            if tweets:
+                self.collection_history.append({
+                    'timestamp': datetime.now(KST).isoformat(),
+                    'influencer': username,
+                    'posts_count': len(tweets),
+                    'success': True
+                })
+            
+        except tweepy.errors.TooManyRequests:
+            logger.warning(f"⚠️ Rate limit 도달 - {username}")
+            self.collection_history.append({
+                'timestamp': datetime.now(KST).isoformat(),
+                'influencer': username,
+                'posts_count': 0,
+                'success': False,
+                'error': 'Rate limit exceeded'
+            })
+        except tweepy.errors.Forbidden:
+            logger.error(f"❌ 접근 권한 없음 - {username}")
+        except Exception as e:
+            logger.error(f"❌ 포스트 수집 오류 - {username}: {str(e)}")
+        
+        return tweets
             
         except Exception as e:
             logger.error(f"❌ 예상치 못한 오류: {str(e)}")
@@ -363,6 +389,18 @@ class XCrawler:
                 
                 logger.info(f"✅ X 게시 성공: {tweet.id_str}")
                 
+                # 게시 기록 저장
+                self.publish_history.append({
+                    'timestamp': datetime.now(KST).isoformat(),
+                    'tweet_id': tweet.id_str,
+                    'url': f'https://twitter.com/user/status/{tweet.id_str}',
+                    'content': full_text,
+                    'success': True
+                })
+                
+                # API 사용량 업데이트
+                self.api_usage['x_api']['calls'] += 1
+                
                 return {
                     'success': True,
                     'tweet_id': tweet.id_str,
@@ -400,15 +438,57 @@ class XCrawler:
     
     def get_stats(self) -> Dict:
         """통계 정보"""
+        # 최근 24시간 통계
+        now = datetime.now(KST)
+        last_24h = now - timedelta(hours=24)
+        
+        recent_collections = [
+            h for h in self.collection_history 
+            if datetime.fromisoformat(h['timestamp']) > last_24h
+        ]
+        
+        recent_publishes = [
+            h for h in self.publish_history
+            if datetime.fromisoformat(h['timestamp']) > last_24h
+        ]
+        
         return {
-            'total_collected': len(self.collected_posts),
-            'influencers_count': len(self.influencers),
-            'last_collection': datetime.now(KST).isoformat(),
+            'overview': {
+                'total_collected': len(self.collected_posts),
+                'total_published': len(self.publish_history),
+                'influencers_count': len(self.influencers),
+                'last_collection': self.collection_history[-1]['timestamp'] if self.collection_history else None,
+                'last_publish': self.publish_history[-1]['timestamp'] if self.publish_history else None
+            },
+            'last_24h': {
+                'collections': len(recent_collections),
+                'publishes': len(recent_publishes),
+                'success_rate': self._calculate_success_rate(recent_collections)
+            },
             'api_status': {
-                'x_api': self.x_client is not None,
-                'ai_api': self.ai_client is not None
+                'x_api': {
+                    'connected': self.x_client is not None,
+                    'calls_made': self.api_usage['x_api']['calls'],
+                    'last_reset': self.api_usage['x_api']['last_reset'].isoformat()
+                },
+                'ai_api': {
+                    'connected': self.ai_client is not None,
+                    'calls_made': self.api_usage['ai_api']['calls'],
+                    'tokens_used': self.api_usage['ai_api']['tokens']
+                }
+            },
+            'recent_activity': {
+                'collections': self.collection_history[-5:],  # 최근 5개
+                'publishes': self.publish_history[-5:]  # 최근 5개
             }
         }
+    
+    def _calculate_success_rate(self, records):
+        """성공률 계산"""
+        if not records:
+            return 100.0
+        successful = sum(1 for r in records if r.get('success', False))
+        return round((successful / len(records)) * 100, 1)
 
 
 # 싱글톤 인스턴스
