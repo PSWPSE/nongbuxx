@@ -2352,6 +2352,121 @@ def test_x_crawler():
             'error': str(e)
         }), 500
 
+# ============================================================================
+# Manual Summary Generation API
+# ============================================================================
+
+@app.route('/api/manual-summary/generate', methods=['POST', 'OPTIONS'])
+def generate_manual_summary():
+    """수동 입력된 포스팅으로 AI 요약 생성"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': '요청 데이터가 없습니다'
+            }), 400
+        
+        # 필수 필드 검증
+        required_fields = ['influencer_name', 'posts', 'ai_provider', 'ai_api_key']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'error': f'필수 필드가 누락되었습니다: {", ".join(missing_fields)}'
+            }), 400
+        
+        influencer_name = data.get('influencer_name', '').strip()
+        posts = data.get('posts', [])
+        ai_provider = data.get('ai_provider')
+        ai_api_key = data.get('ai_api_key')
+        
+        # 포스팅 데이터 검증
+        if not posts or len(posts) == 0:
+            return jsonify({
+                'success': False,
+                'error': '최소 1개 이상의 포스팅을 입력해주세요'
+            }), 400
+        
+        # 빈 포스팅 제거
+        valid_posts = []
+        for post in posts:
+            if post.get('content', '').strip():
+                valid_posts.append({
+                    'id': f'manual_{int(time.time() * 1000)}_{len(valid_posts)}',
+                    'author': influencer_name.replace('@', ''),
+                    'text': post.get('content', '').strip(),
+                    'created_at': post.get('datetime', datetime.now().isoformat()),
+                    'likes': int(post.get('likes', 0)),
+                    'retweets': int(post.get('retweets', 0)),
+                    'engagement': int(post.get('likes', 0)) + int(post.get('retweets', 0)),
+                    'url': f'https://twitter.com/{influencer_name.replace("@", "")}/status/manual_{len(valid_posts)}'
+                })
+        
+        if not valid_posts:
+            return jsonify({
+                'success': False,
+                'error': '유효한 포스팅 내용이 없습니다'
+            }), 400
+        
+        logger.info(f"수동 요약 생성 요청: {influencer_name}, {len(valid_posts)}개 포스팅")
+        
+        # X 크롤러 인스턴스 생성 및 AI 설정
+        crawler = get_crawler()
+        
+        # AI API 설정
+        ai_setup_success = crawler.setup_ai_api({
+            'provider': ai_provider,
+            'api_key': ai_api_key
+        })
+        
+        if not ai_setup_success:
+            return jsonify({
+                'success': False,
+                'error': 'AI API 설정에 실패했습니다. API 키를 확인해주세요.'
+            }), 400
+        
+        # AI 요약 생성 (비동기 함수를 동기적으로 실행)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            summary_result = loop.run_until_complete(crawler.generate_summary(valid_posts))
+            
+            if 'error' in summary_result:
+                return jsonify({
+                    'success': False,
+                    'error': f'AI 요약 생성 실패: {summary_result["error"]}'
+                }), 500
+            
+            logger.info(f"수동 요약 생성 완료: {len(summary_result.get('summary', ''))}자")
+            
+            return jsonify({
+                'success': True,
+                'data': {
+                    'influencer_name': influencer_name,
+                    'posts_count': len(valid_posts),
+                    'summary': summary_result.get('summary', ''),
+                    'hashtags': summary_result.get('hashtags', []),
+                    'analyzed_count': summary_result.get('analyzed_count', len(valid_posts)),
+                    'generation_time': datetime.now().isoformat()
+                }
+            })
+            
+        finally:
+            loop.close()
+        
+    except Exception as e:
+        logger.error(f"수동 요약 생성 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'서버 오류가 발생했습니다: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     # 환경 변수 확인
     port = int(os.getenv('PORT', 8080))  # Railway 기본 포트 8080

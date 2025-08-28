@@ -33,11 +33,16 @@
                 <h1>NONGBUXX</h1>
             </div>
             <p class="subtitle">뉴스를 SNS 콘텐츠로 변환해 드려요.</p>
-            <div style="margin-top: 15px;">
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button type="button" id="xCrawlerBtn" class="btn btn-primary" style="background: linear-gradient(135deg, #1DA1F2, #0d8bd9); border: none; padding: 10px 20px; border-radius: 25px; font-weight: 600;">
                     <i class="fab fa-x-twitter"></i>
                     X 크롤링&요약게시
                     <span style="background: #ff4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 5px; vertical-align: top;">NEW</span>
+                </button>
+                <button type="button" id="manualSummaryBtn" class="btn btn-primary" style="background: linear-gradient(135deg, #4CAF50, #388E3C); border: none; padding: 10px 20px; border-radius: 25px; font-weight: 600;">
+                    <i class="fas fa-edit"></i>
+                    포스팅 요약 생성
+                    <span style="background: #2E7D32; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 5px; vertical-align: top;">MANUAL</span>
                 </button>
             </div>
         </header>
@@ -852,6 +857,150 @@
         <!-- Toast Container -->
         <div class="toast-container" id="toastContainer"></div>
     </div>
+
+        <!-- Manual Summary Screen -->
+        <section class="manual-summary-screen" id="manualSummaryScreen" style="display: none;">
+            <div class="screen-header">
+                <button type="button" id="backToMainFromManualBtn" class="btn btn-icon">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1>
+                    <i class="fas fa-edit"></i>
+                    포스팅 수동 요약 생성
+                </h1>
+                <button type="button" id="manualSummaryThemeToggle" class="theme-toggle-small">
+                    <i class="fas fa-adjust"></i>
+                </button>
+            </div>
+
+            <div class="manual-summary-container">
+                <!-- AI API 설정 섹션 -->
+                <div class="manual-api-settings">
+                    <h3>
+                        <i class="fas fa-robot"></i>
+                        AI API 설정 (요약 생성용)
+                    </h3>
+                    <div class="api-form">
+                        <div class="form-group">
+                            <label for="manualAiProvider">AI 제공자</label>
+                            <select id="manualAiProvider" class="form-control">
+                                <option value="openai">OpenAI (GPT-4o-mini)</option>
+                                <option value="anthropic">Anthropic (Claude-3.5-haiku)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="manualAiApiKey">API Key</label>
+                            <div class="input-with-button">
+                                <input type="password" id="manualAiApiKey" class="form-control" placeholder="API 키를 입력하세요">
+                                <button type="button" class="btn-icon" onclick="togglePasswordField('manualAiApiKey')">
+                                    <i class="fas fa-eye" id="manualAiApiKeyToggle"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="saveManualAiBtn" class="btn btn-success">
+                                <i class="fas fa-save"></i> 저장
+                            </button>
+                            <button type="button" id="deleteManualAiBtn" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> 삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 포스팅 입력 섹션 -->
+                <div class="manual-posts-input">
+                    <h3>
+                        <i class="fas fa-pen-to-square"></i>
+                        포스팅 내용 입력
+                    </h3>
+                    
+                    <div class="influencer-info">
+                        <div class="form-group">
+                            <label for="manualInfluencerName">인플루언서명</label>
+                            <input type="text" id="manualInfluencerName" class="form-control" placeholder="@username 또는 이름">
+                        </div>
+                    </div>
+
+                    <div class="posts-container" id="manualPostsContainer">
+                        <div class="post-item" data-post-id="1">
+                            <div class="post-header">
+                                <h4>포스팅 #1</h4>
+                                <button type="button" class="btn btn-danger btn-sm remove-post-btn" onclick="removePost(1)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <div class="form-group">
+                                <label>포스팅 내용</label>
+                                <textarea class="form-control post-content" rows="4" placeholder="포스팅 내용을 입력하세요"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>좋아요 수</label>
+                                    <input type="number" class="form-control post-likes" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>리트윗 수</label>
+                                    <input type="number" class="form-control post-retweets" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>작성 시간</label>
+                                    <input type="datetime-local" class="form-control post-datetime">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="posts-actions">
+                        <button type="button" id="addPostBtn" class="btn btn-outline">
+                            <i class="fas fa-plus"></i>
+                            포스팅 추가
+                        </button>
+                        <button type="button" id="generateSummaryBtn" class="btn btn-primary">
+                            <i class="fas fa-magic"></i>
+                            AI 요약 생성
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 결과 섹션 -->
+                <div class="manual-result-section" id="manualResultSection" style="display: none;">
+                    <h3>
+                        <i class="fas fa-sparkles"></i>
+                        생성된 요약
+                    </h3>
+                    
+                    <div class="result-content">
+                        <div class="summary-preview" id="manualSummaryPreview">
+                            <!-- 생성된 요약이 여기에 표시됩니다 -->
+                        </div>
+                        
+                        <div class="result-actions">
+                            <button type="button" id="copySummaryBtn" class="btn btn-info">
+                                <i class="fas fa-copy"></i>
+                                복사
+                            </button>
+                            <button type="button" id="downloadSummaryBtn" class="btn btn-secondary">
+                                <i class="fas fa-download"></i>
+                                다운로드
+                            </button>
+                            <button type="button" id="postToXBtn" class="btn btn-primary">
+                                <i class="fab fa-x-twitter"></i>
+                                X에 게시
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 상태 메시지 -->
+                <div class="manual-status-messages" id="manualStatusMessages" style="display: none;">
+                    <div class="status-message">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span id="manualStatusText">AI 요약 생성 중...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="./config.js"></script>

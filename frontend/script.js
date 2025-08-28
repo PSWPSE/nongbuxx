@@ -6904,3 +6904,453 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// ============================================================================
+// Manual Summary Generation Feature
+// ============================================================================
+
+class ManualSummaryManager {
+    constructor() {
+        this.postCounter = 1;
+        this.currentSummary = '';
+        this.init();
+    }
+    
+    init() {
+        // 이벤트 리스너 설정
+        this.setupEventListeners();
+        
+        // 초기 datetime 설정
+        this.setDefaultDateTime();
+        
+        // 테마 초기화
+        this.initTheme();
+        
+        console.log('✅ Manual Summary Manager 초기화 완료');
+    }
+    
+    setupEventListeners() {
+        // 메인 페이지 버튼
+        const manualSummaryBtn = document.getElementById('manualSummaryBtn');
+        if (manualSummaryBtn) {
+            manualSummaryBtn.addEventListener('click', () => this.showManualSummaryScreen());
+        }
+        
+        // 뒤로가기 버튼
+        const backBtn = document.getElementById('backToMainFromManualBtn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => this.hideManualSummaryScreen());
+        }
+        
+        // AI API 관련 버튼
+        const saveAiBtn = document.getElementById('saveManualAiBtn');
+        const deleteAiBtn = document.getElementById('deleteManualAiBtn');
+        if (saveAiBtn) saveAiBtn.addEventListener('click', () => this.saveAiSettings());
+        if (deleteAiBtn) deleteAiBtn.addEventListener('click', () => this.deleteAiSettings());
+        
+        // 포스팅 관련 버튼
+        const addPostBtn = document.getElementById('addPostBtn');
+        const generateBtn = document.getElementById('generateSummaryBtn');
+        if (addPostBtn) addPostBtn.addEventListener('click', () => this.addPost());
+        if (generateBtn) generateBtn.addEventListener('click', () => this.generateSummary());
+        
+        // 결과 관련 버튼
+        const copyBtn = document.getElementById('copySummaryBtn');
+        const downloadBtn = document.getElementById('downloadSummaryBtn');
+        const postXBtn = document.getElementById('postToXBtn');
+        if (copyBtn) copyBtn.addEventListener('click', () => this.copySummary());
+        if (downloadBtn) downloadBtn.addEventListener('click', () => this.downloadSummary());
+        if (postXBtn) postXBtn.addEventListener('click', () => this.postToX());
+        
+        // 테마 토글
+        const themeToggle = document.getElementById('manualSummaryThemeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => this.toggleTheme());
+        }
+    }
+    
+    showManualSummaryScreen() {
+        const screen = document.getElementById('manualSummaryScreen');
+        const mainContainer = document.querySelector('.container');
+        
+        if (screen && mainContainer) {
+            mainContainer.style.display = 'none';
+            screen.style.display = 'block';
+            
+            // AI 설정 불러오기
+            this.loadAiSettings();
+            
+            console.log('📱 Manual Summary 화면 표시');
+        }
+    }
+    
+    hideManualSummaryScreen() {
+        const screen = document.getElementById('manualSummaryScreen');
+        const mainContainer = document.querySelector('.container');
+        
+        if (screen && mainContainer) {
+            screen.style.display = 'none';
+            mainContainer.style.display = 'block';
+            
+            console.log('🔙 메인 화면으로 복귀');
+        }
+    }
+    
+    initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'auto';
+        this.applyTheme(savedTheme);
+    }
+    
+    toggleTheme() {
+        const currentTheme = localStorage.getItem('theme') || 'auto';
+        const themes = ['light', 'dark', 'auto'];
+        const nextIndex = (themes.indexOf(currentTheme) + 1) % themes.length;
+        const nextTheme = themes[nextIndex];
+        
+        localStorage.setItem('theme', nextTheme);
+        this.applyTheme(nextTheme);
+        
+        // 메인 페이지 테마도 동기화
+        if (window.setTheme) {
+            window.setTheme(nextTheme);
+        }
+    }
+    
+    applyTheme(theme) {
+        const screen = document.getElementById('manualSummaryScreen');
+        if (screen) {
+            if (theme === 'auto') {
+                screen.removeAttribute('data-theme');
+            } else {
+                screen.setAttribute('data-theme', theme);
+            }
+        }
+    }
+    
+    saveAiSettings() {
+        const provider = document.getElementById('manualAiProvider')?.value;
+        const apiKey = document.getElementById('manualAiApiKey')?.value;
+        
+        if (!provider || !apiKey) {
+            this.showToast('AI 제공자와 API 키를 입력해주세요.', 'warning');
+            return;
+        }
+        
+        // localStorage에 저장
+        localStorage.setItem('manual_ai_provider', provider);
+        localStorage.setItem('manual_ai_api_key', btoa(apiKey)); // Base64 인코딩
+        
+        this.showToast('AI API 설정이 저장되었습니다.', 'success');
+        console.log('💾 AI API 설정 저장됨:', provider);
+    }
+    
+    loadAiSettings() {
+        const provider = localStorage.getItem('manual_ai_provider');
+        const encodedKey = localStorage.getItem('manual_ai_api_key');
+        
+        if (provider) {
+            const providerSelect = document.getElementById('manualAiProvider');
+            if (providerSelect) providerSelect.value = provider;
+        }
+        
+        if (encodedKey) {
+            try {
+                const apiKey = atob(encodedKey);
+                const keyInput = document.getElementById('manualAiApiKey');
+                if (keyInput) keyInput.value = apiKey;
+                console.log('📥 저장된 AI API 설정 불러옴');
+            } catch (error) {
+                console.error('AI API 키 디코딩 실패:', error);
+            }
+        }
+    }
+    
+    deleteAiSettings() {
+        if (confirm('저장된 AI API 설정을 삭제하시겠습니까?')) {
+            localStorage.removeItem('manual_ai_provider');
+            localStorage.removeItem('manual_ai_api_key');
+            
+            // 입력 필드 초기화
+            const providerSelect = document.getElementById('manualAiProvider');
+            const keyInput = document.getElementById('manualAiApiKey');
+            if (providerSelect) providerSelect.value = 'openai';
+            if (keyInput) keyInput.value = '';
+            
+            this.showToast('AI API 설정이 삭제되었습니다.', 'info');
+            console.log('🗑️ AI API 설정 삭제됨');
+        }
+    }
+    
+    setDefaultDateTime() {
+        const datetimeInput = document.querySelector('.post-datetime');
+        if (datetimeInput && !datetimeInput.value) {
+            const now = new Date();
+            const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+            datetimeInput.value = localDateTime.toISOString().slice(0, 16);
+        }
+    }
+    
+    addPost() {
+        this.postCounter++;
+        const container = document.getElementById('manualPostsContainer');
+        
+        if (container) {
+            const postHtml = `
+                <div class="post-item" data-post-id="${this.postCounter}">
+                    <div class="post-header">
+                        <h4>포스팅 #${this.postCounter}</h4>
+                        <button type="button" class="btn btn-danger btn-sm remove-post-btn" onclick="manualSummaryManager.removePost(${this.postCounter})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label>포스팅 내용</label>
+                        <textarea class="form-control post-content" rows="4" placeholder="포스팅 내용을 입력하세요"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>좋아요 수</label>
+                            <input type="number" class="form-control post-likes" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>리트윗 수</label>
+                            <input type="number" class="form-control post-retweets" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>작성 시간</label>
+                            <input type="datetime-local" class="form-control post-datetime">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', postHtml);
+            
+            // 새 포스팅의 기본 시간 설정
+            const newDatetimeInput = container.querySelector(`[data-post-id="${this.postCounter}"] .post-datetime`);
+            if (newDatetimeInput) {
+                const now = new Date();
+                const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+                newDatetimeInput.value = localDateTime.toISOString().slice(0, 16);
+            }
+            
+            console.log(`➕ 포스팅 #${this.postCounter} 추가됨`);
+        }
+    }
+    
+    removePost(postId) {
+        const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+        if (postElement) {
+            postElement.remove();
+            console.log(`➖ 포스팅 #${postId} 제거됨`);
+            
+            // 포스팅이 1개만 남은 경우 제거 방지
+            const remainingPosts = document.querySelectorAll('.post-item').length;
+            if (remainingPosts === 0) {
+                this.addPost(); // 최소 1개는 유지
+            }
+        }
+    }
+    
+    async generateSummary() {
+        try {
+            // 입력 데이터 수집
+            const influencerName = document.getElementById('manualInfluencerName')?.value?.trim();
+            const provider = document.getElementById('manualAiProvider')?.value;
+            const apiKey = document.getElementById('manualAiApiKey')?.value;
+            
+            // 필수 필드 검증
+            if (!influencerName) {
+                this.showToast('인플루언서명을 입력해주세요.', 'warning');
+                return;
+            }
+            
+            if (!provider || !apiKey) {
+                this.showToast('AI API 설정을 완료해주세요.', 'warning');
+                return;
+            }
+            
+            // 포스팅 데이터 수집
+            const posts = [];
+            const postItems = document.querySelectorAll('.post-item');
+            
+            postItems.forEach(item => {
+                const content = item.querySelector('.post-content')?.value?.trim();
+                const likes = parseInt(item.querySelector('.post-likes')?.value || 0);
+                const retweets = parseInt(item.querySelector('.post-retweets')?.value || 0);
+                const datetime = item.querySelector('.post-datetime')?.value;
+                
+                if (content) {
+                    posts.push({
+                        content: content,
+                        likes: likes,
+                        retweets: retweets,
+                        datetime: datetime
+                    });
+                }
+            });
+            
+            if (posts.length === 0) {
+                this.showToast('최소 1개 이상의 포스팅 내용을 입력해주세요.', 'warning');
+                return;
+            }
+            
+            // 상태 메시지 표시
+            this.showStatusMessage(`AI 요약 생성 중... (${posts.length}개 포스팅 분석)`);
+            
+            console.log('🚀 AI 요약 생성 시작:', { influencer: influencerName, postsCount: posts.length });
+            
+            // API 호출
+            const response = await fetch(`${API_BASE_URL}/api/manual-summary/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    influencer_name: influencerName,
+                    posts: posts,
+                    ai_provider: provider,
+                    ai_api_key: apiKey
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.currentSummary = result.data.summary;
+                this.displaySummary(result.data);
+                this.showToast(`✅ AI 요약 생성 완료! (${result.data.posts_count}개 포스팅 분석)`, 'success');
+                console.log('✅ AI 요약 생성 성공:', result.data);
+            } else {
+                this.showToast(`❌ 요약 생성 실패: ${result.error}`, 'error');
+                console.error('❌ AI 요약 생성 실패:', result.error);
+            }
+            
+        } catch (error) {
+            console.error('요약 생성 오류:', error);
+            this.showToast('요약 생성 중 오류가 발생했습니다.', 'error');
+        } finally {
+            this.hideStatusMessage();
+        }
+    }
+    
+    displaySummary(data) {
+        const resultSection = document.getElementById('manualResultSection');
+        const summaryPreview = document.getElementById('manualSummaryPreview');
+        
+        if (resultSection && summaryPreview) {
+            summaryPreview.textContent = data.summary;
+            resultSection.style.display = 'block';
+            
+            // 결과 섹션으로 스크롤
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+    
+    async copySummary() {
+        if (!this.currentSummary) {
+            this.showToast('복사할 요약이 없습니다.', 'warning');
+            return;
+        }
+        
+        try {
+            await navigator.clipboard.writeText(this.currentSummary);
+            this.showToast('📋 요약이 클립보드에 복사되었습니다!', 'success');
+            console.log('📋 요약 복사 완료');
+        } catch (error) {
+            console.error('복사 실패:', error);
+            this.showToast('복사에 실패했습니다.', 'error');
+        }
+    }
+    
+    downloadSummary() {
+        if (!this.currentSummary) {
+            this.showToast('다운로드할 요약이 없습니다.', 'warning');
+            return;
+        }
+        
+        const influencerName = document.getElementById('manualInfluencerName')?.value?.trim() || 'unknown';
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const filename = `manual_summary_${influencerName}_${timestamp}.md`;
+        
+        const blob = new Blob([this.currentSummary], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        this.showToast(`📥 요약이 ${filename}로 다운로드되었습니다!`, 'success');
+        console.log('📥 요약 다운로드 완료:', filename);
+    }
+    
+    postToX() {
+        if (!this.currentSummary) {
+            this.showToast('게시할 요약이 없습니다.', 'warning');
+            return;
+        }
+        
+        // X 게시 모달 열기 (기존 기능 재사용)
+        if (window.openXPublishingModal) {
+            this.hideManualSummaryScreen();
+            window.openXPublishingModal(this.currentSummary, 'x');
+        } else {
+            this.showToast('X 게시 기능을 사용할 수 없습니다.', 'error');
+        }
+    }
+    
+    showStatusMessage(message) {
+        const statusMessages = document.getElementById('manualStatusMessages');
+        const statusText = document.getElementById('manualStatusText');
+        
+        if (statusMessages && statusText) {
+            statusText.textContent = message;
+            statusMessages.style.display = 'block';
+        }
+    }
+    
+    hideStatusMessage() {
+        const statusMessages = document.getElementById('manualStatusMessages');
+        if (statusMessages) {
+            statusMessages.style.display = 'none';
+        }
+    }
+    
+    showToast(message, type = 'info') {
+        // 메인 페이지의 토스트 기능 재사용
+        if (window.showToast) {
+            window.showToast(message, type);
+        } else {
+            console.log(`Toast [${type}]: ${message}`);
+        }
+    }
+}
+
+// 전역 함수들
+window.togglePasswordField = function(fieldId) {
+    const field = document.getElementById(fieldId);
+    const toggleIcon = document.getElementById(fieldId + 'Toggle');
+    
+    if (field && toggleIcon) {
+        if (field.type === 'password') {
+            field.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        } else {
+            field.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        }
+    }
+}
+
+// Manual Summary Manager 인스턴스 생성
+let manualSummaryManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    manualSummaryManager = new ManualSummaryManager();
+});
