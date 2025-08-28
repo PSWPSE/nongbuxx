@@ -980,10 +980,8 @@ const XCrawler = {
                 // 히스토리 업데이트
                 await this.updateHistory();
                 
-                // 타임라인 업데이트 (최근 활동)
-                if (stats.recent_activity) {
-                    this.updateTimeline(stats.recent_activity);
-                }
+                // 타임라인 업데이트 (스케줄 포함)
+                this.updateTimeline(stats);
                 
                 // 게시 큐 업데이트
                 this.updateQueue(stats);
