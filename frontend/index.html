@@ -874,38 +874,19 @@
             </div>
 
             <div class="manual-summary-container">
-                <!-- AI API 설정 섹션 -->
-                <div class="manual-api-settings">
+                <!-- AI API 상태 섹션 -->
+                <div class="manual-api-status">
                     <h3>
                         <i class="fas fa-robot"></i>
-                        AI API 설정 (요약 생성용)
-                        <span class="api-status-indicator" id="manualApiStatus" style="display: none;">상태</span>
+                        AI API 상태
+                        <span class="api-status-indicator" id="manualApiStatus">확인 중...</span>
                     </h3>
-                    <div class="api-form">
-                        <div class="form-group">
-                            <label for="manualAiProvider">AI 제공자</label>
-                            <select id="manualAiProvider" class="form-control">
-                                <option value="openai">OpenAI (GPT-4o-mini)</option>
-                                <option value="anthropic">Anthropic (Claude-3.5-haiku)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="manualAiApiKey">API Key</label>
-                            <div class="input-with-button">
-                                <input type="password" id="manualAiApiKey" class="form-control" placeholder="API 키를 입력하세요">
-                                <button type="button" class="btn-icon" onclick="togglePasswordField('manualAiApiKey')">
-                                    <i class="fas fa-eye" id="manualAiApiKeyToggle"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" id="saveManualAiBtn" class="btn btn-success">
-                                <i class="fas fa-save"></i> 저장
-                            </button>
-                            <button type="button" id="deleteManualAiBtn" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> 삭제
-                            </button>
-                        </div>
+                    <div class="api-status-info">
+                        <p id="apiStatusMessage">메인 화면에서 설정한 AI API를 사용합니다.</p>
+                        <button type="button" id="goToMainSettingsBtn" class="btn btn-outline btn-sm">
+                            <i class="fas fa-cog"></i>
+                            메인 화면에서 AI API 설정
+                        </button>
                     </div>
                 </div>
 

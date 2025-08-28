@@ -8623,8 +8623,8 @@ textarea:focus-visible {
     gap: 2rem;
 }
 
-/* API 설정 섹션 */
-.manual-api-settings {
+/* API 상태 섹션 */
+.manual-api-status {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 12px;
@@ -8632,7 +8632,7 @@ textarea:focus-visible {
     box-shadow: var(--shadow-sm);
 }
 
-.manual-api-settings h3 {
+.manual-api-status h3 {
     margin: 0 0 1rem 0;
     color: var(--text-primary);
     display: flex;
@@ -8641,15 +8641,21 @@ textarea:focus-visible {
     font-size: 1.1rem;
 }
 
-.manual-api-settings h3 i {
+.manual-api-status h3 i {
     color: #3b82f6;
 }
 
-.manual-api-settings .api-form {
-    display: grid;
-    grid-template-columns: 1fr 2fr auto;
+.api-status-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 1rem;
-    align-items: end;
+}
+
+.api-status-info p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
 }
 
 /* 포스팅 입력 섹션 */
@@ -8801,8 +8807,9 @@ textarea:focus-visible {
         padding: 1rem;
     }
     
-    .manual-api-settings .api-form {
-        grid-template-columns: 1fr;
+    .api-status-info {
+        flex-direction: column;
+        align-items: flex-start;
     }
     
     .form-row {
