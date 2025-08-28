@@ -69,8 +69,13 @@
                                 </button>
                                 <button type="button" id="apiSettingsBtn" class="btn btn-header">
                                     <i class="fas fa-key"></i>
-                                    API 키 설정
+                                    AI API
                                     <span class="api-status-indicator" id="apiStatusIndicator">비활성</span>
+                                </button>
+                                <button type="button" id="xApiMainSettingsBtn" class="btn btn-header">
+                                    <i class="fab fa-x-twitter"></i>
+                                    X API
+                                    <span class="api-status-indicator" id="xApiMainStatusIndicator">비활성</span>
                                 </button>
                             </div>
                         </div>
@@ -341,6 +346,89 @@
                             </button>
                         </div>
                         <div class="api-validation-result" id="apiValidationResult"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- X API Settings Modal Section (Main) -->
+            <section class="x-api-main-settings-modal-section" id="xApiMainSettingsModalSection" style="display: none;">
+                <div class="modal-overlay" id="xApiMainSettingsModalOverlay">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3><i class="fab fa-x-twitter"></i> X(Twitter) API 설정</h3>
+                            <button type="button" class="btn-icon" id="closeXApiMainSettingsBtn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="info-box">
+                            <i class="fas fa-info-circle"></i>
+                            X Developer Portal에서 발급받은 API 키를 입력하세요. 한 번 입력하면 브라우저에 안전하게 저장됩니다.
+                        </div>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="xMainConsumerKey">API Key (Consumer Key)</label>
+                                <div class="input-with-button">
+                                    <input type="password" id="xMainConsumerKey" class="form-control" placeholder="Consumer Key 입력">
+                                    <button type="button" class="btn-icon" onclick="toggleXApiField('xMainConsumerKey')">
+                                        <i class="fas fa-eye" id="xMainConsumerKeyToggle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="xMainConsumerSecret">API Secret (Consumer Secret)</label>
+                                <div class="input-with-button">
+                                    <input type="password" id="xMainConsumerSecret" class="form-control" placeholder="Consumer Secret 입력">
+                                    <button type="button" class="btn-icon" onclick="toggleXApiField('xMainConsumerSecret')">
+                                        <i class="fas fa-eye" id="xMainConsumerSecretToggle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="xMainAccessToken">Access Token</label>
+                                <div class="input-with-button">
+                                    <input type="password" id="xMainAccessToken" class="form-control" placeholder="Access Token 입력">
+                                    <button type="button" class="btn-icon" onclick="toggleXApiField('xMainAccessToken')">
+                                        <i class="fas fa-eye" id="xMainAccessTokenToggle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="xMainAccessTokenSecret">Access Token Secret</label>
+                                <div class="input-with-button">
+                                    <input type="password" id="xMainAccessTokenSecret" class="form-control" placeholder="Access Token Secret 입력">
+                                    <button type="button" class="btn-icon" onclick="toggleXApiField('xMainAccessTokenSecret')">
+                                        <i class="fas fa-eye" id="xMainAccessTokenSecretToggle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" id="validateXMainCredentialsBtn" class="btn btn-info">
+                                <i class="fas fa-check"></i> 인증 확인
+                            </button>
+                            <button type="button" id="saveXMainCredentialsBtn" class="btn btn-success">
+                                <i class="fas fa-save"></i> 저장
+                            </button>
+                            <button type="button" id="loadXMainCredentialsBtn" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> 불러오기
+                            </button>
+                            <button type="button" id="deleteXMainCredentialsBtn" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> 삭제
+                            </button>
+                            <button type="button" id="cancelXMainSettingsBtn" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> 취소
+                            </button>
+                        </div>
+                        
+                        <div class="validation-result" id="xMainValidationResult" style="display: none;">
+                            <!-- 검증 결과가 여기에 표시됩니다 -->
+                        </div>
                     </div>
                 </div>
             </section>
