@@ -6343,6 +6343,18 @@ window.handleXPublishClick = function(button) {
 window.openXPublishingModal = function(content = '', contentType = 'x') {
     console.log('🚀 X 게시 모달 열기 시도:', { content: content?.substring(0, 50), contentType });
     
+    // Rate Limit 상태 확인
+    const rateLimitStatus = checkRateLimit();
+    if (rateLimitStatus.isLimited) {
+        showToast(
+            `⏳ Rate Limit 활성 중\n${rateLimitStatus.message}\n리셋 시간: ${rateLimitStatus.resetTime}`,
+            'warning',
+            8000
+        );
+        console.warn('⚠️ Rate Limit으로 인해 모달 열기 차단:', rateLimitStatus);
+        return; // 모달을 열지 않음
+    }
+    
     if (xModalElements.modal) {
         xModalElements.modal.style.display = 'block';
         
@@ -6598,6 +6610,40 @@ window.saveXCredentials = async function() {
 // X API 인증 캐시 키
 const X_AUTH_CACHE_KEY = 'x_auth_cache';
 const X_AUTH_CACHE_TTL = 900000; // 15분 (밀리초)
+const X_RATE_LIMIT_KEY = 'x_rate_limit_until';
+const X_API_ATTEMPT_KEY = 'x_last_api_attempt';
+
+// Rate Limit 상태 확인
+window.checkRateLimit = function() {
+    const rateLimitUntil = localStorage.getItem(X_RATE_LIMIT_KEY);
+    if (rateLimitUntil) {
+        const until = parseInt(rateLimitUntil);
+        const now = Date.now();
+        if (now < until) {
+            const remaining = until - now;
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            return {
+                isLimited: true,
+                remainingTime: remaining,
+                message: `${minutes}분 ${seconds}초 후 재시도 가능`,
+                resetTime: new Date(until).toLocaleTimeString('ko-KR')
+            };
+        } else {
+            // Rate limit 만료 - 제거
+            localStorage.removeItem(X_RATE_LIMIT_KEY);
+        }
+    }
+    return { isLimited: false };
+}
+
+// Rate Limit 설정
+window.setRateLimit = function(duration = 900000) { // 기본 15분
+    const until = Date.now() + duration;
+    localStorage.setItem(X_RATE_LIMIT_KEY, until.toString());
+    localStorage.setItem(X_API_ATTEMPT_KEY, Date.now().toString());
+    console.log(`⏰ Rate Limit 설정: ${new Date(until).toLocaleTimeString('ko-KR')}까지`);
+}
 
 // 캐시된 인증 정보 가져오기
 window.getCachedXAuth = function() {
@@ -6700,7 +6746,18 @@ window.loadXCredentials = function() {
 window.validateXCredentials = async function() {
     console.log('🔐 validateXCredentials 시작');
     
-    // 먼저 캐시 확인
+    // Rate Limit 확인
+    const rateLimitStatus = checkRateLimit();
+    if (rateLimitStatus.isLimited) {
+        showValidationResult(
+            `⏳ Rate Limit 활성\n${rateLimitStatus.message}\n다음 시도 가능: ${rateLimitStatus.resetTime}`, 
+            'warning'
+        );
+        console.warn('⚠️ Rate Limit 활성:', rateLimitStatus);
+        return false;
+    }
+    
+    // 캐시 확인
     const cachedAuth = getCachedXAuth();
     if (cachedAuth && cachedAuth.user) {
         const remainingMinutes = Math.round((X_AUTH_CACHE_TTL - (Date.now() - cachedAuth.timestamp)) / 60000);
@@ -6767,14 +6824,18 @@ window.validateXCredentials = async function() {
             return true;
         } else {
             // 429 Too Many Requests 특별 처리
-            if (response.status === 429) {
+            if (response.status === 429 || result.code === 'RATE_LIMIT_EXCEEDED') {
+                // Rate Limit 설정 (15분 + 안전 마진 5분)
+                setRateLimit(1200000); // 20분
+                
+                const resetTime = new Date(Date.now() + 1200000).toLocaleTimeString('ko-KR');
                 showValidationResult(
-                    `⏳ X API 요청 제한 초과\n15분 후에 다시 시도해주세요.\n(Rate Limit: 15분당 15회)`, 
+                    `⏳ X API 요청 제한 초과\n20분 후에 다시 시도해주세요.\n다음 시도 가능: ${resetTime}\n(Rate Limit: 75회/15분)`, 
                     'warning'
                 );
-                console.warn('⚠️ X API Rate Limit 초과 (429)');
-        } else {
-            showValidationResult(`❌ 인증 실패: ${result.error}`, 'error');
+                console.warn('⚠️ X API Rate Limit 초과 - 20분 대기 설정');
+            } else {
+                showValidationResult(`❌ 인증 실패: ${result.error}`, 'error');
             }
             console.log('❌ 인증 실패! publishBtn 비활성화');
             if (xModalElements.publishBtn) {
