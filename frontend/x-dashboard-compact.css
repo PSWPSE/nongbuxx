@@ -272,8 +272,14 @@
 .status-messages {
     display: flex;
     gap: 1rem;
-    margin-bottom: 1.5rem;
     align-items: center;
+    min-height: 0;
+    transition: all 0.3s ease;
+}
+
+/* 내용이 있을 때만 마진 적용 */
+.status-messages:not(:empty) {
+    margin-bottom: 1.5rem;
     min-height: 40px;
 }
 

@@ -53,13 +53,14 @@
 
 /* Header */
 .x-header {
-    background: var(--x-secondary);
-    color: white;
+    background: var(--x-card-bg);
+    color: var(--x-text);
     padding: 1rem 0;
     position: sticky;
     top: 0;
     z-index: 100;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-bottom: 1px solid var(--x-border);
 }
 
 .x-header-content {
@@ -108,8 +109,8 @@
 
 .btn-back {
     background: transparent;
-    border: 1px solid rgba(255,255,255,0.3);
-    color: white;
+    border: 1px solid var(--x-border);
+    color: var(--x-text);
     padding: 0.5rem 1rem;
     border-radius: 20px;
     cursor: pointer;
@@ -117,8 +118,9 @@
 }
 
 .btn-back:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.5);
+    background: var(--x-hover);
+    border-color: var(--x-primary);
+    color: var(--x-primary);
 }
 
 .x-logo {
@@ -128,6 +130,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    color: var(--x-text);
 }
 
 .x-logo i {
@@ -151,7 +154,7 @@
     background: transparent;
     border: none;
     padding: 1rem 1.5rem;
-    color: var(--x-accent);
+    color: var(--x-text-secondary);
     cursor: pointer;
     position: relative;
     transition: all 0.3s;
@@ -163,10 +166,12 @@
 
 .x-menu-item:hover {
     color: var(--x-primary);
+    background: var(--x-hover);
 }
 
 .x-menu-item.active {
     color: var(--x-primary);
+    background: var(--x-hover);
 }
 
 .x-menu-item.active::after {
@@ -293,7 +298,6 @@
 }
 
 .collection-status {
-    margin-top: 1rem;
     padding: 1rem;
     border-radius: 8px;
     display: none;
@@ -322,7 +326,6 @@
 
 /* Publish Status */
 .publish-status {
-    margin-top: 1rem;
     padding: 1rem;
     border-radius: 8px;
     display: none;
