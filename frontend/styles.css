@@ -8818,6 +8818,103 @@ textarea:focus-visible {
     }
 }
 
+/* API 검증 메시지 */
+.api-validation-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    animation: slideInDown 0.3s ease-out;
+}
+
+.api-validation-message.success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.api-validation-message.error {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.api-validation-message.warning {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fed7aa;
+}
+
+.api-validation-message i {
+    font-size: 1.1em;
+}
+
+/* 다크 모드에서 검증 메시지 */
+[data-theme="dark"] .api-validation-message.success {
+    background: #14532d;
+    color: #bbf7d0;
+    border-color: #166534;
+}
+
+[data-theme="dark"] .api-validation-message.error {
+    background: #7f1d1d;
+    color: #fecaca;
+    border-color: #dc2626;
+}
+
+[data-theme="dark"] .api-validation-message.warning {
+    background: #78350f;
+    color: #fed7aa;
+    border-color: #d97706;
+}
+
+/* API 상태 표시기 */
+.api-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.api-status-indicator.success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.api-status-indicator.error {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+[data-theme="dark"] .api-status-indicator.success {
+    background: #14532d;
+    color: #bbf7d0;
+}
+
+[data-theme="dark"] .api-status-indicator.error {
+    background: #7f1d1d;
+    color: #fecaca;
+}
+
+/* 애니메이션 */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* 다크 모드 추가 스타일 */
 [data-theme="dark"] .manual-summary-screen {
     background: var(--bg-primary);
@@ -8832,4 +8929,4 @@ textarea:focus-visible {
     color: var(--text-primary);
 }
 
-/* 배포 시스템 테스트 Wed Aug 28 22:30 KST 2025 */
+/* 배포 시스템 테스트 Wed Aug 28 22:35 KST 2025 */

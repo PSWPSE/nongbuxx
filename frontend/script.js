@@ -7027,21 +7027,144 @@ class ManualSummaryManager {
         }
     }
     
-    saveAiSettings() {
+    async saveAiSettings() {
         const provider = document.getElementById('manualAiProvider')?.value;
-        const apiKey = document.getElementById('manualAiApiKey')?.value;
+        const apiKey = document.getElementById('manualAiApiKey')?.value?.trim();
+        const saveBtn = document.getElementById('saveManualAiBtn');
         
+        // 입력 필드 검증
         if (!provider || !apiKey) {
-            this.showToast('AI 제공자와 API 키를 입력해주세요.', 'warning');
+            this.showValidationMessage('AI 제공자와 API 키를 모두 입력해주세요.', 'error');
             return;
         }
         
-        // localStorage에 저장
-        localStorage.setItem('manual_ai_provider', provider);
-        localStorage.setItem('manual_ai_api_key', btoa(apiKey)); // Base64 인코딩
+        // API 키 포맷 기본 검증
+        if (!this.validateApiKeyFormat(provider, apiKey)) {
+            return;
+        }
         
-        this.showToast('AI API 설정이 저장되었습니다.', 'success');
-        console.log('💾 AI API 설정 저장됨:', provider);
+        // 저장 중 표시
+        const originalText = saveBtn?.innerHTML;
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...';
+        }
+        
+        try {
+            // API 키 실제 유효성 테스트
+            const isValid = await this.testApiKey(provider, apiKey);
+            
+            if (isValid) {
+                // localStorage에 저장
+                localStorage.setItem('manual_ai_provider', provider);
+                localStorage.setItem('manual_ai_api_key', btoa(apiKey)); // Base64 인코딩
+                
+                this.showValidationMessage(`✅ ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API 설정이 저장되었습니다!`, 'success');
+                console.log('💾 AI API 설정 저장 및 검증 완료:', provider);
+                
+                // 저장 성공 시 시각적 피드백
+                this.showApiStatus(true, provider);
+            } else {
+                this.showValidationMessage('❌ API 키가 유효하지 않습니다. 키를 확인해주세요.', 'error');
+            }
+            
+        } catch (error) {
+            console.error('API 키 검증 오류:', error);
+            this.showValidationMessage('⚠️ API 키 검증 중 오류가 발생했습니다. 키를 확인해주세요.', 'warning');
+        } finally {
+            // 버튼 상태 복원
+            if (saveBtn && originalText) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            }
+        }
+    }
+    
+    validateApiKeyFormat(provider, apiKey) {
+        if (provider === 'openai') {
+            if (!apiKey.startsWith('sk-') || apiKey.length < 20) {
+                this.showValidationMessage('OpenAI API 키는 "sk-"로 시작해야 합니다.', 'error');
+                return false;
+            }
+        } else if (provider === 'anthropic') {
+            if (!apiKey.startsWith('sk-ant-') || apiKey.length < 20) {
+                this.showValidationMessage('Anthropic API 키는 "sk-ant-"로 시작해야 합니다.', 'error');
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    async testApiKey(provider, apiKey) {
+        try {
+            const testData = {
+                influencer_name: 'test',
+                posts: [{
+                    content: 'API test message',
+                    likes: 0,
+                    retweets: 0,
+                    datetime: new Date().toISOString()
+                }],
+                ai_provider: provider,
+                ai_api_key: apiKey
+            };
+            
+            const response = await fetch(`${API_BASE_URL}/api/manual-summary/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(testData)
+            });
+            
+            const result = await response.json();
+            return result.success;
+            
+        } catch (error) {
+            console.error('API 테스트 실패:', error);
+            return false;
+        }
+    }
+    
+    showValidationMessage(message, type) {
+        // 기존 메시지 제거
+        const existingMsg = document.querySelector('.api-validation-message');
+        if (existingMsg) {
+            existingMsg.remove();
+        }
+        
+        // 새 메시지 생성
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `api-validation-message ${type}`;
+        messageDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        `;
+        
+        // API 설정 섹션에 추가
+        const apiSection = document.querySelector('.manual-api-settings');
+        if (apiSection) {
+            apiSection.appendChild(messageDiv);
+            
+            // 3초 후 자동 제거
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 5000);
+        }
+        
+        // 콘솔에도 로그
+        console.log(`AI API 설정 [${type}]: ${message}`);
+    }
+    
+    showApiStatus(isValid, provider) {
+        const statusIndicator = document.getElementById('manualApiStatus');
+        if (statusIndicator) {
+            statusIndicator.style.display = 'inline-flex';
+            statusIndicator.textContent = isValid ? `✅ ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} 연결됨` : '❌ 연결 오류';
+            statusIndicator.className = `api-status-indicator ${isValid ? 'success' : 'error'}`;
+        }
     }
     
     loadAiSettings() {
@@ -7059,8 +7182,14 @@ class ManualSummaryManager {
                 const keyInput = document.getElementById('manualAiApiKey');
                 if (keyInput) keyInput.value = apiKey;
                 console.log('📥 저장된 AI API 설정 불러옴');
+                
+                // 저장된 설정이 있으면 상태 표시
+                if (provider && apiKey) {
+                    this.showApiStatus(true, provider);
+                }
             } catch (error) {
                 console.error('AI API 키 디코딩 실패:', error);
+                this.showApiStatus(false, provider || 'unknown');
             }
         }
     }
@@ -7076,7 +7205,13 @@ class ManualSummaryManager {
             if (providerSelect) providerSelect.value = 'openai';
             if (keyInput) keyInput.value = '';
             
-            this.showToast('AI API 설정이 삭제되었습니다.', 'info');
+            // 상태 표시기 숨기기
+            const statusIndicator = document.getElementById('manualApiStatus');
+            if (statusIndicator) {
+                statusIndicator.style.display = 'none';
+            }
+            
+            this.showValidationMessage('🗑️ AI API 설정이 삭제되었습니다.', 'warning');
             console.log('🗑️ AI API 설정 삭제됨');
         }
     }
