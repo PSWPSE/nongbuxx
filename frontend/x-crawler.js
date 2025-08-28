@@ -1077,9 +1077,9 @@ const XCrawler = {
     
     updateStatusCards(stats) {
         // 컴팩트 상태바 업데이트
-        const overview = stats?.overview || {};
-        const last24h = stats?.last_24h || {};
-        const apiStatus = stats?.api_status || {};
+        const overview = stats?.crawler?.overview || stats?.overview || {};
+        const last24h = stats?.crawler?.last_24h || stats?.last_24h || {};
+        const apiStatus = stats?.crawler?.api_status || stats?.api_status || {};
         
         // 컴팩트 상태바 요소 업데이트
         const collectedEl = document.getElementById('statusCollected');

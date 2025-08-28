@@ -51,6 +51,17 @@ class XCrawler:
     def setup_x_api(self, credentials: Dict[str, str]) -> bool:
         """X API 설정"""
         try:
+            # Tweepy v2 Client 설정 (Free Tier 지원)
+            self.x_client = tweepy.Client(
+                bearer_token=None,  # Free Tier는 Bearer Token 불필요
+                consumer_key=credentials.get('consumer_key'),
+                consumer_secret=credentials.get('consumer_secret'),
+                access_token=credentials.get('access_token'),
+                access_token_secret=credentials.get('access_token_secret'),
+                wait_on_rate_limit=True
+            )
+            
+            # v1.1 API도 설정 (인증 및 게시용)
             auth = tweepy.OAuthHandler(
                 credentials.get('consumer_key'),
                 credentials.get('consumer_secret')
@@ -59,11 +70,10 @@ class XCrawler:
                 credentials.get('access_token'),
                 credentials.get('access_token_secret')
             )
-            
-            self.x_client = tweepy.API(auth, wait_on_rate_limit=True)
+            self.x_api_v1 = tweepy.API(auth, wait_on_rate_limit=True)
             
             # 인증 테스트
-            self.x_client.verify_credentials()
+            self.x_api_v1.verify_credentials()
             logger.info("✅ X API 인증 성공")
             return True
             
@@ -142,56 +152,41 @@ class XCrawler:
                     user_id = cached['user_id']
                     logger.info(f"📦 캐시된 사용자 정보 사용: @{username}")
             
-            # 캐시 미스 시에만 API 호출
-            if not user_id:
-                try:
-                    user = self.x_client.get_user(screen_name=username)
-                    user_id = user.id_str
-                    # 캐시 저장
-                    self.user_cache[cache_key] = {
-                        'user_id': user_id,
-                        'timestamp': current_time
-                    }
-                    self.api_usage['x_api']['calls'] += 1
-                    self.api_usage['x_api']['user_calls'] = self.api_usage['x_api'].get('user_calls', [])
-                    self.api_usage['x_api']['user_calls'].append({
-                        'timestamp': datetime.now(KST).isoformat(),
-                        'username': username
-                    })
-                    logger.info(f"🔄 API 호출: 사용자 정보 조회 - @{username}")
-                except Exception as e:
-                    logger.error(f"❌ 사용자 {username}을 찾을 수 없습니다: {str(e)}")
-                    return []
-            
-            # 트윗 가져오기
+            # Free Tier API 제한으로 인해 검색 API 사용
+            # 사용자별 트윗 검색 (v2 Search API - Free Tier 지원)
             tweets = []
             try:
-                # API 호출 최적화: count 설정
-                actual_count = min(count, 30)  # 최대 30개로 제한
+                # 검색 쿼리 생성 (from:username 형식)
+                query = f"from:{username} -is:reply -is:retweet"
                 
-                for tweet in tweepy.Cursor(
-                    self.x_client.user_timeline,
-                    user_id=user_id,
-                    exclude_replies=True,
-                    include_rts=False,
-                    tweet_mode='extended',
-                    count=actual_count  # 200에서 감소
-                ).items(actual_count):
-                    # 시간 필터 적용
-                    tweet_time = tweet.created_at.replace(tzinfo=pytz.UTC)
-                    if tweet_time < since_time.replace(tzinfo=pytz.UTC):
-                        break
-                    
-                    tweets.append({
-                        'id': tweet.id_str,
-                        'author': username,
-                        'text': tweet.full_text,
-                        'created_at': tweet_time.astimezone(KST).isoformat(),
-                        'likes': tweet.favorite_count,
-                        'retweets': tweet.retweet_count,
-                        'url': f'https://twitter.com/{username}/status/{tweet.id_str}',
-                        'engagement': tweet.favorite_count + tweet.retweet_count
-                    })
+                # API 호출 최적화: count 설정
+                actual_count = min(count, 10)  # Free Tier는 더 제한적
+                
+                # Search API 사용 (Free Tier 지원)
+                search_results = self.x_client.search_recent_tweets(
+                    query=query,
+                    max_results=actual_count,
+                    tweet_fields=['created_at', 'author_id', 'public_metrics']
+                )
+                
+                if search_results and hasattr(search_results, 'data') and search_results.data:
+                    for tweet in search_results.data:
+                        # 시간 필터 적용
+                        tweet_time = tweet.created_at.replace(tzinfo=pytz.UTC)
+                        if tweet_time < since_time.replace(tzinfo=pytz.UTC):
+                            continue
+                        
+                        metrics = tweet.public_metrics
+                        tweets.append({
+                            'id': tweet.id,
+                            'author': username,
+                            'text': tweet.text,
+                            'created_at': tweet_time.astimezone(KST).isoformat(),
+                            'likes': metrics.get('like_count', 0),
+                            'retweets': metrics.get('retweet_count', 0),
+                            'url': f'https://twitter.com/{username}/status/{tweet.id}',
+                            'engagement': metrics.get('like_count', 0) + metrics.get('retweet_count', 0)
+                        })
                 
                 logger.info(f"✅ {username}: {len(tweets)}개 포스트 수집 완료")
                 
@@ -447,9 +442,9 @@ class XCrawler:
                     max_text_len = 280 - len(hashtags_text) - 5  # "\n\n" + "..."
                     full_text = f"{full_text[:max_text_len]}...\n\n{hashtags_text}"
             
-            # 트윗 게시
+            # 트윗 게시 (v1.1 API 사용)
             try:
-                tweet = self.x_client.update_status(full_text)
+                tweet = self.x_api_v1.update_status(full_text)
                 
                 logger.info(f"✅ X 게시 성공: {tweet.id_str}")
                 
