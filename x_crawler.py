@@ -190,22 +190,24 @@ class XCrawler:
                 ]
                 tweets = sample_tweets
                 logger.info(f"📋 테스트 데이터 생성: @{username} - {len(tweets)}개")
-                
                 logger.info(f"✅ {username}: {len(tweets)}개 포스트 수집 완료")
+            else:
+                logger.warning(f"⚠️ '{username}'은 테스트 계정이 아닙니다. Free Tier에서는 실제 수집이 불가능합니다.")
+                tweets = []
                 
-            except tweepy.errors.TooManyRequests as e:
-                logger.warning(f"⚠️ Rate limit 도달 - {username}: {str(e)}")
-                self.collection_history.append({
-                    'timestamp': datetime.now(KST).isoformat(),
-                    'influencer': username,
-                    'posts_count': 0,
-                    'success': False,
-                    'error': 'Rate limit exceeded'
-                })
-                return []
-            except Exception as e:
-                logger.error(f"❌ 트윗 수집 오류 - {username}: {str(e)}")
-                return []
+        except tweepy.errors.TooManyRequests as e:
+            logger.warning(f"⚠️ Rate limit 도달 - {username}: {str(e)}")
+            self.collection_history.append({
+                'timestamp': datetime.now(KST).isoformat(),
+                'influencer': username,
+                'posts_count': 0,
+                'success': False,
+                'error': 'Rate limit exceeded'
+            })
+            return []
+        except Exception as e:
+            logger.error(f"❌ 트윗 수집 오류 - {username}: {str(e)}")
+            return []
             
             # 수집 시간 업데이트
             self.last_collection_time = current_time
