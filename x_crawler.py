@@ -49,19 +49,9 @@ class XCrawler:
         logger.info("✅ X 크롤러 초기화")
     
     def setup_x_api(self, credentials: Dict[str, str]) -> bool:
-        """X API 설정"""
+        """X API 설정 - Free Tier 최적화"""
         try:
-            # Tweepy v2 Client 설정 (Free Tier 지원)
-            self.x_client = tweepy.Client(
-                bearer_token=None,  # Free Tier는 Bearer Token 불필요
-                consumer_key=credentials.get('consumer_key'),
-                consumer_secret=credentials.get('consumer_secret'),
-                access_token=credentials.get('access_token'),
-                access_token_secret=credentials.get('access_token_secret'),
-                wait_on_rate_limit=True
-            )
-            
-            # v1.1 API도 설정 (인증 및 게시용)
+            # OAuth 1.0a 설정 (Free Tier에서 주로 사용)
             auth = tweepy.OAuthHandler(
                 credentials.get('consumer_key'),
                 credentials.get('consumer_secret')
@@ -70,11 +60,24 @@ class XCrawler:
                 credentials.get('access_token'),
                 credentials.get('access_token_secret')
             )
+            
+            # v1.1 API (Free Tier에서 사용 가능)
             self.x_api_v1 = tweepy.API(auth, wait_on_rate_limit=True)
             
-            # 인증 테스트
-            self.x_api_v1.verify_credentials()
-            logger.info("✅ X API 인증 성공")
+            # v2 Client 설정 (Free Tier에서 제한적)
+            # OAuth 1.0a User Context 사용
+            self.x_client = tweepy.Client(
+                consumer_key=credentials.get('consumer_key'),
+                consumer_secret=credentials.get('consumer_secret'),
+                access_token=credentials.get('access_token'),
+                access_token_secret=credentials.get('access_token_secret'),
+                wait_on_rate_limit=True
+            )
+            
+            # 인증 테스트 (Free Tier에서 가능)
+            user = self.x_api_v1.verify_credentials()
+            logger.info(f"✅ X API 인증 성공: @{user.screen_name}")
+            logger.info("⚠️ Free Tier 제한: 트윗 수집 불가, 게시만 가능")
             return True
             
         except Exception as e:

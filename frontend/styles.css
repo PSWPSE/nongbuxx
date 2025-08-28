@@ -1620,12 +1620,19 @@ textarea:focus-visible {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.7);  /* 배경 어둡게 강화 */
+    backdrop-filter: blur(4px);  /* 배경 블러 효과 추가 */
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
     animation: modalSlideIn 0.3s ease;
+}
+
+/* X 게시 모달 특별 스타일 */
+.x-publishing-modal-section .modal-overlay {
+    background: rgba(0, 0, 0, 0.85);  /* X 모달은 더 어둡게 */
+    backdrop-filter: blur(8px);
 }
 
 .modal-content {
@@ -1637,7 +1644,23 @@ textarea:focus-visible {
     max-height: 90vh;
     overflow-y: auto;
     animation: modalSlideIn 0.3s ease;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);  /* 그림자 강화 */
+    border: 1px solid var(--border-color);  /* 테두리 추가 */
+}
+
+/* 라이트 모드에서 모달 배경 더 어둡게 */
+[data-theme="light"] .modal-overlay {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="light"] .x-publishing-modal-section .modal-overlay {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+/* 다크 모드에서 모달 콘텐츠 배경 확실하게 */
+[data-theme="dark"] .modal-content {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modal-content.large-modal {
