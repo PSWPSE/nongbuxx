@@ -152,14 +152,17 @@
             <section id="api-settings-section" class="x-section">
                 <h2 class="section-title">X API 설정</h2>
                 
-                <!-- Read Permission Settings -->
+                <!-- Unified API Settings -->
                 <div class="api-settings-card">
-                    <h3>📖 읽기 권한 (포스트 수집용)</h3>
+                    <h3>🔑 X API 인증 정보 (읽기/쓰기 통합)</h3>
+                    <p style="color: var(--x-accent); margin-bottom: 1.5rem;">
+                        X API는 하나의 키로 읽기와 쓰기 권한을 모두 제공합니다.
+                    </p>
                     <div class="form-group">
                         <label>Consumer Key (API Key)</label>
                         <div class="input-with-toggle">
-                            <input type="password" id="xReadConsumerKey" placeholder="Consumer Key 입력">
-                            <button class="toggle-visibility" data-target="xReadConsumerKey">
+                            <input type="password" id="xConsumerKey" placeholder="Consumer Key 입력">
+                            <button class="toggle-visibility" data-target="xConsumerKey">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -167,8 +170,8 @@
                     <div class="form-group">
                         <label>Consumer Secret (API Secret)</label>
                         <div class="input-with-toggle">
-                            <input type="password" id="xReadConsumerSecret" placeholder="Consumer Secret 입력">
-                            <button class="toggle-visibility" data-target="xReadConsumerSecret">
+                            <input type="password" id="xConsumerSecret" placeholder="Consumer Secret 입력">
+                            <button class="toggle-visibility" data-target="xConsumerSecret">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -176,8 +179,8 @@
                     <div class="form-group">
                         <label>Access Token</label>
                         <div class="input-with-toggle">
-                            <input type="password" id="xReadAccessToken" placeholder="Access Token 입력">
-                            <button class="toggle-visibility" data-target="xReadAccessToken">
+                            <input type="password" id="xAccessToken" placeholder="Access Token 입력">
+                            <button class="toggle-visibility" data-target="xAccessToken">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -185,82 +188,27 @@
                     <div class="form-group">
                         <label>Access Token Secret</label>
                         <div class="input-with-toggle">
-                            <input type="password" id="xReadAccessTokenSecret" placeholder="Access Token Secret 입력">
-                            <button class="toggle-visibility" data-target="xReadAccessTokenSecret">
+                            <input type="password" id="xAccessTokenSecret" placeholder="Access Token Secret 입력">
+                            <button class="toggle-visibility" data-target="xAccessTokenSecret">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button id="validateReadApiBtn" class="btn btn-primary">
+                        <button id="validateApiBtn" class="btn btn-primary">
                             <i class="fas fa-check"></i> 인증 확인
                         </button>
-                        <button id="saveReadApiBtn" class="btn btn-success">
+                        <button id="saveApiBtn" class="btn btn-success">
                             <i class="fas fa-save"></i> 저장
                         </button>
-                        <button id="loadReadApiBtn" class="btn btn-info">
+                        <button id="loadApiBtn" class="btn btn-info">
                             <i class="fas fa-upload"></i> 불러오기
                         </button>
-                    </div>
-                    <div id="readApiValidationResult" class="validation-result"></div>
-                </div>
-
-                <!-- Write Permission Settings -->
-                <div class="api-settings-card">
-                    <h3>✍️ 쓰기 권한 (자동 게시용)</h3>
-                    <div class="checkbox-group">
-                        <label>
-                            <input type="checkbox" id="useSameCredentials">
-                            읽기 권한과 동일한 계정 사용
-                        </label>
-                    </div>
-                    <div id="writeApiFields">
-                        <div class="form-group">
-                            <label>Consumer Key (API Key)</label>
-                            <div class="input-with-toggle">
-                                <input type="password" id="xWriteConsumerKey" placeholder="Consumer Key 입력">
-                                <button class="toggle-visibility" data-target="xWriteConsumerKey">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Consumer Secret (API Secret)</label>
-                            <div class="input-with-toggle">
-                                <input type="password" id="xWriteConsumerSecret" placeholder="Consumer Secret 입력">
-                                <button class="toggle-visibility" data-target="xWriteConsumerSecret">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Access Token</label>
-                            <div class="input-with-toggle">
-                                <input type="password" id="xWriteAccessToken" placeholder="Access Token 입력">
-                                <button class="toggle-visibility" data-target="xWriteAccessToken">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Access Token Secret</label>
-                            <div class="input-with-toggle">
-                                <input type="password" id="xWriteAccessTokenSecret" placeholder="Access Token Secret 입력">
-                                <button class="toggle-visibility" data-target="xWriteAccessTokenSecret">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button id="validateWriteApiBtn" class="btn btn-primary">
-                            <i class="fas fa-check"></i> 인증 확인
-                        </button>
-                        <button id="saveWriteApiBtn" class="btn btn-success">
-                            <i class="fas fa-save"></i> 저장
+                        <button id="deleteApiBtn" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> 삭제
                         </button>
                     </div>
-                    <div id="writeApiValidationResult" class="validation-result"></div>
+                    <div id="apiValidationResult" class="validation-result"></div>
                 </div>
             </section>
 

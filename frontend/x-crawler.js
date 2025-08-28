@@ -11,9 +11,6 @@ const XCrawler = {
     // 현재 활성 섹션
     currentSection: 'dashboard',
     
-    // 쓰기 권한 캐시 (체크박스 사용 시)
-    writeCredentialsCache: null,
-    
     // 스케줄 설정
     scheduleConfig: {
         collection: {
@@ -73,36 +70,21 @@ const XCrawler = {
             });
         });
         
-        // X API 설정 - 읽기 권한
-        document.getElementById('validateReadApiBtn')?.addEventListener('click', () => {
-            this.validateXApi('read');
+        // X API 설정 (통합)
+        document.getElementById('validateApiBtn')?.addEventListener('click', () => {
+            this.validateXApi();
         });
         
-        document.getElementById('saveReadApiBtn')?.addEventListener('click', () => {
-            this.saveXApi('read');
+        document.getElementById('saveApiBtn')?.addEventListener('click', () => {
+            this.saveXApi();
         });
         
-        document.getElementById('loadReadApiBtn')?.addEventListener('click', () => {
-            this.loadXApi('read');
+        document.getElementById('loadApiBtn')?.addEventListener('click', () => {
+            this.loadXApi();
         });
         
-        // X API 설정 - 쓰기 권한
-        const useSameCheckbox = document.getElementById('useSameCredentials');
-        if (useSameCheckbox) {
-            useSameCheckbox.addEventListener('change', (e) => {
-                this.toggleWriteApiFields(e.target.checked);
-                if (e.target.checked) {
-                    this.copyReadToWriteCredentials();
-                }
-            });
-        }
-        
-        document.getElementById('validateWriteApiBtn')?.addEventListener('click', () => {
-            this.validateXApi('write');
-        });
-        
-        document.getElementById('saveWriteApiBtn')?.addEventListener('click', () => {
-            this.saveXApi('write');
+        document.getElementById('deleteApiBtn')?.addEventListener('click', () => {
+            this.deleteXApi();
         });
         
         // 비밀번호 토글
@@ -183,12 +165,12 @@ const XCrawler = {
     },
     
     // X API 설정 관리
-    async validateXApi(type) {
-        const credentials = this.getXApiCredentials(type);
+    async validateXApi() {
+        const credentials = this.getXApiCredentials();
         
         if (!credentials.consumer_key || !credentials.consumer_secret || 
             !credentials.access_token || !credentials.access_token_secret) {
-            this.showValidationResult(type, 'error', '모든 필드를 입력해주세요.');
+            this.showValidationResult('error', '모든 필드를 입력해주세요.');
             return;
         }
         
@@ -204,18 +186,18 @@ const XCrawler = {
             const result = await response.json();
             
             if (result.success) {
-                this.showValidationResult(type, 'success', 'X API 인증이 확인되었습니다!');
+                this.showValidationResult('success', 'X API 인증이 확인되었습니다!');
             } else {
-                this.showValidationResult(type, 'error', result.error || '인증에 실패했습니다.');
+                this.showValidationResult('error', result.error || '인증에 실패했습니다.');
             }
         } catch (error) {
             console.error('X API 인증 오류:', error);
-            this.showValidationResult(type, 'error', '인증 확인 중 오류가 발생했습니다.');
+            this.showValidationResult('error', '인증 확인 중 오류가 발생했습니다.');
         }
     },
     
-    saveXApi(type) {
-        const credentials = this.getXApiCredentials(type);
+    saveXApi() {
+        const credentials = this.getXApiCredentials();
         
         if (!credentials.consumer_key || !credentials.consumer_secret || 
             !credentials.access_token || !credentials.access_token_secret) {
@@ -223,131 +205,71 @@ const XCrawler = {
             return;
         }
         
-        if (type === 'read') {
-            // 읽기 권한은 기존 x_credentials 키 사용 (호환성 유지)
-            localStorage.setItem('x_credentials', btoa(JSON.stringify(credentials)));
-            this.showNotification('읽기 권한 API 정보가 저장되었습니다.', 'success');
+        // 통합된 키로 저장 (기존 x_credentials 키 사용하여 호환성 유지)
+        localStorage.setItem('x_credentials', btoa(JSON.stringify(credentials)));
+        this.showNotification('X API 정보가 저장되었습니다.', 'success');
+    },
+    
+    loadXApi() {
+        const storedData = localStorage.getItem('x_credentials');
+        
+        if (storedData) {
+            try {
+                const credentials = JSON.parse(atob(storedData));
+                this.setXApiCredentials(credentials);
+                this.showNotification('저장된 X API 정보를 불러왔습니다.', 'info');
+            } catch (error) {
+                console.error('API 정보 불러오기 오류:', error);
+                this.showNotification('저장된 정보를 불러올 수 없습니다.', 'error');
+            }
         } else {
-            // 체크박스 상태도 함께 저장
-            const useSame = document.getElementById('useSameCredentials')?.checked || false;
-            const saveData = {
-                credentials: credentials,
-                useSameAsRead: useSame
-            };
-            localStorage.setItem('x_write_credentials', btoa(JSON.stringify(saveData)));
-            this.showNotification('쓰기 권한 API 정보가 저장되었습니다.', 'success');
+            this.showNotification('저장된 X API 정보가 없습니다.', 'info');
         }
     },
     
-    loadXApi(type) {
-        let storedData;
-        
-        if (type === 'read') {
-            storedData = localStorage.getItem('x_credentials');
-            if (storedData) {
-                try {
-                    const credentials = JSON.parse(atob(storedData));
-                    this.setXApiCredentials(type, credentials);
-                    this.showNotification('저장된 읽기 권한 정보를 불러왔습니다.', 'info');
-                } catch (error) {
-                    console.error('API 정보 불러오기 오류:', error);
-                    this.showNotification('저장된 정보를 불러올 수 없습니다.', 'error');
-                }
-            } else {
-                this.showNotification('저장된 읽기 권한 정보가 없습니다.', 'info');
-            }
-        } else {
-            storedData = localStorage.getItem('x_write_credentials');
-            if (storedData) {
-                try {
-                    const data = JSON.parse(atob(storedData));
-                    
-                    // 구버전 호환성 체크
-                    if (data.credentials) {
-                        // 새 형식
-                        const useSameCheckbox = document.getElementById('useSameCredentials');
-                        if (useSameCheckbox && data.useSameAsRead) {
-                            useSameCheckbox.checked = true;
-                            this.toggleWriteApiFields(true);
-                            this.copyReadToWriteCredentials();
-                        } else {
-                            this.setXApiCredentials(type, data.credentials);
-                        }
-                    } else {
-                        // 구 형식 (직접 credentials 객체)
-                        this.setXApiCredentials(type, data);
-                    }
-                    
-                    this.showNotification('저장된 쓰기 권한 정보를 불러왔습니다.', 'info');
-                } catch (error) {
-                    console.error('API 정보 불러오기 오류:', error);
-                    this.showNotification('저장된 정보를 불러올 수 없습니다.', 'error');
-                }
-            } else {
-                this.showNotification('저장된 쓰기 권한 정보가 없습니다.', 'info');
-            }
+    deleteXApi() {
+        if (confirm('저장된 X API 정보를 삭제하시겠습니까?')) {
+            localStorage.removeItem('x_credentials');
+            localStorage.removeItem('x_write_credentials'); // 구버전 호환성
+            this.clearXApiFields();
+            this.showNotification('X API 정보가 삭제되었습니다.', 'success');
         }
     },
     
-    getXApiCredentials(type) {
-        if (type === 'write') {
-            // 체크박스가 체크되어 있으면 캐시된 읽기 권한 값 사용
-            const useSameCheckbox = document.getElementById('useSameCredentials');
-            if (useSameCheckbox && useSameCheckbox.checked && this.writeCredentialsCache) {
-                return this.writeCredentialsCache;
-            }
-        }
-        
-        const prefix = type === 'read' ? 'xRead' : 'xWrite';
+    getXApiCredentials() {
         return {
-            consumer_key: document.getElementById(`${prefix}ConsumerKey`)?.value || '',
-            consumer_secret: document.getElementById(`${prefix}ConsumerSecret`)?.value || '',
-            access_token: document.getElementById(`${prefix}AccessToken`)?.value || '',
-            access_token_secret: document.getElementById(`${prefix}AccessTokenSecret`)?.value || ''
+            consumer_key: document.getElementById('xConsumerKey')?.value || '',
+            consumer_secret: document.getElementById('xConsumerSecret')?.value || '',
+            access_token: document.getElementById('xAccessToken')?.value || '',
+            access_token_secret: document.getElementById('xAccessTokenSecret')?.value || ''
         };
     },
     
-    setXApiCredentials(type, credentials) {
-        const prefix = type === 'read' ? 'xRead' : 'xWrite';
-        document.getElementById(`${prefix}ConsumerKey`).value = credentials.consumer_key || '';
-        document.getElementById(`${prefix}ConsumerSecret`).value = credentials.consumer_secret || '';
-        document.getElementById(`${prefix}AccessToken`).value = credentials.access_token || '';
-        document.getElementById(`${prefix}AccessTokenSecret`).value = credentials.access_token_secret || '';
-    },
-    
-    toggleWriteApiFields(useSame) {
-        const writeFields = document.getElementById('writeApiFields');
-        if (writeFields) {
-            if (useSame) {
-                writeFields.style.display = 'none';
-                writeFields.style.opacity = '0.5';
-            } else {
-                writeFields.style.display = 'block';
-                writeFields.style.opacity = '1';
-                // 체크 해제 시 쓰기 필드 초기화
-                this.clearWriteCredentials();
-            }
-        }
-    },
-    
-    copyReadToWriteCredentials() {
-        // 읽기 권한 값을 가져와서 쓰기 권한에 복사
-        const readCredentials = this.getXApiCredentials('read');
+    setXApiCredentials(credentials) {
+        const consumerKey = document.getElementById('xConsumerKey');
+        const consumerSecret = document.getElementById('xConsumerSecret');
+        const accessToken = document.getElementById('xAccessToken');
+        const accessTokenSecret = document.getElementById('xAccessTokenSecret');
         
-        // 내부적으로 쓰기 권한 값 저장 (UI에는 표시하지 않음)
-        this.writeCredentialsCache = readCredentials;
-        
-        console.log('✅ 읽기 권한 값이 쓰기 권한으로 복사되었습니다');
+        if (consumerKey) consumerKey.value = credentials.consumer_key || '';
+        if (consumerSecret) consumerSecret.value = credentials.consumer_secret || '';
+        if (accessToken) accessToken.value = credentials.access_token || '';
+        if (accessTokenSecret) accessTokenSecret.value = credentials.access_token_secret || '';
     },
     
-    clearWriteCredentials() {
-        // 쓰기 권한 필드 초기화
-        document.getElementById('xWriteConsumerKey').value = '';
-        document.getElementById('xWriteConsumerSecret').value = '';
-        document.getElementById('xWriteAccessToken').value = '';
-        document.getElementById('xWriteAccessTokenSecret').value = '';
-        this.writeCredentialsCache = null;
+    clearXApiFields() {
+        const consumerKey = document.getElementById('xConsumerKey');
+        const consumerSecret = document.getElementById('xConsumerSecret');
+        const accessToken = document.getElementById('xAccessToken');
+        const accessTokenSecret = document.getElementById('xAccessTokenSecret');
+        
+        if (consumerKey) consumerKey.value = '';
+        if (consumerSecret) consumerSecret.value = '';
+        if (accessToken) accessToken.value = '';
+        if (accessTokenSecret) accessTokenSecret.value = '';
     },
+    
+
     
     togglePasswordVisibility(targetId) {
         const input = document.getElementById(targetId);
@@ -364,8 +286,8 @@ const XCrawler = {
         }
     },
     
-    showValidationResult(type, status, message) {
-        const resultElement = document.getElementById(`${type}ApiValidationResult`);
+    showValidationResult(status, message) {
+        const resultElement = document.getElementById('apiValidationResult');
         if (resultElement) {
             resultElement.className = `validation-result ${status}`;
             resultElement.textContent = message;
@@ -603,43 +525,14 @@ const XCrawler = {
     
     // X API 설정 로드
     loadXApiSettings() {
-        // 읽기 권한 자동 로드
-        const readData = localStorage.getItem('x_credentials');
-        if (readData) {
+        const storedData = localStorage.getItem('x_credentials');
+        if (storedData) {
             try {
-                const credentials = JSON.parse(atob(readData));
-                this.setXApiCredentials('read', credentials);
+                const credentials = JSON.parse(atob(storedData));
+                this.setXApiCredentials(credentials);
+                console.log('✅ X API 설정 자동 로드 완료');
             } catch (error) {
-                console.error('읽기 권한 로드 오류:', error);
-            }
-        }
-        
-        // 쓰기 권한 자동 로드
-        const writeData = localStorage.getItem('x_write_credentials');
-        if (writeData) {
-            try {
-                const data = JSON.parse(atob(writeData));
-                
-                if (data.credentials && data.useSameAsRead) {
-                    // 체크박스 체크 상태 복원
-                    const useSameCheckbox = document.getElementById('useSameCredentials');
-                    if (useSameCheckbox) {
-                        useSameCheckbox.checked = true;
-                        this.toggleWriteApiFields(true);
-                        // 읽기 권한 값을 캐시에 복사
-                        if (readData) {
-                            const readCredentials = JSON.parse(atob(readData));
-                            this.writeCredentialsCache = readCredentials;
-                        }
-                    }
-                } else if (data.credentials) {
-                    this.setXApiCredentials('write', data.credentials);
-                } else {
-                    // 구버전 호환
-                    this.setXApiCredentials('write', data);
-                }
-            } catch (error) {
-                console.error('쓰기 권한 로드 오류:', error);
+                console.error('X API 설정 로드 오류:', error);
             }
         }
     },
