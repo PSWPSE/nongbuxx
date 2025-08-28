@@ -43,6 +43,9 @@ const XCrawler = {
         // X API 설정 로드
         this.loadXApiSettings();
         
+        // AI API 설정 자동 로드
+        this.loadAiApi();
+        
         // 스케줄 설정 로드
         this.loadScheduleConfig();
         
@@ -575,21 +578,29 @@ const XCrawler = {
     
     // AI API 불러오기
     loadAiApi() {
-        const provider = localStorage.getItem('ai_provider');
-        const apiKey = localStorage.getItem('ai_key');
-        const statusDiv = document.getElementById('aiApiStatus');
-        
-        if (provider && apiKey) {
-            document.getElementById('aiProvider').value = provider;
-            document.getElementById('aiApiKey').value = apiKey;
+        try {
+            const provider = localStorage.getItem('ai_provider');
+            const apiKey = localStorage.getItem('ai_key');
+            const providerElement = document.getElementById('aiProvider');
+            const apiKeyElement = document.getElementById('aiApiKey');
+            const statusDiv = document.getElementById('aiApiStatus');
             
-            statusDiv.className = 'validation-result success';
-            statusDiv.textContent = '✅ AI API 정보를 불러왔습니다';
-            
-            this.showNotification('AI API 정보를 불러왔습니다', 'success');
-        } else {
-            statusDiv.className = 'validation-result error';
-            statusDiv.textContent = '❌ 저장된 AI API 정보가 없습니다';
+            if (provider && apiKey && providerElement && apiKeyElement) {
+                providerElement.value = provider;
+                apiKeyElement.value = apiKey;
+                
+                if (statusDiv) {
+                    statusDiv.className = 'validation-result success';
+                    statusDiv.textContent = '✅ AI API 정보가 저장되어 있습니다';
+                }
+                
+                console.log('✅ AI API 정보 자동 로드 완료');
+            } else if (statusDiv) {
+                statusDiv.className = 'validation-result';
+                statusDiv.textContent = '';
+            }
+        } catch (error) {
+            console.log('AI API 정보 로드 중 오류:', error);
         }
     },
     
