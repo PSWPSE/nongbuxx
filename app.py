@@ -1983,34 +1983,82 @@ def handle_x_crawler_schedule():
             'message': '스케줄이 설정되었습니다'
         })
 
+# 인플루언서 저장소 (메모리 기반, 실제로는 DB 사용 권장)
+influencers_storage = []
+
 @app.route('/api/x-crawler/influencers', methods=['GET', 'POST', 'DELETE'])
 def handle_influencers():
     """인플루언서 관리"""
+    global influencers_storage
+    
     if request.method == 'GET':
         # 인플루언서 목록 조회
-        # TODO: DB에서 조회
         return jsonify({
             'success': True,
-            'data': []
+            'data': influencers_storage
         })
     
     elif request.method == 'POST':
         # 인플루언서 추가
         data = request.json
-        # TODO: DB에 저장
+        
+        # 중복 체크
+        username = data.get('username', '').replace('@', '')
+        if any(inf['username'] == username for inf in influencers_storage):
+            return jsonify({
+                'success': False,
+                'error': '이미 등록된 인플루언서입니다'
+            }), 400
+        
+        # 새 인플루언서 추가
+        new_influencer = {
+            'id': f'inf_{int(time.time()*1000)}',
+            'username': username,
+            'name': data.get('name', username),
+            'profileImage': data.get('profileImage', 'https://via.placeholder.com/60'),
+            'isActive': data.get('isActive', True),
+            'addedAt': datetime.now().isoformat(),
+            'lastFetched': None,
+            'stats': {
+                'postsCollected': 0,
+                'lastPostDate': None
+            }
+        }
+        
+        influencers_storage.append(new_influencer)
+        logger.info(f"✅ 인플루언서 추가: @{username}")
+        
         return jsonify({
             'success': True,
-            'message': '인플루언서가 추가되었습니다'
+            'message': f'@{username}이(가) 추가되었습니다',
+            'data': new_influencer
         })
     
     else:  # DELETE
         # 인플루언서 삭제
-        username = request.args.get('username')
-        # TODO: DB에서 삭제
-        return jsonify({
-            'success': True,
-            'message': f'{username}이(가) 삭제되었습니다'
-        })
+        influencer_id = request.args.get('id')
+        
+        if not influencer_id:
+            return jsonify({
+                'success': False,
+                'error': 'ID가 필요합니다'
+            }), 400
+        
+        # 인플루언서 찾아서 삭제
+        initial_count = len(influencers_storage)
+        influencers_storage = [inf for inf in influencers_storage if inf['id'] != influencer_id]
+        
+        if len(influencers_storage) < initial_count:
+            logger.info(f"🗑️ 인플루언서 삭제: ID {influencer_id}")
+            return jsonify({
+                'success': True,
+                'message': '인플루언서가 삭제되었습니다'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': '인플루언서를 찾을 수 없습니다'
+            }), 404
 
 @app.route('/api/x-crawler/collect', methods=['POST'])
 def collect_posts():
@@ -2116,10 +2164,10 @@ if __name__ == '__main__':
     logger.info(f"🌍 Environment: {os.getenv('FLASK_ENV', 'development')}")
     logger.info(f"🔑 API Keys - OpenAI: {'SET' if os.getenv('OPENAI_API_KEY') else 'NOT_SET'}, Anthropic: {'SET' if os.getenv('ANTHROPIC_API_KEY') else 'NOT_SET'}")
     
-    # X 크롤러 스케줄러 시작
-    scheduler = get_scheduler()
-    scheduler.start()
-    logger.info("📅 X 크롤러 스케줄러 시작됨")
+    # X 크롤러 스케줄러는 Flask 앱 컨텍스트 내에서만 시작
+    # scheduler = get_scheduler()
+    # scheduler.start()
+    logger.info("📅 X 크롤러 스케줄러 준비됨 (수동 시작 필요)")
     
 
     

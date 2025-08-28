@@ -46,8 +46,10 @@ const XCrawler = {
         // 스케줄 설정 로드
         this.loadScheduleConfig();
         
-        // 인플루언서 목록 로드
-        this.loadInfluencers();
+        // 인플루언서 목록 로드 (백엔드에서)
+        this.loadInfluencers().then(() => {
+            console.log('✅ 인플루언서 목록 초기화 완료');
+        });
         
         // 대시보드 초기화
         this.initDashboard();
@@ -157,6 +159,11 @@ const XCrawler = {
         switch(sectionName) {
             case 'dashboard':
                 this.updateDashboard();
+                break;
+            case 'influencers':
+                this.loadInfluencers().then(() => {
+                    this.renderInfluencers();
+                });
                 break;
             case 'statistics':
                 this.loadStatistics();
@@ -404,52 +411,166 @@ const XCrawler = {
     },
     
     async addInfluencer() {
-        const username = document.getElementById('influencerUsername')?.value;
+        const usernameInput = document.getElementById('influencerUsername');
+        const username = usernameInput?.value?.trim();
         
         if (!username) {
             this.showNotification('사용자명을 입력해주세요.', 'error');
             return;
         }
         
-        const influencer = {
-            id: Date.now().toString(),
-            username: username.startsWith('@') ? username : '@' + username,
-            name: '',
-            profileImage: 'https://via.placeholder.com/60',
-            isActive: true,
-            addedAt: new Date().toISOString(),
-            lastFetched: null,
-            stats: {
-                followers: 0,
-                posts: 0
+        // @ 제거
+        const cleanUsername = username.replace('@', '');
+        
+        try {
+            // 백엔드에 추가 요청
+            const response = await fetch(`${this.API_BASE_URL}/api/x-crawler/influencers`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: cleanUsername,
+                    name: cleanUsername,
+                    isActive: true
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 로컬 목록 업데이트
+                await this.loadInfluencers();
+                this.renderInfluencers();
+                this.hideModal();
+                
+                // 입력 필드 초기화
+                usernameInput.value = '';
+                
+                this.showNotification(result.message || '인플루언서가 추가되었습니다.', 'success');
+            } else {
+                this.showNotification(result.error || '추가 실패', 'error');
             }
-        };
+        } catch (error) {
+            console.error('인플루언서 추가 오류:', error);
+            this.showNotification('인플루언서 추가 중 오류가 발생했습니다.', 'error');
+        }
+    },
+    
+    async removeInfluencer(influencerId) {
+        if (!confirm('이 인플루언서를 삭제하시겠습니까?')) {
+            return;
+        }
         
-        this.influencers.push(influencer);
-        this.saveInfluencers();
-        this.renderInfluencers();
-        this.hideModal();
-        
-        this.showNotification('인플루언서가 추가되었습니다.', 'success');
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/api/x-crawler/influencers?id=${influencerId}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                await this.loadInfluencers();
+                this.renderInfluencers();
+                this.showNotification('인플루언서가 삭제되었습니다.', 'success');
+            } else {
+                this.showNotification(result.error || '삭제 실패', 'error');
+            }
+        } catch (error) {
+            console.error('인플루언서 삭제 오류:', error);
+            this.showNotification('삭제 중 오류가 발생했습니다.', 'error');
+        }
     },
     
     saveInfluencers() {
-        localStorage.setItem('x_crawler_influencers', JSON.stringify(this.influencers));
+        // 이제 백엔드에서 관리하므로 로컬 저장 불필요
     },
     
-    loadInfluencers() {
-        const saved = localStorage.getItem('x_crawler_influencers');
-        if (saved) {
-            try {
-                this.influencers = JSON.parse(saved);
-            } catch (error) {
-                console.error('인플루언서 목록 로드 오류:', error);
+    async loadInfluencers() {
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/api/x-crawler/influencers`);
+            const result = await response.json();
+            
+            if (result.success) {
+                this.influencers = result.data || [];
+                console.log(`✅ ${this.influencers.length}명의 인플루언서 로드됨`);
             }
+        } catch (error) {
+            console.error('인플루언서 목록 로드 오류:', error);
+            this.influencers = [];
         }
     },
     
     renderInfluencers() {
-        // 인플루언서 카드 렌더링 로직
+        const container = document.querySelector('.influencer-grid');
+        if (!container) return;
+        
+        // 기존 카드 제거 (추가 버튼 제외)
+        const existingCards = container.querySelectorAll('.influencer-card:not(.add-new)');
+        existingCards.forEach(card => card.remove());
+        
+        // 인플루언서 카드 생성
+        this.influencers.forEach(influencer => {
+            const card = document.createElement('div');
+            card.className = 'influencer-card';
+            card.innerHTML = `
+                <div class="influencer-avatar">
+                    <img src="${influencer.profileImage}" alt="@${influencer.username}">
+                </div>
+                <div class="influencer-info">
+                    <h4>@${influencer.username}</h4>
+                    <p>${influencer.name}</p>
+                    <span class="status-badge ${influencer.isActive ? 'active' : 'inactive'}">
+                        ${influencer.isActive ? '활성' : '비활성'}
+                    </span>
+                </div>
+                <div class="influencer-stats">
+                    <p>${influencer.stats?.postsCollected || 0} 포스트 수집됨</p>
+                    <p>${influencer.lastFetched ? `마지막 수집: ${this.formatRelativeTime(influencer.lastFetched)}` : '아직 수집 안됨'}</p>
+                </div>
+                <div class="influencer-actions">
+                    <button class="btn-small btn-toggle" data-id="${influencer.id}">
+                        ${influencer.isActive ? '일시정지' : '활성화'}
+                    </button>
+                    <button class="btn-small btn-danger btn-delete" data-id="${influencer.id}">삭제</button>
+                </div>
+            `;
+            
+            // 추가 버튼 앞에 삽입
+            const addButton = container.querySelector('.add-new');
+            container.insertBefore(card, addButton);
+        });
+        
+        // 이벤트 리스너 추가
+        container.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.dataset.id;
+                this.removeInfluencer(id);
+            });
+        });
+        
+        container.querySelectorAll('.btn-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.dataset.id;
+                this.toggleInfluencerStatus(id);
+            });
+        });
+    },
+    
+    formatRelativeTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000); // 초 단위
+        
+        if (diff < 60) return '방금 전';
+        if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+        return `${Math.floor(diff / 86400)}일 전`;
+    },
+    
+    async toggleInfluencerStatus(influencerId) {
+        // TODO: 백엔드 API 구현 후 연동
+        console.log('Toggle status for:', influencerId);
     },
     
     // 대시보드
@@ -483,26 +604,79 @@ const XCrawler = {
     },
     
     async updateDashboard() {
-        // 상태 카드 업데이트
-        this.updateStatusCards();
+        try {
+            // 백엔드에서 통계 가져오기
+            const response = await fetch(`${this.API_BASE_URL}/api/x-crawler/stats`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const stats = result.data;
+                
+                // 상태 카드 업데이트
+                this.updateStatusCards(stats);
+                
+                // 타임라인 업데이트
+                this.updateTimeline(stats);
+                
+                // 게시 큐 업데이트
+                this.updateQueue(stats);
+            }
+        } catch (error) {
+            console.error('대시보드 업데이트 오류:', error);
+        }
+    },
+    
+    updateStatusCards(stats) {
+        // 수집 예정
+        const collectingCount = document.querySelector('.status-card:nth-child(1) .status-count');
+        if (collectingCount) {
+            collectingCount.textContent = stats?.scheduler?.next_schedules?.filter(s => s.type === 'collection').length || 0;
+        }
         
-        // 타임라인 업데이트
-        this.updateTimeline();
+        // 게시 대기
+        const pendingCount = document.querySelector('.status-card:nth-child(2) .status-count');
+        if (pendingCount) {
+            pendingCount.textContent = stats?.scheduler?.queue_size || 0;
+        }
         
-        // 게시 큐 업데이트
-        this.updateQueue();
+        // 완료
+        const completedCount = document.querySelector('.status-card:nth-child(3) .status-count');
+        if (completedCount) {
+            completedCount.textContent = stats?.scheduler?.history_count || 0;
+        }
     },
     
-    updateStatusCards() {
-        // 실제 데이터로 업데이트하는 로직
+    updateTimeline(stats) {
+        const container = document.querySelector('.timeline-items');
+        if (!container || !stats?.scheduler?.next_schedules) return;
+        
+        container.innerHTML = '';
+        
+        stats.scheduler.next_schedules.forEach(schedule => {
+            const item = document.createElement('div');
+            item.className = 'timeline-item scheduled';
+            
+            const scheduleTime = new Date(schedule.next_run);
+            const now = new Date();
+            
+            if (scheduleTime < now) {
+                item.className = 'timeline-item completed';
+            } else if (scheduleTime - now < 30 * 60 * 1000) {
+                item.className = 'timeline-item upcoming';
+            }
+            
+            item.innerHTML = `
+                <span class="time">${scheduleTime.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</span>
+                <span class="status">${scheduleTime < now ? '✅' : scheduleTime - now < 30 * 60 * 1000 ? '⏳' : '⏰'}</span>
+                <span class="description">${schedule.name}</span>
+            `;
+            
+            container.appendChild(item);
+        });
     },
     
-    updateTimeline() {
-        // 오늘의 스케줄 업데이트
-    },
-    
-    updateQueue() {
-        // 게시 큐 업데이트
+    updateQueue(stats) {
+        // 게시 큐 업데이트 (추후 구현)
     },
     
     // 통계
