@@ -2064,14 +2064,87 @@ def handle_influencers():
 def collect_posts():
     """수동 수집 실행"""
     try:
-        scheduler = get_scheduler()
+        global influencers_storage
+        
+        # X API 자격증명 확인
+        x_credentials = request.headers.get('X-Credentials')
+        if not x_credentials:
+            return jsonify({
+                'success': False,
+                'error': 'X API 자격증명이 필요합니다'
+            }), 401
+        
+        # 자격증명 디코드
+        try:
+            import base64
+            credentials = json.loads(base64.b64decode(x_credentials))
+        except:
+            return jsonify({
+                'success': False,
+                'error': '잘못된 자격증명 형식'
+            }), 400
+        
+        # 크롤러 초기화
+        crawler = get_crawler()
+        if not crawler.setup_x_api(credentials):
+            return jsonify({
+                'success': False,
+                'error': 'X API 인증 실패'
+            }), 401
+        
+        # 활성 인플루언서 목록
+        active_influencers = [inf for inf in influencers_storage if inf.get('isActive', True)]
+        
+        if not active_influencers:
+            return jsonify({
+                'success': False,
+                'error': '활성 인플루언서가 없습니다'
+            }), 400
+        
+        # 수집 실행
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(scheduler.collect_posts())
         
-        return jsonify(result)
+        all_posts = []
+        collection_results = []
+        
+        for influencer in active_influencers:
+            username = influencer['username']
+            posts = loop.run_until_complete(
+                crawler.fetch_influencer_posts(username, count=5, since_hours=48)
+            )
+            
+            # 인플루언서 통계 업데이트
+            influencer['stats']['postsCollected'] = influencer['stats'].get('postsCollected', 0) + len(posts)
+            influencer['lastFetched'] = datetime.now().isoformat()
+            
+            collection_results.append({
+                'username': username,
+                'posts_collected': len(posts)
+            })
+            
+            all_posts.extend(posts)
+            
+            logger.info(f"✅ @{username}: {len(posts)}개 포스트 수집")
+        
+        # 요약 생성 (Phase 7에서 구현)
+        summary = f"총 {len(all_posts)}개 포스트 수집됨"
+        
+        return jsonify({
+            'success': True,
+            'message': f'{len(active_influencers)}명의 인플루언서로부터 {len(all_posts)}개 포스트 수집',
+            'data': {
+                'total_posts': len(all_posts),
+                'influencers': collection_results,
+                'posts': all_posts[:10],  # 최대 10개만 반환
+                'summary': summary
+            }
+        })
+        
     except Exception as e:
         logger.error(f"수집 오류: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({
             'success': False,
             'error': str(e)

@@ -84,6 +84,10 @@ class XCrawler:
     ) -> List[Dict]:
         """인플루언서 최신 포스트 수집"""
         try:
+            if not self.x_client:
+                logger.error("❌ X API 클라이언트가 설정되지 않았습니다")
+                return []
+            
             # @ 제거
             username = username.replace('@', '')
             
@@ -92,37 +96,52 @@ class XCrawler:
             # 시간 필터
             since_time = datetime.now(KST) - timedelta(hours=since_hours)
             
+            # 사용자 정보 가져오기
+            try:
+                user = self.x_client.get_user(screen_name=username)
+                user_id = user.id_str
+            except Exception as e:
+                logger.error(f"❌ 사용자 {username}을 찾을 수 없습니다: {str(e)}")
+                return []
+            
             # 트윗 가져오기
             tweets = []
-            for tweet in tweepy.Cursor(
-                self.x_client.user_timeline,
-                screen_name=username,
-                exclude_replies=True,
-                include_rts=False,
-                tweet_mode='extended',
-                count=200
-            ).items(count):
-                # 시간 필터 적용
-                tweet_time = tweet.created_at.replace(tzinfo=pytz.UTC)
-                if tweet_time < since_time.replace(tzinfo=pytz.UTC):
-                    break
+            try:
+                for tweet in tweepy.Cursor(
+                    self.x_client.user_timeline,
+                    user_id=user_id,
+                    exclude_replies=True,
+                    include_rts=False,
+                    tweet_mode='extended',
+                    count=200
+                ).items(count):
+                    # 시간 필터 적용
+                    tweet_time = tweet.created_at.replace(tzinfo=pytz.UTC)
+                    if tweet_time < since_time.replace(tzinfo=pytz.UTC):
+                        break
+                    
+                    tweets.append({
+                        'id': tweet.id_str,
+                        'author': username,
+                        'text': tweet.full_text,
+                        'created_at': tweet_time.astimezone(KST).isoformat(),
+                        'likes': tweet.favorite_count,
+                        'retweets': tweet.retweet_count,
+                        'url': f'https://twitter.com/{username}/status/{tweet.id_str}',
+                        'engagement': tweet.favorite_count + tweet.retweet_count
+                    })
                 
-                tweets.append({
-                    'id': tweet.id_str,
-                    'author': username,
-                    'text': tweet.full_text,
-                    'created_at': tweet_time.astimezone(KST).isoformat(),
-                    'likes': tweet.favorite_count,
-                    'retweets': tweet.retweet_count,
-                    'url': f'https://twitter.com/{username}/status/{tweet.id_str}'
-                })
+                logger.info(f"✅ {username}: {len(tweets)}개 포스트 수집 완료")
+                
+            except tweepy.errors.TooManyRequests:
+                logger.warning(f"⚠️ Rate limit 도달 - {username}")
+            except tweepy.errors.Forbidden:
+                logger.error(f"❌ 접근 권한 없음 - {username}")
+            except Exception as e:
+                logger.error(f"❌ 포스트 수집 오류 - {username}: {str(e)}")
             
-            logger.info(f"✅ {username}: {len(tweets)}개 포스트 수집 완료")
             return tweets
             
-        except tweepy.errors.TweepyException as e:
-            logger.error(f"❌ {username} 수집 실패: {str(e)}")
-            return []
         except Exception as e:
             logger.error(f"❌ 예상치 못한 오류: {str(e)}")
             return []

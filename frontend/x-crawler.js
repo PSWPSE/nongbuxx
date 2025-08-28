@@ -125,6 +125,122 @@ const XCrawler = {
         document.getElementById('xThemeToggle')?.addEventListener('click', () => {
             this.toggleTheme();
         });
+        
+        // 수동 수집 버튼
+        document.getElementById('manualCollectBtn')?.addEventListener('click', () => {
+            this.collectPosts();
+        });
+    },
+    
+    // 포스트 수집
+    async collectPosts() {
+        const statusDiv = document.getElementById('collectionStatus');
+        const collectBtn = document.getElementById('manualCollectBtn');
+        
+        // X API 자격증명 확인
+        const credentials = localStorage.getItem('x_credentials');
+        if (!credentials) {
+            this.showNotification('X API 설정이 필요합니다. API 설정 메뉴에서 설정해주세요.', 'error');
+            return;
+        }
+        
+        // 인플루언서 확인
+        if (this.influencers.length === 0) {
+            this.showNotification('먼저 인플루언서를 추가해주세요.', 'error');
+            return;
+        }
+        
+        // 로딩 상태
+        collectBtn.disabled = true;
+        collectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 수집 중...';
+        statusDiv.className = 'collection-status loading';
+        statusDiv.textContent = '포스트를 수집하고 있습니다...';
+        
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/api/x-crawler/collect`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Credentials': credentials
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 성공
+                statusDiv.className = 'collection-status success';
+                statusDiv.innerHTML = `
+                    <strong>✅ 수집 완료!</strong><br>
+                    ${result.message}<br>
+                    <small>${result.data.influencers.map(inf => 
+                        `@${inf.username}: ${inf.posts_collected}개`
+                    ).join(', ')}</small>
+                `;
+                
+                // 인플루언서 목록 새로고침
+                await this.loadInfluencers();
+                if (this.currentSection === 'influencers') {
+                    this.renderInfluencers();
+                }
+                
+                // 대시보드 업데이트
+                if (this.currentSection === 'dashboard') {
+                    this.updateDashboard();
+                }
+                
+                // 수집된 포스트 표시 (선택적)
+                if (result.data.posts && result.data.posts.length > 0) {
+                    this.displayCollectedPosts(result.data.posts);
+                }
+                
+                this.showNotification(result.message, 'success');
+            } else {
+                // 실패
+                statusDiv.className = 'collection-status error';
+                statusDiv.textContent = `❌ 오류: ${result.error}`;
+                this.showNotification(result.error || '수집 실패', 'error');
+            }
+        } catch (error) {
+            console.error('수집 오류:', error);
+            statusDiv.className = 'collection-status error';
+            statusDiv.textContent = '❌ 수집 중 오류가 발생했습니다.';
+            this.showNotification('수집 중 오류가 발생했습니다.', 'error');
+        } finally {
+            // 버튼 복원
+            collectBtn.disabled = false;
+            collectBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 수동 수집 실행';
+            
+            // 5초 후 상태 메시지 숨기기
+            setTimeout(() => {
+                statusDiv.className = 'collection-status';
+                statusDiv.textContent = '';
+            }, 5000);
+        }
+    },
+    
+    // 수집된 포스트 표시
+    displayCollectedPosts(posts) {
+        // 게시 큐에 포스트 샘플 표시
+        const queueContainer = document.querySelector('.queue-items');
+        if (!queueContainer || posts.length === 0) return;
+        
+        // 기존 내용 제거
+        queueContainer.innerHTML = '';
+        
+        // 최대 3개만 표시
+        posts.slice(0, 3).forEach((post, index) => {
+            const item = document.createElement('div');
+            item.className = 'queue-item';
+            item.innerHTML = `
+                <div class="queue-time">@${post.author}</div>
+                <div class="queue-content">
+                    <p>${post.text.substring(0, 100)}${post.text.length > 100 ? '...' : ''}</p>
+                    <small>❤️ ${post.likes} 🔁 ${post.retweets}</small>
+                </div>
+            `;
+            queueContainer.appendChild(item);
+        });
     },
     
     // 섹션 전환
