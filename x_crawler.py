@@ -41,9 +41,9 @@ class XCrawler:
         
         # 캐싱 추가
         self.user_cache = {}  # 사용자 정보 캐시
-        self.cache_ttl = 3600  # 1시간 캐시
+        self.cache_ttl = 21600  # 6시간 캐시 (수집 주기와 동일)
         self.last_collection_time = 0  # 마지막 수집 시간
-        self.min_collection_interval = 1800  # 최소 30분 간격
+        self.min_collection_interval = 21600  # 최소 6시간 간격 (6 * 60 * 60)
         
         logger.info("✅ X 크롤러 초기화")
     
@@ -92,7 +92,7 @@ class XCrawler:
     async def fetch_influencer_posts(
         self,
         username: str,
-        count: int = 10,  # 50에서 10으로 감소 (API 호출 최적화)
+        count: int = 30,  # 트윗 30개로 설정
         since_hours: int = 24
     ) -> List[Dict]:
         """인플루언서 최신 포스트 수집 (최적화됨)"""
@@ -147,8 +147,8 @@ class XCrawler:
             # 트윗 가져오기
             tweets = []
             try:
-                # API 호출 최적화: count를 최소화
-                actual_count = min(count, 20)  # 최대 20개로 제한
+                # API 호출 최적화: count 설정
+                actual_count = min(count, 30)  # 최대 30개로 제한
                 
                 for tweet in tweepy.Cursor(
                     self.x_client.user_timeline,
