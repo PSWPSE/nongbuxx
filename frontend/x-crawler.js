@@ -1276,7 +1276,48 @@ const XCrawler = {
     },
     
     renderStatistics(data) {
-        // 통계 렌더링 로직
+        // 7일 통계 업데이트
+        if (data.last_7_days) {
+            const collections = data.last_7_days.collections || 0;
+            const publishes = data.last_7_days.publishes || 0;
+            const total = collections + publishes;
+            const success = data.last_7_days.success_rate || 0;
+            
+            const collectionsEl = document.getElementById('stats7DaysCollections');
+            if (collectionsEl) collectionsEl.textContent = `${collections}회 수집`;
+            
+            const publishesEl = document.getElementById('stats7DaysPublishes');
+            if (publishesEl) publishesEl.textContent = `${publishes}회 게시`;
+            
+            const successEl = document.getElementById('stats7DaysSuccess');
+            if (successEl) successEl.textContent = `${success}% 성공률`;
+        }
+        
+        // 실시간 상태 업데이트
+        const activeInfluencers = this.influencers.filter(inf => inf.isActive).length;
+        const activeEl = document.getElementById('statsActiveInfluencers');
+        if (activeEl) activeEl.textContent = `${activeInfluencers}명 활성`;
+        
+        const queueSize = data.queue_size || 0;
+        const queueEl = document.getElementById('statsQueueSize');
+        if (queueEl) queueEl.textContent = `${queueSize}개 대기`;
+        
+        // 마지막 활동
+        if (data.last_activity) {
+            const lastActivityEl = document.getElementById('statsLastActivity');
+            if (lastActivityEl) {
+                const lastTime = new Date(data.last_activity);
+                const now = new Date();
+                const diff = Math.floor((now - lastTime) / (1000 * 60));
+                if (diff < 60) {
+                    lastActivityEl.textContent = `${diff}분 전`;
+                } else if (diff < 1440) {
+                    lastActivityEl.textContent = `${Math.floor(diff / 60)}시간 전`;
+                } else {
+                    lastActivityEl.textContent = `${Math.floor(diff / 1440)}일 전`;
+                }
+            }
+        }
     },
     
     // X API 설정 로드

@@ -9,10 +9,10 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 import pytz
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.jobstores.memory import MemoryJobStore
-from apscheduler.executors.asyncio import AsyncIOExecutor
+
 import traceback
 
 # 로거 설정
@@ -33,7 +33,7 @@ class XCrawlerScheduler:
             'default': MemoryJobStore()
         }
         executors = {
-            'default': AsyncIOExecutor()
+            'default': {'type': 'threadpool', 'max_workers': 10}
         }
         job_defaults = {
             'coalesce': False,
@@ -41,7 +41,7 @@ class XCrawlerScheduler:
             'misfire_grace_time': 30
         }
         
-        self.scheduler = AsyncIOScheduler(
+        self.scheduler = BackgroundScheduler(
             jobstores=jobstores,
             executors=executors,
             job_defaults=job_defaults,
@@ -277,13 +277,24 @@ class XCrawlerScheduler:
         """다음 예정된 작업 목록"""
         jobs = []
         for job in self.scheduler.get_jobs():
-            next_run = job.next_run_time
+            # APScheduler 3.x 버전 호환
+            next_run = getattr(job, 'next_run_time', None)
+            if not next_run:
+                # 트리거에서 다음 실행 시간 가져오기
+                trigger = getattr(job, 'trigger', None)
+                if trigger:
+                    try:
+                        from datetime import datetime
+                        next_run = trigger.get_next_fire_time(None, datetime.now(self.tz))
+                    except:
+                        continue
+            
             if next_run:
                 jobs.append({
                     'id': job.id,
                     'name': job.name,
                     'next_run': next_run.strftime('%Y-%m-%d %H:%M:%S'),
-                    'type': 'collection' if 'collect' in job.id else 'publishing'
+                    'job_type': 'collect' if 'collect' in job.id else 'publish'
                 })
         
         # 시간순 정렬

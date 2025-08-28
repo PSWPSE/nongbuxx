@@ -270,15 +270,22 @@
 
 /* 상태 메시지 영역 */
 .status-messages {
-    display: flex;
+    display: none;
     gap: 1rem;
     align-items: center;
     min-height: 0;
     transition: all 0.3s ease;
 }
 
-/* 내용이 있을 때만 마진 적용 */
-.status-messages:not(:empty) {
+/* 내용이 있을 때만 표시 */
+.status-messages:has(.collection-status.loading),
+.status-messages:has(.collection-status.success),
+.status-messages:has(.collection-status.error),
+.status-messages:has(.publish-status.loading),
+.status-messages:has(.publish-status.success),
+.status-messages:has(.publish-status.error),
+.status-messages:has(.btn.btn-success) {
+    display: flex;
     margin-bottom: 1.5rem;
     min-height: 40px;
 }
