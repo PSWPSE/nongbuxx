@@ -2053,9 +2053,16 @@ def handle_influencers():
                 'error': '인플루언서를 찾을 수 없습니다'
             }), 404
 
-@app.route('/api/x-crawler/collect', methods=['POST'])
+@app.route('/api/x-crawler/collect', methods=['POST', 'OPTIONS'])
 def collect_posts():
     """수동 수집 실행"""
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Credentials'
+        return response
+    
     try:
         global influencers_storage
         
@@ -2165,9 +2172,16 @@ def collect_posts():
             'error': str(e)
         }), 500
 
-@app.route('/api/x-crawler/publish', methods=['POST'])
+@app.route('/api/x-crawler/publish', methods=['POST', 'OPTIONS'])
 def publish_to_x_crawler():
     """수동 게시"""
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Credentials'
+        return response
+    
     try:
         # X API 자격증명 확인
         x_credentials = request.headers.get('X-Credentials')
