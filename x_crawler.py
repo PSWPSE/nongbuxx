@@ -39,6 +39,12 @@ class XCrawler:
             'ai_api': {'tokens': 0, 'calls': 0}
         }
         
+        # 캐싱 추가
+        self.user_cache = {}  # 사용자 정보 캐시
+        self.cache_ttl = 3600  # 1시간 캐시
+        self.last_collection_time = 0  # 마지막 수집 시간
+        self.min_collection_interval = 1800  # 최소 30분 간격
+        
         logger.info("✅ X 크롤러 초기화")
     
     def setup_x_api(self, credentials: Dict[str, str]) -> bool:
@@ -84,12 +90,21 @@ class XCrawler:
             return False
     
     async def fetch_influencer_posts(
-        self, 
-        username: str, 
-        count: int = 10,
+        self,
+        username: str,
+        count: int = 10,  # 50에서 10으로 감소 (API 호출 최적화)
         since_hours: int = 24
     ) -> List[Dict]:
-        """인플루언서 최신 포스트 수집"""
+        """인플루언서 최신 포스트 수집 (최적화됨)"""
+        # 수집 간격 체크
+        current_time = time.time()
+        if self.last_collection_time > 0:
+            elapsed = current_time - self.last_collection_time
+            if elapsed < self.min_collection_interval:
+                remaining = int((self.min_collection_interval - elapsed) / 60)
+                logger.warning(f"⏳ 수집 간격 제한: {remaining}분 후 재시도 가능")
+                return []
+        
         try:
             if not self.x_client:
                 logger.error("❌ X API 클라이언트가 설정되지 않았습니다")
@@ -103,25 +118,46 @@ class XCrawler:
             # 시간 필터
             since_time = datetime.now(KST) - timedelta(hours=since_hours)
             
-            # 사용자 정보 가져오기
-            try:
-                user = self.x_client.get_user(screen_name=username)
-                user_id = user.id_str
-            except Exception as e:
-                logger.error(f"❌ 사용자 {username}을 찾을 수 없습니다: {str(e)}")
-                return []
+            # 캐시된 사용자 정보 확인
+            cache_key = f"user_{username}"
+            user_id = None
+            
+            if cache_key in self.user_cache:
+                cached = self.user_cache[cache_key]
+                if current_time - cached['timestamp'] < self.cache_ttl:
+                    user_id = cached['user_id']
+                    logger.info(f"📦 캐시된 사용자 정보 사용: @{username}")
+            
+            # 캐시 미스 시에만 API 호출
+            if not user_id:
+                try:
+                    user = self.x_client.get_user(screen_name=username)
+                    user_id = user.id_str
+                    # 캐시 저장
+                    self.user_cache[cache_key] = {
+                        'user_id': user_id,
+                        'timestamp': current_time
+                    }
+                    self.api_usage['x_api']['calls'] += 1
+                    logger.info(f"🔄 API 호출: 사용자 정보 조회 - @{username}")
+                except Exception as e:
+                    logger.error(f"❌ 사용자 {username}을 찾을 수 없습니다: {str(e)}")
+                    return []
             
             # 트윗 가져오기
             tweets = []
             try:
+                # API 호출 최적화: count를 최소화
+                actual_count = min(count, 20)  # 최대 20개로 제한
+                
                 for tweet in tweepy.Cursor(
                     self.x_client.user_timeline,
                     user_id=user_id,
                     exclude_replies=True,
                     include_rts=False,
                     tweet_mode='extended',
-                    count=200
-                ).items(count):
+                    count=actual_count  # 200에서 감소
+                ).items(actual_count):
                     # 시간 필터 적용
                     tweet_time = tweet.created_at.replace(tzinfo=pytz.UTC)
                     if tweet_time < since_time.replace(tzinfo=pytz.UTC):
@@ -138,9 +174,26 @@ class XCrawler:
                         'engagement': tweet.favorite_count + tweet.retweet_count
                     })
                 
-                            logger.info(f"✅ {username}: {len(tweets)}개 포스트 수집 완료")
+                logger.info(f"✅ {username}: {len(tweets)}개 포스트 수집 완료")
+                
+            except tweepy.errors.TooManyRequests as e:
+                logger.warning(f"⚠️ Rate limit 도달 - {username}: {str(e)}")
+                self.collection_history.append({
+                    'timestamp': datetime.now(KST).isoformat(),
+                    'influencer': username,
+                    'posts_count': 0,
+                    'success': False,
+                    'error': 'Rate limit exceeded'
+                })
+                return []
+            except Exception as e:
+                logger.error(f"❌ 트윗 수집 오류 - {username}: {str(e)}")
+                return []
             
-            # API 사용량 업데이트
+            # 수집 시간 업데이트
+            self.last_collection_time = current_time
+            
+            # API 사용량 업데이트 (타임라인 조회)
             self.api_usage['x_api']['calls'] += 1
             
             # 수집 기록 저장
@@ -152,21 +205,7 @@ class XCrawler:
                     'success': True
                 })
             
-        except tweepy.errors.TooManyRequests:
-            logger.warning(f"⚠️ Rate limit 도달 - {username}")
-            self.collection_history.append({
-                'timestamp': datetime.now(KST).isoformat(),
-                'influencer': username,
-                'posts_count': 0,
-                'success': False,
-                'error': 'Rate limit exceeded'
-            })
-        except tweepy.errors.Forbidden:
-            logger.error(f"❌ 접근 권한 없음 - {username}")
-        except Exception as e:
-            logger.error(f"❌ 포스트 수집 오류 - {username}: {str(e)}")
-        
-        return tweets
+            return tweets
             
         except Exception as e:
             logger.error(f"❌ 예상치 못한 오류: {str(e)}")

@@ -32,6 +32,11 @@ class XPublisher:
         self.authenticated = False
         self.client = None
         
+        # 인증 캐싱 추가
+        self.last_verify_time = 0
+        self.verify_cache_ttl = 900  # 15분 캐시
+        self.cached_user = None
+        
         try:
             # OAuth 1.0a 인증 (게시 권한 필요)
             if all([consumer_key, consumer_secret, access_token, access_token_secret]):
@@ -52,7 +57,7 @@ class XPublisher:
     
     def verify_credentials(self) -> Dict:
         """
-        API 인증 상태 확인
+        API 인증 상태 확인 (캐싱 적용)
         
         Returns:
             인증 상태 및 사용자 정보
@@ -63,17 +68,33 @@ class XPublisher:
                 'error': 'API 클라이언트가 초기화되지 않았습니다'
             }
         
+        # 캐시된 인증 정보 확인
+        import time
+        current_time = time.time()
+        if self.cached_user and (current_time - self.last_verify_time) < self.verify_cache_ttl:
+            logger.info("📦 캐시된 인증 정보 사용")
+            return {
+                'success': True,
+                'user': self.cached_user,
+                'cached': True
+            }
+        
         try:
-            # 현재 사용자 정보 가져오기
+            # 캐시 만료 시에만 API 호출
+            logger.info("🔄 X API 인증 확인 호출")
             response = self.client.get_me()
             if response.data:
+                # 캐시 업데이트
+                self.cached_user = {
+                    'id': response.data.id,
+                    'username': response.data.username,
+                    'name': response.data.name
+                }
+                self.last_verify_time = current_time
+                
                 return {
                     'success': True,
-                    'user': {
-                        'id': response.data.id,
-                        'username': response.data.username,
-                        'name': response.data.name
-                    }
+                    'user': self.cached_user
                 }
             else:
                 return {

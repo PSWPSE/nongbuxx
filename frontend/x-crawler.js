@@ -426,8 +426,14 @@ const XCrawler = {
         }
     },
     
-    // X API 설정 관리
+    // X API 설정 관리 (디바운싱 추가)
     async validateXApi() {
+        // 연속 호출 방지 (5초 쿨다운)
+        if (this.isValidating) {
+            this.showValidationResult('warning', '인증 확인 중입니다. 잠시 기다려주세요.');
+            return;
+        }
+        
         const credentials = this.getXApiCredentials();
         
         if (!credentials.consumer_key || !credentials.consumer_secret || 
@@ -435,6 +441,9 @@ const XCrawler = {
             this.showValidationResult('error', '모든 필드를 입력해주세요.');
             return;
         }
+        
+        // 디바운싱 플래그 설정
+        this.isValidating = true;
         
         try {
             const response = await fetch(`${this.API_BASE_URL}/api/validate/x-credentials`, {
@@ -455,6 +464,11 @@ const XCrawler = {
         } catch (error) {
             console.error('X API 인증 오류:', error);
             this.showValidationResult('error', '인증 확인 중 오류가 발생했습니다.');
+        } finally {
+            // 5초 후 플래그 해제
+            setTimeout(() => {
+                this.isValidating = false;
+            }, 5000);
         }
     },
     
