@@ -169,6 +169,14 @@ document.addEventListener('DOMContentLoaded', function() {
     initKeyboardShortcuts();
     loadUserPreferences();
     
+    // X 크롤러 버튼 이벤트 리스너 추가
+    const xCrawlerBtn = document.getElementById('xCrawlerBtn');
+    if (xCrawlerBtn) {
+        xCrawlerBtn.addEventListener('click', () => {
+            window.location.href = './x-crawler.html';
+        });
+    }
+    
     // 콘텐츠 타입 선택 초기화
     handleContentTypeChange();
     

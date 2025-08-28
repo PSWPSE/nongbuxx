@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="X 크롤링&요약게시 - 인플루언서 포스트 자동 수집 및 게시">
+    <title>X 크롤링&요약게시 - NONGBUXX</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./x-crawler.css">
+</head>
+<body>
+    <div class="x-crawler-container">
+        <!-- Header Navigation -->
+        <header class="x-header">
+            <div class="x-header-content">
+                <div class="x-header-left">
+                    <button id="backToMainBtn" class="btn-back">
+                        <i class="fas fa-arrow-left"></i>
+                        뉴스 추출로 돌아가기
+                    </button>
+                </div>
+                <div class="x-header-center">
+                    <h1 class="x-logo">
+                        <i class="fab fa-x-twitter"></i>
+                        X 크롤링&요약게시
+                    </h1>
+                </div>
+                <div class="x-header-right">
+                    <button id="xThemeToggle" class="btn-icon">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Top Menu Bar -->
+        <nav class="x-menu-bar">
+            <button class="x-menu-item active" data-section="dashboard">
+                <i class="fas fa-chart-line"></i>
+                대시보드
+            </button>
+            <button class="x-menu-item" data-section="api-settings">
+                <i class="fas fa-key"></i>
+                X API 설정
+            </button>
+            <button class="x-menu-item" data-section="schedule">
+                <i class="fas fa-calendar-alt"></i>
+                스케줄 관리
+            </button>
+            <button class="x-menu-item" data-section="influencers">
+                <i class="fas fa-users"></i>
+                인플루언서
+            </button>
+            <button class="x-menu-item" data-section="statistics">
+                <i class="fas fa-chart-bar"></i>
+                통계
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="x-main-content">
+            
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="x-section active">
+                <h2 class="section-title">자동화 대시보드</h2>
+                
+                <!-- Status Cards -->
+                <div class="status-cards">
+                    <div class="status-card">
+                        <div class="status-icon collecting">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <div class="status-info">
+                            <h3>수집 예정</h3>
+                            <p class="status-count">3</p>
+                        </div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-icon pending">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="status-info">
+                            <h3>게시 대기</h3>
+                            <p class="status-count">2</p>
+                        </div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-icon completed">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="status-info">
+                            <h3>완료</h3>
+                            <p class="status-count">5</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Schedule -->
+                <div class="schedule-timeline">
+                    <h3>오늘의 스케줄</h3>
+                    <div class="timeline-items">
+                        <div class="timeline-item completed">
+                            <span class="time">09:00</span>
+                            <span class="status">✅</span>
+                            <span class="description">수집 완료 - 15개 포스트</span>
+                        </div>
+                        <div class="timeline-item completed">
+                            <span class="time">09:05</span>
+                            <span class="status">✅</span>
+                            <span class="description">AI 요약 생성 완료</span>
+                        </div>
+                        <div class="timeline-item upcoming">
+                            <span class="time">10:00</span>
+                            <span class="status">⏳</span>
+                            <span class="description">게시 예정 - 30분 후</span>
+                        </div>
+                        <div class="timeline-item scheduled">
+                            <span class="time">15:00</span>
+                            <span class="status">⏰</span>
+                            <span class="description">수집 예정</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Queue -->
+                <div class="content-queue">
+                    <h3>게시 대기 큐</h3>
+                    <div class="queue-items">
+                        <div class="queue-item">
+                            <div class="queue-time">10:00</div>
+                            <div class="queue-content">
+                                <h4>📱 오늘의 테크 리더 인사이트</h4>
+                                <p>일론: Starship 발사 성공 / 순다르: Gemini 2.0 발표</p>
+                            </div>
+                            <div class="queue-actions">
+                                <button class="btn-small">미리보기</button>
+                                <button class="btn-small">수정</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- X API Settings Section -->
+            <section id="api-settings-section" class="x-section">
+                <h2 class="section-title">X API 설정</h2>
+                
+                <!-- Read Permission Settings -->
+                <div class="api-settings-card">
+                    <h3>📖 읽기 권한 (포스트 수집용)</h3>
+                    <div class="form-group">
+                        <label>Consumer Key (API Key)</label>
+                        <div class="input-with-toggle">
+                            <input type="password" id="xReadConsumerKey" placeholder="Consumer Key 입력">
+                            <button class="toggle-visibility" data-target="xReadConsumerKey">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Consumer Secret (API Secret)</label>
+                        <div class="input-with-toggle">
+                            <input type="password" id="xReadConsumerSecret" placeholder="Consumer Secret 입력">
+                            <button class="toggle-visibility" data-target="xReadConsumerSecret">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Access Token</label>
+                        <div class="input-with-toggle">
+                            <input type="password" id="xReadAccessToken" placeholder="Access Token 입력">
+                            <button class="toggle-visibility" data-target="xReadAccessToken">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Access Token Secret</label>
+                        <div class="input-with-toggle">
+                            <input type="password" id="xReadAccessTokenSecret" placeholder="Access Token Secret 입력">
+                            <button class="toggle-visibility" data-target="xReadAccessTokenSecret">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="validateReadApiBtn" class="btn btn-primary">
+                            <i class="fas fa-check"></i> 인증 확인
+                        </button>
+                        <button id="saveReadApiBtn" class="btn btn-success">
+                            <i class="fas fa-save"></i> 저장
+                        </button>
+                        <button id="loadReadApiBtn" class="btn btn-info">
+                            <i class="fas fa-upload"></i> 불러오기
+                        </button>
+                    </div>
+                    <div id="readApiValidationResult" class="validation-result"></div>
+                </div>
+
+                <!-- Write Permission Settings -->
+                <div class="api-settings-card">
+                    <h3>✍️ 쓰기 권한 (자동 게시용)</h3>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="useSameCredentials">
+                            읽기 권한과 동일한 계정 사용
+                        </label>
+                    </div>
+                    <div id="writeApiFields">
+                        <div class="form-group">
+                            <label>Consumer Key (API Key)</label>
+                            <div class="input-with-toggle">
+                                <input type="password" id="xWriteConsumerKey" placeholder="Consumer Key 입력">
+                                <button class="toggle-visibility" data-target="xWriteConsumerKey">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Consumer Secret (API Secret)</label>
+                            <div class="input-with-toggle">
+                                <input type="password" id="xWriteConsumerSecret" placeholder="Consumer Secret 입력">
+                                <button class="toggle-visibility" data-target="xWriteConsumerSecret">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Access Token</label>
+                            <div class="input-with-toggle">
+                                <input type="password" id="xWriteAccessToken" placeholder="Access Token 입력">
+                                <button class="toggle-visibility" data-target="xWriteAccessToken">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Access Token Secret</label>
+                            <div class="input-with-toggle">
+                                <input type="password" id="xWriteAccessTokenSecret" placeholder="Access Token Secret 입력">
+                                <button class="toggle-visibility" data-target="xWriteAccessTokenSecret">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="validateWriteApiBtn" class="btn btn-primary">
+                            <i class="fas fa-check"></i> 인증 확인
+                        </button>
+                        <button id="saveWriteApiBtn" class="btn btn-success">
+                            <i class="fas fa-save"></i> 저장
+                        </button>
+                    </div>
+                    <div id="writeApiValidationResult" class="validation-result"></div>
+                </div>
+            </section>
+
+            <!-- Schedule Management Section -->
+            <section id="schedule-section" class="x-section">
+                <h2 class="section-title">스케줄 관리</h2>
+                
+                <div class="schedule-settings">
+                    <div class="schedule-card">
+                        <h3>📥 수집 스케줄</h3>
+                        <div class="schedule-options">
+                            <label>
+                                <input type="radio" name="collection-frequency" value="daily" checked>
+                                매일
+                            </label>
+                            <label>
+                                <input type="radio" name="collection-frequency" value="weekly">
+                                매주
+                            </label>
+                            <label>
+                                <input type="radio" name="collection-frequency" value="realtime">
+                                실시간 (5분마다)
+                            </label>
+                        </div>
+                        <div class="time-inputs">
+                            <input type="time" value="09:00">
+                            <input type="time" value="15:00">
+                            <input type="time" value="21:00">
+                            <button class="btn-add-time">+ 시간 추가</button>
+                        </div>
+                    </div>
+
+                    <div class="schedule-card">
+                        <h3>📤 게시 스케줄</h3>
+                        <div class="schedule-options">
+                            <label>
+                                <input type="radio" name="publish-mode" value="auto" checked>
+                                수집 후 자동 게시
+                            </label>
+                            <label>
+                                <input type="radio" name="publish-mode" value="scheduled">
+                                지정 시간 게시
+                            </label>
+                        </div>
+                        <div class="delay-setting">
+                            <label>지연 시간 (분):</label>
+                            <input type="number" id="publishDelay" value="60" min="0" max="1440">
+                        </div>
+                    </div>
+
+                    <div class="schedule-actions">
+                        <button id="saveScheduleBtn" class="btn btn-success">
+                            <i class="fas fa-save"></i> 스케줄 저장
+                        </button>
+                        <button id="testScheduleBtn" class="btn btn-info">
+                            <i class="fas fa-play"></i> 테스트 실행
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Influencers Section -->
+            <section id="influencers-section" class="x-section">
+                <h2 class="section-title">인플루언서 관리</h2>
+                
+                <div class="influencer-grid">
+                    <div class="influencer-card">
+                        <div class="influencer-avatar">
+                            <img src="https://via.placeholder.com/60" alt="@elonmusk">
+                        </div>
+                        <div class="influencer-info">
+                            <h4>@elonmusk</h4>
+                            <p>Elon Musk</p>
+                            <span class="status-badge active">활성</span>
+                        </div>
+                        <div class="influencer-stats">
+                            <p>152 포스트 수집됨</p>
+                            <p>마지막 수집: 2시간 전</p>
+                        </div>
+                        <div class="influencer-actions">
+                            <button class="btn-small">일시정지</button>
+                            <button class="btn-small btn-danger">삭제</button>
+                        </div>
+                    </div>
+
+                    <div class="influencer-card add-new">
+                        <button id="addInfluencerBtn">
+                            <i class="fas fa-plus"></i>
+                            <span>인플루언서 추가</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Statistics Section -->
+            <section id="statistics-section" class="x-section">
+                <h2 class="section-title">통계 & 히스토리</h2>
+                
+                <div class="stats-overview">
+                    <div class="stat-card">
+                        <h3>최근 7일 실행</h3>
+                        <div class="stat-value">42회 수집</div>
+                        <div class="stat-value">21회 게시</div>
+                        <div class="stat-value">95% 성공률</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>평균 인게이지먼트</h3>
+                        <div class="stat-value">523 좋아요</div>
+                        <div class="stat-value">89 리트윗</div>
+                        <div class="stat-value">34 답글</div>
+                    </div>
+                </div>
+
+                <div class="history-log">
+                    <h3>실행 히스토리</h3>
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>시간</th>
+                                <th>작업</th>
+                                <th>상태</th>
+                                <th>상세</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <!-- 동적으로 채워질 부분 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="addInfluencerModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>인플루언서 추가</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>X 사용자명 (@제외)</label>
+                    <input type="text" id="influencerUsername" placeholder="예: elonmusk">
+                </div>
+                <div class="form-actions">
+                    <button id="confirmAddInfluencerBtn" class="btn btn-primary">추가</button>
+                    <button class="btn btn-secondary close-modal">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./x-crawler.js"></script>
+</body>
+</html>
