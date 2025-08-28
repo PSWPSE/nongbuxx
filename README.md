@@ -335,4 +335,4 @@ tail -f app.log
 
 ---
 
-**Made with ❤️ by PSWPSE** 
+**Made with ❤️ by PSWPSE** # Force Railway rebuild Thu Aug 28 14:47:51 KST 2025
