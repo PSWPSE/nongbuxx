@@ -141,10 +141,16 @@ const XCrawler = {
             this.toggleTheme();
         });
         
-        // 수동 수집 버튼
-        document.getElementById('manualCollectBtn')?.addEventListener('click', () => {
-            this.collectPosts();
-        });
+        // 수동 수집 버튼 (중복 제거를 위해 기존 리스너 제거)
+        const collectBtn = document.getElementById('manualCollectBtn');
+        if (collectBtn) {
+            // 기존 리스너 제거를 위해 새로운 버튼으로 교체
+            const newCollectBtn = collectBtn.cloneNode(true);
+            collectBtn.parentNode.replaceChild(newCollectBtn, collectBtn);
+            newCollectBtn.addEventListener('click', () => {
+                this.collectPosts();
+            });
+        }
         
         // 수동 게시 버튼
         document.getElementById('manualPublishBtn')?.addEventListener('click', () => {
@@ -976,6 +982,7 @@ const XCrawler = {
             
             if (result.success && result.data) {
                 const history = result.data;
+                this.historyData = history; // 히스토리 데이터 저장
                 
                 // 타임라인에 최근 활동 표시
                 const container = document.querySelector('.timeline-items');
@@ -1076,32 +1083,88 @@ const XCrawler = {
     },
     
     updateTimeline(stats) {
-        const container = document.querySelector('.timeline-items');
-        if (!container || !stats?.scheduler?.next_schedules) return;
+        const container = document.getElementById('scheduleTimeline') || document.querySelector('.timeline-items');
+        if (!container) return;
         
         container.innerHTML = '';
         
-        stats.scheduler.next_schedules.forEach(schedule => {
-            const item = document.createElement('div');
-            item.className = 'timeline-item scheduled';
-            
-            const scheduleTime = new Date(schedule.next_run);
-            const now = new Date();
-            
-            if (scheduleTime < now) {
-                item.className = 'timeline-item completed';
-            } else if (scheduleTime - now < 30 * 60 * 1000) {
-                item.className = 'timeline-item upcoming';
+        // 실제 데이터 기반 타임라인 생성
+        const allEvents = [];
+        const now = new Date();
+        const today = now.toDateString();
+        
+        // 히스토리 데이터 (실제 실행된 이벤트)
+        if (this.historyData) {
+            // 수집 기록
+            if (this.historyData.collections) {
+                this.historyData.collections.forEach(item => {
+                    const eventTime = new Date(item.timestamp);
+                    if (eventTime.toDateString() === today) {
+                        allEvents.push({
+                            time: eventTime,
+                            status: item.success ? '✅' : '❌',
+                            description: `수집 ${item.success ? '완료' : '실패'} - @${item.influencer}`,
+                            className: item.success ? 'completed' : 'failed'
+                        });
+                    }
+                });
             }
             
-            item.innerHTML = `
-                <span class="time">${scheduleTime.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}</span>
-                <span class="status">${scheduleTime < now ? '✅' : scheduleTime - now < 30 * 60 * 1000 ? '⏳' : '⏰'}</span>
-                <span class="description">${schedule.name}</span>
-            `;
-            
-            container.appendChild(item);
-        });
+            // 게시 기록
+            if (this.historyData.publishes) {
+                this.historyData.publishes.forEach(item => {
+                    const eventTime = new Date(item.timestamp);
+                    if (eventTime.toDateString() === today) {
+                        allEvents.push({
+                            time: eventTime,
+                            status: item.success ? '✅' : '❌',
+                            description: `게시 ${item.success ? '완료' : '실패'}`,
+                            className: item.success ? 'completed' : 'failed'
+                        });
+                    }
+                });
+            }
+        }
+        
+        // 예정된 스케줄
+        if (stats?.scheduler?.next_schedules) {
+            stats.scheduler.next_schedules.forEach(schedule => {
+                const scheduleTime = new Date(schedule.next_run);
+                if (scheduleTime.toDateString() === today && scheduleTime > now) {
+                    const isUpcoming = scheduleTime - now < 30 * 60 * 1000;
+                    allEvents.push({
+                        time: scheduleTime,
+                        status: isUpcoming ? '⏳' : '⏰',
+                        description: schedule.job_type === 'collect' ? '수집 예정' : '게시 예정',
+                        className: isUpcoming ? 'upcoming' : 'scheduled'
+                    });
+                }
+            });
+        }
+        
+        // 시간순 정렬
+        allEvents.sort((a, b) => a.time - b.time);
+        
+        // 렌더링
+        if (allEvents.length > 0) {
+            allEvents.forEach(event => {
+                const item = document.createElement('div');
+                item.className = `timeline-item ${event.className}`;
+                
+                item.innerHTML = `
+                    <span class="time">${event.time.toLocaleTimeString('ko-KR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}</span>
+                    <span class="status">${event.status}</span>
+                    <span class="description">${event.description}</span>
+                `;
+                
+                container.appendChild(item);
+            });
+        } else {
+            container.innerHTML = '<div class="timeline-empty">오늘 예정된 스케줄이 없습니다</div>';
+        }
     },
     
     updateQueue(stats) {

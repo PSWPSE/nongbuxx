@@ -73,9 +73,16 @@
             <section id="dashboard-section" class="x-section active">
                 <h2 class="section-title">
                     자동화 대시보드
-                    <button id="refreshDashboardBtn" class="btn-small" style="float: right; font-size: 14px;">
-                        🔄 새로고침
-                    </button>
+                    <div class="header-actions">
+                        <button id="manualCollectBtn" class="btn btn-primary btn-small">
+                            <i class="fas fa-sync-alt"></i>
+                            수집 실행
+                        </button>
+                        <button id="refreshDashboardBtn" class="btn btn-secondary btn-small">
+                            <i class="fas fa-refresh"></i>
+                            새로고침
+                        </button>
+                    </div>
                 </h2>
                 
                 <!-- Compact Status Bar -->
@@ -107,46 +114,21 @@
                     </div>
                 </div>
 
-                <!-- Manual Collection & Publishing Buttons -->
-                <div class="manual-actions">
-                    <div class="action-buttons">
-                        <button id="manualCollectBtn" class="btn btn-primary btn-large">
-                            <i class="fas fa-sync-alt"></i>
-                            수동 수집 실행
-                        </button>
-                        <button id="manualPublishBtn" class="btn btn-success btn-large" style="display: none;">
-                            <i class="fas fa-paper-plane"></i>
-                            X에 게시하기
-                        </button>
-                    </div>
+                <!-- Collection Status -->
+                <div class="status-messages">
                     <div id="collectionStatus" class="collection-status"></div>
                     <div id="publishStatus" class="publish-status"></div>
+                    <button id="manualPublishBtn" class="btn btn-success btn-small" style="display: none;">
+                        <i class="fas fa-paper-plane"></i>
+                        X에 게시하기
+                    </button>
                 </div>
 
                 <!-- Today's Schedule -->
                 <div class="schedule-timeline">
                     <h3>오늘의 스케줄</h3>
-                    <div class="timeline-items">
-                        <div class="timeline-item completed">
-                            <span class="time">09:00</span>
-                            <span class="status">✅</span>
-                            <span class="description">수집 완료 - 15개 포스트</span>
-                        </div>
-                        <div class="timeline-item completed">
-                            <span class="time">09:05</span>
-                            <span class="status">✅</span>
-                            <span class="description">AI 요약 생성 완료</span>
-                        </div>
-                        <div class="timeline-item upcoming">
-                            <span class="time">10:00</span>
-                            <span class="status">⏳</span>
-                            <span class="description">게시 예정 - 30분 후</span>
-                        </div>
-                        <div class="timeline-item scheduled">
-                            <span class="time">15:00</span>
-                            <span class="status">⏰</span>
-                            <span class="description">수집 예정</span>
-                        </div>
+                    <div class="timeline-items" id="scheduleTimeline">
+                        <!-- 실제 데이터가 여기에 동적으로 추가됩니다 -->
                     </div>
                 </div>
 

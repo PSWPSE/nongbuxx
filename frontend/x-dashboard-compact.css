@@ -171,6 +171,19 @@
     font-size: 1rem;
 }
 
+/* 헤더 액션 버튼 */
+.header-actions {
+    display: inline-flex;
+    gap: 0.5rem;
+    float: right;
+}
+
+.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 /* 타임라인 컴팩트화 */
 .schedule-timeline {
     background: #15202b;
@@ -195,7 +208,8 @@
 }
 
 .timeline-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 60px 24px 1fr;
     align-items: center;
     gap: 0.75rem;
     padding: 0.5rem;
@@ -207,37 +221,92 @@
 .timeline-item .time {
     color: #1da1f2;
     font-weight: 500;
-    min-width: 50px;
+    text-align: right;
 }
 
 .timeline-item .status {
     font-size: 1rem;
+    text-align: center;
 }
 
 .timeline-item .description {
     color: #8899a6;
-    flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* 수동 액션 버튼 컴팩트화 */
-.manual-actions {
+.timeline-item.completed {
+    background: rgba(29, 161, 242, 0.05);
+}
+
+.timeline-item.failed {
+    background: rgba(224, 36, 94, 0.05);
+}
+
+/* 빈 타임라인 상태 */
+.timeline-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #8899a6;
+    font-size: 0.9rem;
+}
+
+/* 상태 메시지 영역 */
+.status-messages {
     display: flex;
     gap: 1rem;
     margin-bottom: 1.5rem;
     align-items: center;
+    min-height: 40px;
 }
 
-.action-buttons {
-    display: flex;
-    gap: 0.75rem;
+/* 버튼 스타일 통일 */
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    font-weight: 500;
 }
 
-.btn-large {
-    padding: 0.75rem 1.5rem !important;
-    font-size: 0.95rem !important;
+.btn-small i {
+    font-size: 0.85rem;
+}
+
+.btn.btn-primary {
+    background: #1da1f2;
+    color: white;
+}
+
+.btn.btn-primary:hover {
+    background: #1a91da;
+    transform: translateY(-1px);
+}
+
+.btn.btn-secondary {
+    background: #38444d;
+    color: #ffffff;
+}
+
+.btn.btn-secondary:hover {
+    background: #4a5568;
+    transform: translateY(-1px);
+}
+
+.btn.btn-success {
+    background: #17bf63;
+    color: white;
+}
+
+.btn.btn-success:hover {
+    background: #15a855;
+    transform: translateY(-1px);
 }
 
 /* 스크롤바 스타일 */
