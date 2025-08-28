@@ -289,26 +289,73 @@ class XCrawler:
                 for post in posts_to_summarize
             ])
             
-            prompt = f"""다음은 오늘의 주요 X(트위터) 포스트들입니다. 
-한국어로 280자 이내의 매력적인 요약을 작성하고, 관련 해시태그를 제안해주세요.
+            # 새로운 포맷팅 스타일
+            from datetime import datetime
+            import pytz
+            
+            KST = pytz.timezone('Asia/Seoul')
+            
+            # 인플루언서별로 그룹화
+            posts_by_author = {}
+            for post in posts_to_summarize:
+                author = post.get('author', 'unknown')
+                if author not in posts_by_author:
+                    posts_by_author[author] = []
+                posts_by_author[author].append(post)
+            
+            # 포맷팅된 텍스트 생성
+            formatted_posts = []
+            for author, author_posts in posts_by_author.items():
+                formatted_posts.append(f"@{author}의 포스트:")
+                for i, post in enumerate(author_posts[:3], 1):  # 작성자당 최대 3개
+                    formatted_posts.append(f"{i}. \"{post['text'][:100]}...\" - @{author}")
+                    formatted_posts.append(f"   링크: {post.get('url', 'N/A')}")
+                    created_at = post.get('created_at', '')
+                    if created_at:
+                        try:
+                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                            dt_kst = dt.astimezone(KST)
+                            formatted_posts.append(f"   -{dt_kst.strftime('%Y.%m.%d (%a) %H:%M')}")
+                        except:
+                            formatted_posts.append(f"   -시간 정보 없음")
+                formatted_posts.append("")
+            
+            combined_text = "\n".join(formatted_posts)
+            
+            prompt = f"""다음 X(트위터) 포스트들을 아래 형식으로 요약해주세요:
 
 [수집된 포스트]
 {combined_text}
 
-[요구사항]
-1. 280자 이내의 한국어 요약 (핵심 트렌드와 인사이트 중심)
-2. 이모지를 적절히 사용하여 가독성 향상
-3. 해시태그 5개 제안 (#으로 시작)
+[요구 포맷]
+@인플루언서명의 최근 게시글 요약 모음
 
-[응답 형식]
-요약: (요약 내용)
-해시태그: #태그1 #태그2 #태그3 #태그4 #태그5"""
+1. "직접 인용문 (구어체 한국어 번역)" - @username
+링크주소
+-2025.08.28 (목) 18:00
+
+2. "직접 인용문 (구어체 한국어 번역)" - @username
+링크주소
+-2025.08.28 (목) 18:00
+
+3. "직접 인용문 (구어체 한국어 번역)" - @username
+링크주소
+-2025.08.28 (목) 18:00
+
+긍정 키워드: #긍정적맥락1 #긍정적맥락2 #긍정적맥락3
+부정 키워드: #우려사항1 #우려사항2
+
+[작성 원칙]
+1. 인용문은 구어체로 자연스럽게 한국어 번역
+2. 원문의 의미를 정확히 전달하되 읽기 쉽게
+3. 긍정/부정 키워드는 맥락에서 추출
+4. 시간은 한국 시간(KST) 기준"""
             
             if self.ai_provider == 'openai':
                 response = self.ai_client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role": "system", "content": "당신은 소셜 미디어 트렌드 분석 전문가입니다. 간결하고 인사이트 있는 요약을 작성합니다."},
+                        {"role": "system", "content": "당신은 소셜 미디어 트렌드 분석 전문가입니다. 주어진 포맷에 맞춰 정확히 작성하고, 구어체로 자연스럽게 번역합니다."},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=500,
@@ -334,26 +381,27 @@ class XCrawler:
                     'posts_count': len(posts)
                 }
             
-            # 응답 파싱
+            # 새로운 포맷 응답 파싱
             lines = ai_response.strip().split('\n')
-            summary = ""
+            summary = ai_response  # 전체 응답을 요약으로 사용
+            
+            # 긍정/부정 키워드 추출
+            positive_keywords = []
+            negative_keywords = []
             hashtags = []
             
             for line in lines:
-                if line.startswith('요약:'):
-                    summary = line.replace('요약:', '').strip()
-                elif line.startswith('해시태그:'):
-                    hashtag_text = line.replace('해시태그:', '').strip()
-                    hashtags = [tag.strip() for tag in hashtag_text.split() if tag.startswith('#')]
+                if '긍정 키워드:' in line:
+                    keyword_text = line.split('긍정 키워드:')[1].strip()
+                    positive_keywords = [tag.strip() for tag in keyword_text.split() if tag.startswith('#')]
+                elif '부정 키워드:' in line:
+                    keyword_text = line.split('부정 키워드:')[1].strip()
+                    negative_keywords = [tag.strip() for tag in keyword_text.split() if tag.startswith('#')]
+            
+            # 모든 키워드를 해시태그로 결합
+            hashtags = positive_keywords + negative_keywords
             
             # 기본값 처리
-            if not summary:
-                summary = ai_response[:280] if len(ai_response) > 280 else ai_response
-            
-            # 길이 제한
-            if len(summary) > max_length:
-                summary = summary[:max_length-3] + "..."
-            
             if not hashtags:
                 hashtags = ['#X트렌드', '#AI요약', '#인플루언서', '#소셜미디어', '#트렌드분석']
             
