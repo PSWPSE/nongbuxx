@@ -305,14 +305,11 @@ class XCrawler:
             
             # 포맷팅된 텍스트 생성
             formatted_posts = []
-            emojis = ['💬', '🗣️', '💡', '📌', '🎯', '💭', '🔔', '📢']
-            emoji_idx = 0
             
             for author, author_posts in posts_by_author.items():
                 formatted_posts.append(f"@{author}의 포스트:")
                 for post in author_posts[:5]:  # 작성자당 최대 5개
-                    emoji = emojis[emoji_idx % len(emojis)]
-                    formatted_posts.append(f"{emoji} \"{post['text'][:150]}...\" - @{author}")
+                    formatted_posts.append(f"▶ \"{post['text'][:150]}...\"")
                     created_at = post.get('created_at', '')
                     if created_at:
                         try:
@@ -321,7 +318,6 @@ class XCrawler:
                             formatted_posts.append(f"   -{dt_kst.strftime('%Y.%m.%d (%a) %H:%M')}")
                         except:
                             formatted_posts.append(f"   -시간 정보 없음")
-                    emoji_idx += 1
                 formatted_posts.append("")
             
             combined_text = "\n".join(formatted_posts)
@@ -332,15 +328,15 @@ class XCrawler:
 {combined_text}
 
 [요구 포맷]
-🔥 @인플루언서명의 최근 게시글 요약 모음
+🚀 @인플루언서명의 최근 게시글 요약 모음
 
-💬 "직접 인용문 (구어체 한국어 번역)" - @username
+▶ "직접 인용문 (구어체 한국어 번역)"
 -2025.08.28 (목) 18:00
 
-🗣️ "직접 인용문 (구어체 한국어 번역)" - @username
+▶ "직접 인용문 (구어체 한국어 번역)"
 -2025.08.28 (목) 18:00
 
-💡 "직접 인용문 (구어체 한국어 번역)" - @username
+▶ "직접 인용문 (구어체 한국어 번역)"
 -2025.08.28 (목) 18:00
 
 긍정 키워드: #긍정적맥락1 #긍정적맥락2 #긍정적맥락3
@@ -348,12 +344,13 @@ class XCrawler:
 
 [작성 원칙]
 1. 제목 앞에 적절한 이모지 1개 추가 (🚀, 📊, 💰, 🔥, 📱 등 내용에 맞게)
-2. 각 인용문마다 다른 이모지로 구분 (💬, 🗣️, 💡, 📌, 🎯, 💭, 🔔, 📢 등)
-3. 인용문은 구어체로 자연스럽게 한국어 번역
-4. 원문의 의미를 정확히 전달하되 읽기 쉽게
-5. 긍정/부정 키워드는 맥락에서 추출
-6. 시간은 한국 시간(KST) 기준
-7. 링크는 포함하지 않음"""
+2. 각 인용문 앞에 동일한 화살표(▶) 사용
+3. 인용문 뒤의 - @username 부분은 제거
+4. 인용문은 구어체로 자연스럽게 한국어 번역
+5. 원문의 의미를 정확히 전달하되 읽기 쉽게
+6. 긍정/부정 키워드는 맥락에서 추출
+7. 시간은 한국 시간(KST) 기준
+8. 링크는 포함하지 않음"""
             
             if self.ai_provider == 'openai':
                 response = self.ai_client.chat.completions.create(
