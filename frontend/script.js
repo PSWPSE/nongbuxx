@@ -6563,10 +6563,11 @@ window.saveXCredentials = async function() {
         access_token_secret: xModalElements.accessTokenSecret.value
     };
     
-    // 저장 전 인증 확인
-    const isValid = await window.validateXCredentials();
-    if (!isValid) {
-        showToast('인증에 실패했습니다. 올바른 정보를 입력해주세요.', 'error');
+    // 저장 전 인증 확인 제거 - 사용자가 명시적으로 "인증 확인" 버튼을 누를 때만 확인
+    // API 호출 절약을 위해 저장 시에는 검증하지 않음
+    if (!credentials.consumer_key || !credentials.consumer_secret || 
+        !credentials.access_token || !credentials.access_token_secret) {
+        showToast('모든 필드를 입력해주세요.', 'warning');
         return;
     }
     
@@ -6622,13 +6623,11 @@ window.loadXCredentials = function() {
                 contentSection.style.pointerEvents = 'auto';
             }
             
-            // 자동으로 인증 확인하고 버튼 활성화
-            setTimeout(async () => {
-                const isValid = await window.validateXCredentials();
-                if (isValid && xModalElements.publishBtn) {
-                    xModalElements.publishBtn.disabled = false;
-                }
-            }, 500);
+            // 자동 인증 확인 제거 - 저장된 정보가 있으면 바로 활성화
+            // API 호출 절약
+            if (xModalElements.publishBtn) {
+                xModalElements.publishBtn.disabled = false;
+            }
             
             return true;
         }
