@@ -78,14 +78,7 @@ const elements = {
     apiValidationResult: document.getElementById('apiValidationResult'),
     
     // X API 메인 설정 관련 요소들
-    xApiMainSettingsBtn: document.getElementById('xApiMainSettingsBtn'),
-    xApiMainStatusIndicator: document.getElementById('xApiMainStatusIndicator'),
-    xApiMainSettingsModalSection: document.getElementById('xApiMainSettingsModalSection'),
-    closeXApiMainSettingsBtn: document.getElementById('closeXApiMainSettingsBtn'),
-    xMainConsumerKey: document.getElementById('xMainConsumerKey'),
-    xMainConsumerSecret: document.getElementById('xMainConsumerSecret'),
-    xMainAccessToken: document.getElementById('xMainAccessToken'),
-    xMainAccessTokenSecret: document.getElementById('xMainAccessTokenSecret'),
+
     validateXMainCredentialsBtn: document.getElementById('validateXMainCredentialsBtn'),
     saveXMainCredentialsBtn: document.getElementById('saveXMainCredentialsBtn'),
     loadXMainCredentialsBtn: document.getElementById('loadXMainCredentialsBtn'),
@@ -183,9 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 출처 관리 초기화
     loadAvailableSources();
     
-    // X API 상태 초기화
-    const hasXCredentials = localStorage.getItem('x_credentials');
-    updateXApiMainStatus(!!hasXCredentials);
+
     
     // 생성된 콘텐츠 탭 기능 초기화
     
@@ -516,28 +507,7 @@ function initEventListeners() {
         elements.deleteApiKeyBtn.addEventListener('click', deleteApiKey);
     }
     
-    // X API 메인 설정 관련
-    if (elements.xApiMainSettingsBtn) {
-        elements.xApiMainSettingsBtn.addEventListener('click', showXApiMainSettingsModal);
-    }
-    if (elements.closeXApiMainSettingsBtn) {
-        elements.closeXApiMainSettingsBtn.addEventListener('click', hideXApiMainSettingsModal);
-    }
-    if (elements.cancelXMainSettingsBtn) {
-        elements.cancelXMainSettingsBtn.addEventListener('click', hideXApiMainSettingsModal);
-    }
-    if (elements.validateXMainCredentialsBtn) {
-        elements.validateXMainCredentialsBtn.addEventListener('click', validateXMainCredentials);
-    }
-    if (elements.saveXMainCredentialsBtn) {
-        elements.saveXMainCredentialsBtn.addEventListener('click', saveXMainCredentials);
-    }
-    if (elements.loadXMainCredentialsBtn) {
-        elements.loadXMainCredentialsBtn.addEventListener('click', loadXMainCredentials);
-    }
-    if (elements.deleteXMainCredentialsBtn) {
-        elements.deleteXMainCredentialsBtn.addEventListener('click', deleteXMainCredentials);
-    }
+
     
     // 출처 관리 관련
     if (elements.sourceManagementBtn) {
@@ -2758,171 +2728,7 @@ function updateApiStatus(provider, isConfigured) {
 // X API 메인 설정 관리 (메인 화면용)
 // ============================================================================
 
-function showXApiMainSettingsModal() {
-    if (elements.xApiMainSettingsModalSection) {
-        elements.xApiMainSettingsModalSection.style.display = 'block';
-        loadXMainCredentials(); // 저장된 정보 자동 불러오기
-    }
-}
 
-function hideXApiMainSettingsModal() {
-    if (elements.xApiMainSettingsModalSection) {
-        elements.xApiMainSettingsModalSection.style.display = 'none';
-    }
-}
-
-async function validateXMainCredentials() {
-    const credentials = {
-        consumer_key: elements.xMainConsumerKey?.value,
-        consumer_secret: elements.xMainConsumerSecret?.value,
-        access_token: elements.xMainAccessToken?.value,
-        access_token_secret: elements.xMainAccessTokenSecret?.value
-    };
-    
-    // 모든 필드가 입력되었는지 확인
-    if (!credentials.consumer_key || !credentials.consumer_secret || 
-        !credentials.access_token || !credentials.access_token_secret) {
-        showToast('모든 필드를 입력해주세요.', 'warning');
-        return false;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/validate/x-credentials`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(credentials)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showXMainValidationResult('success', 'X API 인증이 확인되었습니다!');
-            return true;
-        } else {
-            showXMainValidationResult('error', result.error || '인증에 실패했습니다.');
-            return false;
-        }
-    } catch (error) {
-        console.error('X API 인증 확인 오류:', error);
-        showXMainValidationResult('error', '인증 확인 중 오류가 발생했습니다.');
-        return false;
-    }
-}
-
-async function saveXMainCredentials() {
-    // 먼저 인증 확인
-    const isValid = await validateXMainCredentials();
-    if (!isValid) {
-        showToast('인증에 실패했습니다. 올바른 정보를 입력해주세요.', 'error');
-        return;
-    }
-    
-    const credentials = {
-        consumer_key: elements.xMainConsumerKey?.value,
-        consumer_secret: elements.xMainConsumerSecret?.value,
-        access_token: elements.xMainAccessToken?.value,
-        access_token_secret: elements.xMainAccessTokenSecret?.value
-    };
-    
-    // localStorage에 저장 (Base64 인코딩)
-    localStorage.setItem('x_credentials', btoa(JSON.stringify(credentials)));
-    
-    // 상태 업데이트
-    updateXApiMainStatus(true);
-    
-    showToast('X API 인증 정보가 저장되었습니다!', 'success');
-    hideXApiMainSettingsModal();
-}
-
-function loadXMainCredentials() {
-    const storedData = localStorage.getItem('x_credentials');
-    if (storedData) {
-        try {
-            const credentials = JSON.parse(atob(storedData));
-            if (elements.xMainConsumerKey) elements.xMainConsumerKey.value = credentials.consumer_key || '';
-            if (elements.xMainConsumerSecret) elements.xMainConsumerSecret.value = credentials.consumer_secret || '';
-            if (elements.xMainAccessToken) elements.xMainAccessToken.value = credentials.access_token || '';
-            if (elements.xMainAccessTokenSecret) elements.xMainAccessTokenSecret.value = credentials.access_token_secret || '';
-            
-            showToast('저장된 X API 정보를 불러왔습니다.', 'info');
-        } catch (error) {
-            console.error('X API 정보 불러오기 오류:', error);
-            showToast('저장된 정보를 불러올 수 없습니다.', 'error');
-        }
-    } else {
-        showToast('저장된 X API 정보가 없습니다.', 'info');
-    }
-}
-
-function deleteXMainCredentials() {
-    if (confirm('저장된 X API 인증 정보를 삭제하시겠습니까?')) {
-        localStorage.removeItem('x_credentials');
-        
-        // 입력 필드 초기화
-        if (elements.xMainConsumerKey) elements.xMainConsumerKey.value = '';
-        if (elements.xMainConsumerSecret) elements.xMainConsumerSecret.value = '';
-        if (elements.xMainAccessToken) elements.xMainAccessToken.value = '';
-        if (elements.xMainAccessTokenSecret) elements.xMainAccessTokenSecret.value = '';
-        
-        // 상태 업데이트
-        updateXApiMainStatus(false);
-        
-        showToast('X API 인증 정보가 삭제되었습니다.', 'info');
-        hideXApiMainSettingsModal();
-    }
-}
-
-function updateXApiMainStatus(isActive) {
-    if (elements.xApiMainStatusIndicator) {
-        if (isActive) {
-            elements.xApiMainStatusIndicator.textContent = '활성';
-            elements.xApiMainStatusIndicator.classList.add('active');
-            elements.xApiMainStatusIndicator.style.backgroundColor = '#4CAF50';
-        } else {
-            elements.xApiMainStatusIndicator.textContent = '비활성';
-            elements.xApiMainStatusIndicator.classList.remove('active');
-            elements.xApiMainStatusIndicator.style.backgroundColor = '#999';
-        }
-    }
-}
-
-// X API 필드 표시/숨김 토글 함수
-window.toggleXApiField = function(fieldId) {
-    const field = document.getElementById(fieldId);
-    const toggleIcon = document.getElementById(fieldId + 'Toggle');
-    
-    if (field && toggleIcon) {
-        if (field.type === 'password') {
-            field.type = 'text';
-            toggleIcon.classList.remove('fa-eye');
-            toggleIcon.classList.add('fa-eye-slash');
-        } else {
-            field.type = 'password';
-            toggleIcon.classList.remove('fa-eye-slash');
-            toggleIcon.classList.add('fa-eye');
-        }
-    }
-}
-
-function showXMainValidationResult(type, message) {
-    const resultElement = elements.xMainValidationResult;
-    
-    if (resultElement) {
-        resultElement.style.display = 'block';
-        resultElement.className = `validation-result ${type}`;
-        resultElement.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-            ${message}
-        `;
-        
-        // 3초 후 자동으로 숨김
-        setTimeout(() => {
-            resultElement.style.display = 'none';
-        }, 3000);
-    }
-}
 
 // ============================================================================
 // AI API 설정 관리
@@ -6279,8 +6085,8 @@ async function downloadEnhancedBlogContent(groupBaseName) {
 // X(Twitter) 게시 관련 기능
 // ============================================
 
-// X API 인증 정보 저장 (LocalStorage)
-const X_API_STORAGE_KEY = 'x_api_credentials';
+// X API 인증 정보 저장 (LocalStorage) - X 크롤러와 통합된 키 사용
+const X_API_STORAGE_KEY = 'x_credentials';
 
 // X 게시 모달 요소들
 const xModalElements = {
