@@ -176,6 +176,7 @@
     display: inline-flex;
     gap: 0.5rem;
     float: right;
+    align-items: center;
 }
 
 .section-title {

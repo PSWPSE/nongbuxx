@@ -136,10 +136,13 @@ const XCrawler = {
             });
         });
         
-        // 테마 토글
-        document.getElementById('xThemeToggle')?.addEventListener('click', () => {
-            this.toggleTheme();
-        });
+        // 테마 토글 (메인과 동일한 방식)
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                this.toggleTheme();
+            });
+        }
         
         // 수동 수집 버튼 (중복 제거를 위해 기존 리스너 제거)
         const collectBtn = document.getElementById('manualCollectBtn');
@@ -1290,26 +1293,67 @@ const XCrawler = {
         }
     },
     
-    // 테마 관리
+    // 테마 관리 (메인과 통합된 시스템)
     initTheme() {
-        const savedTheme = localStorage.getItem('x_crawler_theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        this.updateThemeIcon(savedTheme);
+        // 메인과 동일한 키 사용하여 테마 동기화
+        const savedTheme = localStorage.getItem('theme') || 'auto';
+        
+        if (savedTheme === 'auto') {
+            // 시스템 테마 따르기
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+            this.updateThemeDisplay(prefersDark ? 'dark' : 'light', 'auto');
+        } else {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            this.updateThemeDisplay(savedTheme, savedTheme);
+        }
+        
+        // 시스템 테마 변경 감지
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            const currentTheme = localStorage.getItem('theme') || 'auto';
+            if (currentTheme === 'auto') {
+                const theme = e.matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', theme);
+                this.updateThemeDisplay(theme, 'auto');
+            }
+        });
     },
     
     toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        // 메인과 동일한 3단계 토글: light -> dark -> auto
+        const themes = ['light', 'dark', 'auto'];
+        const currentSaved = localStorage.getItem('theme') || 'auto';
+        const currentIndex = themes.indexOf(currentSaved);
+        const nextIndex = (currentIndex + 1) % themes.length;
+        const nextTheme = themes[nextIndex];
         
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('x_crawler_theme', newTheme);
-        this.updateThemeIcon(newTheme);
+        localStorage.setItem('theme', nextTheme);
+        
+        if (nextTheme === 'auto') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+            this.updateThemeDisplay(prefersDark ? 'dark' : 'light', 'auto');
+        } else {
+            document.documentElement.setAttribute('data-theme', nextTheme);
+            this.updateThemeDisplay(nextTheme, nextTheme);
+        }
     },
     
-    updateThemeIcon(theme) {
-        const icon = document.querySelector('#xThemeToggle i');
-        if (icon) {
-            icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+    updateThemeDisplay(actualTheme, savedTheme) {
+        const icon = document.getElementById('themeIcon');
+        const text = document.getElementById('themeText');
+        
+        if (icon && text) {
+            if (savedTheme === 'auto') {
+                icon.className = 'fas fa-adjust';
+                text.textContent = '자동';
+            } else if (actualTheme === 'dark') {
+                icon.className = 'fas fa-sun';
+                text.textContent = '라이트 모드';
+            } else {
+                icon.className = 'fas fa-moon';
+                text.textContent = '다크 모드';
+            }
         }
     },
     

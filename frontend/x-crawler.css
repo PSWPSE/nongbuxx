@@ -12,10 +12,20 @@
     --x-border: #e1e8ed;
 }
 
+/* 메인과 통일된 다크 테마 */
 [data-theme="dark"] {
-    --x-bg: #15202B;
-    --x-card-bg: #192734;
-    --x-border: #38444d;
+    --x-bg: var(--bg-primary, #0f172a);
+    --x-card-bg: var(--bg-card, #1e293b);
+    --x-border: var(--border-color, #334155);
+}
+
+/* 자동 테마 - 시스템 설정 따르기 */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        --x-bg: var(--bg-primary, #0f172a);
+        --x-card-bg: var(--bg-card, #1e293b);
+        --x-border: var(--border-color, #334155);
+    }
 }
 
 /* Container */
@@ -48,6 +58,32 @@
 
 .x-header-left, .x-header-right {
     flex: 1;
+}
+
+/* 메인과 통일된 테마 토글 버튼 */
+.x-header .theme-toggle {
+    background: var(--x-card-bg);
+    border: 1px solid var(--x-border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: var(--x-text);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.x-header .theme-toggle:hover {
+    background: var(--x-hover);
+    transform: translateY(-1px);
+}
+
+.x-header .theme-toggle i {
+    font-size: 16px;
+    color: var(--x-primary);
 }
 
 .x-header-center {
