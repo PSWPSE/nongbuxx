@@ -3050,7 +3050,13 @@ function setTheme(theme) {
 
 function updateThemeToggle(displayTheme) {
     if (elements.themeIcon && elements.themeText) {
-        if (displayTheme === 'dark') {
+        // 저장된 테마 값을 확인하여 자동 모드도 표시
+        const savedTheme = localStorage.getItem('theme') || 'auto';
+        
+        if (savedTheme === 'auto') {
+            elements.themeIcon.className = 'fas fa-adjust';
+            elements.themeText.textContent = '자동';
+        } else if (displayTheme === 'dark') {
             elements.themeIcon.className = 'fas fa-sun';
             elements.themeText.textContent = '라이트 모드';
         } else {

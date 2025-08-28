@@ -1,93 +1,149 @@
-/* X API 호출 통계 스타일 */
-.realtime-stats-banner {
+/* X 크롤러 통계 스타일 */
+
+/* 통계 섹션 컨테이너 */
+.statistics-container {
     display: flex;
-    justify-content: space-around;
-    background: #15202b;
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    border: 1px solid #38444d;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1rem;
 }
 
-.realtime-stat {
-    text-align: center;
-}
-
-.realtime-stat .label {
-    display: block;
-    color: #8899a6;
-    font-size: 0.85rem;
-    margin-bottom: 0.5rem;
-}
-
-.realtime-stat .value {
-    display: block;
-    color: #1da1f2;
-    font-size: 1.5rem;
-    font-weight: bold;
-}
-
-/* API 호출 통계 스타일 */
-.api-call-stats {
-    background: #15202b;
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    border: 1px solid #38444d;
-}
-
-.api-call-stats h3 {
-    color: #1da1f2;
-    margin-bottom: 1rem;
-    font-size: 1.2rem;
-}
-
-.api-stats-grid {
+/* 통계 카드 그리드 */
+.stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
 }
 
+/* 개별 통계 카드 */
+.stat-card {
+    background: var(--x-card-bg);
+    border: 1px solid var(--x-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* API 호출 통계 스타일 */
+.api-call-stats {
+    background: var(--x-card-bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--x-border);
+}
+
+.api-call-stats h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: var(--x-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* API 통계 그리드 */
+.api-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+/* API 통계 카드 */
 .api-stat-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #38444d;
+    background: var(--x-hover);
+    border: 1px solid var(--x-border);
     border-radius: 8px;
     padding: 1rem;
 }
 
 .api-stat-card h4 {
-    color: #ffffff;
-    margin-bottom: 0.75rem;
     font-size: 0.9rem;
-    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--x-primary);
+    font-weight: 500;
 }
 
+/* 통계 행 */
 .stat-row {
     display: flex;
     justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    align-items: center;
+    margin-bottom: 0.5rem;
 }
 
 .stat-row:last-child {
-    border-bottom: none;
-}
-
-.stat-row.total {
-    margin-top: 0.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid #38444d;
-    font-weight: bold;
-    color: #1da1f2;
+    margin-bottom: 0;
 }
 
 .stat-label {
-    color: #8899a6;
+    color: var(--x-text-secondary);
     font-size: 0.85rem;
 }
 
 .stat-value {
-    color: #ffffff;
+    color: var(--x-text);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 1rem;
+}
+
+/* 총계 행 스타일 */
+.stat-row.total {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--x-border);
+}
+
+.stat-row.total .stat-value {
+    color: var(--x-primary);
+    font-size: 1.1rem;
+}
+
+/* 차트 컨테이너 */
+.chart-container {
+    background: var(--x-card-bg);
+    border: 1px solid var(--x-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+}
+
+.chart-container h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: var(--x-text);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .api-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 다크 모드 특별 스타일 */
+[data-theme="dark"] .api-stat-card {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 라이트 모드 특별 스타일 */
+[data-theme="light"] .api-stat-card {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .stat-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }

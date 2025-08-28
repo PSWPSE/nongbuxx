@@ -10,21 +10,36 @@
     --x-bg: #ffffff;
     --x-card-bg: #f7f9fa;
     --x-border: #e1e8ed;
+    --x-text: #14171A;
+    --x-text-secondary: #657786;
+    --x-hover: rgba(29, 161, 242, 0.1);
 }
 
 /* 메인과 통일된 다크 테마 */
 [data-theme="dark"] {
-    --x-bg: var(--bg-primary, #0f172a);
-    --x-card-bg: var(--bg-card, #1e293b);
-    --x-border: var(--border-color, #334155);
+    --x-bg: #0f172a;
+    --x-card-bg: #1e293b;
+    --x-border: #334155;
+    --x-text: #f1f5f9;
+    --x-text-secondary: #94a3b8;
+    --x-hover: rgba(255, 255, 255, 0.05);
+    --x-primary: #3b82f6;
+    --x-secondary: #f1f5f9;
+    --x-accent: #94a3b8;
 }
 
 /* 자동 테마 - 시스템 설정 따르기 */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) {
-        --x-bg: var(--bg-primary, #0f172a);
-        --x-card-bg: var(--bg-card, #1e293b);
-        --x-border: var(--border-color, #334155);
+        --x-bg: #0f172a;
+        --x-card-bg: #1e293b;
+        --x-border: #334155;
+        --x-text: #f1f5f9;
+        --x-text-secondary: #94a3b8;
+        --x-hover: rgba(255, 255, 255, 0.05);
+        --x-primary: #3b82f6;
+        --x-secondary: #f1f5f9;
+        --x-accent: #94a3b8;
     }
 }
 
