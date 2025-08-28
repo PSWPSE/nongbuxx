@@ -455,6 +455,7 @@ def generate_content():
 def publish_to_x():
     """X(Twitter)에 콘텐츠 게시"""
     if request.method == 'OPTIONS':
+        # CORS preflight 요청 처리
         return jsonify({'success': True}), 200
     
     try:
