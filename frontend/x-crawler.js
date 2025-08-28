@@ -1135,7 +1135,7 @@ const XCrawler = {
             const result = await response.json();
             
             if (result.success && result.data) {
-                const stats = result.data;
+                const stats = result.data.crawler || result.data; // crawler 통계 우선 사용
                 
                 // 24시간 통계 업데이트
                 const last24hColl = document.getElementById('last24hCollections');
@@ -1160,6 +1160,29 @@ const XCrawler = {
                     } else {
                         statusElement.textContent = '🔴';
                     }
+                }
+                
+                // API 호출 통계 업데이트
+                if (stats.api_calls) {
+                    // 오늘 통계
+                    const todayUserEl = document.getElementById('todayUserLookups');
+                    if (todayUserEl) todayUserEl.textContent = stats.api_calls.today.user_lookups || 0;
+                    
+                    const todayTimelineEl = document.getElementById('todayTimelineFetches');
+                    if (todayTimelineEl) todayTimelineEl.textContent = stats.api_calls.today.timeline_fetches || 0;
+                    
+                    const todayTotalEl = document.getElementById('todayTotalCalls');
+                    if (todayTotalEl) todayTotalEl.textContent = stats.api_calls.today.total || 0;
+                    
+                    // 24시간 통계
+                    const last24hUserEl = document.getElementById('last24hUserLookups');
+                    if (last24hUserEl) last24hUserEl.textContent = stats.api_calls.last_24h.user_lookups || 0;
+                    
+                    const last24hTimelineEl = document.getElementById('last24hTimelineFetches');
+                    if (last24hTimelineEl) last24hTimelineEl.textContent = stats.api_calls.last_24h.timeline_fetches || 0;
+                    
+                    const last24hTotalEl = document.getElementById('last24hTotalCalls');
+                    if (last24hTotalEl) last24hTotalEl.textContent = stats.api_calls.last_24h.total || 0;
                 }
                 
                 this.renderStatistics(stats);

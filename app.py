@@ -2276,7 +2276,7 @@ def get_collection_history():
 
 @app.route('/api/x-crawler/stats', methods=['GET'])
 def get_x_crawler_stats():
-    """통계 조회"""
+    """통계 조회 (API 호출 상세 포함)"""
     crawler = get_crawler()
     scheduler = get_scheduler()
     
@@ -2289,6 +2289,27 @@ def get_x_crawler_stats():
         'success': True,
         'data': stats
     })
+
+@app.route('/api/x-api-stats', methods=['GET'])
+def get_x_api_stats():
+    """X API 호출 통계 조회"""
+    try:
+        # 최근 사용한 publisher 인스턴스의 통계 (있는 경우)
+        # 실제로는 전역 또는 세션 기반으로 관리 필요
+        stats = {
+            'message': 'X API 통계는 X 크롤러 통계에 포함되어 있습니다',
+            'crawler_stats_url': '/api/x-crawler/stats'
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': stats
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/x-crawler/test', methods=['POST'])
 def test_x_crawler():

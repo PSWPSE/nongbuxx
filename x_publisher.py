@@ -37,6 +37,14 @@ class XPublisher:
         self.verify_cache_ttl = 900  # 15분 캐시
         self.cached_user = None
         
+        # API 호출 통계 추가
+        self.api_call_stats = {
+            'verify': [],  # 인증 확인 호출
+            'post': [],    # 게시 호출
+            'timeline': [], # 타임라인 조회
+            'user': []      # 사용자 정보 조회
+        }
+        
         try:
             # OAuth 1.0a 인증 (게시 권한 필요)
             if all([consumer_key, consumer_secret, access_token, access_token_secret]):
@@ -83,6 +91,13 @@ class XPublisher:
             # 캐시 만료 시에만 API 호출
             logger.info("🔄 X API 인증 확인 호출")
             response = self.client.get_me()
+            
+            # API 호출 통계 기록
+            self.api_call_stats['verify'].append({
+                'timestamp': datetime.now().isoformat(),
+                'cached': False
+            })
+            
             if response.data:
                 # 캐시 업데이트
                 self.cached_user = {
@@ -156,6 +171,13 @@ class XPublisher:
                 text=text,
                 media_ids=media_ids
             )
+            
+            # API 호출 통계 기록
+            self.api_call_stats['post'].append({
+                'timestamp': datetime.now().isoformat(),
+                'type': 'tweet',
+                'length': len(text)
+            })
             
             if response.data:
                 tweet_id = response.data['id']
@@ -268,6 +290,67 @@ class XPublisher:
                 'error': str(e),
                 'posted_tweets': thread_results
             }
+    
+    def get_api_stats(self) -> Dict:
+        """
+        API 호출 통계 반환
+        
+        Returns:
+            일일 API 호출 통계
+        """
+        from datetime import timedelta
+        now = datetime.now()
+        today = now.date()
+        last_24h = now - timedelta(hours=24)
+        
+        # 오늘 통계
+        today_stats = {
+            'verify': 0,
+            'post': 0,
+            'timeline': 0,
+            'user': 0,
+            'total': 0
+        }
+        
+        # 24시간 통계
+        last_24h_stats = {
+            'verify': 0,
+            'post': 0,
+            'timeline': 0,
+            'user': 0,
+            'total': 0
+        }
+        
+        for call_type, calls in self.api_call_stats.items():
+            for call in calls:
+                call_time = datetime.fromisoformat(call['timestamp'])
+                
+                # 오늘 통계
+                if call_time.date() == today:
+                    today_stats[call_type] += 1
+                    today_stats['total'] += 1
+                
+                # 24시간 통계
+                if call_time >= last_24h:
+                    last_24h_stats[call_type] += 1
+                    last_24h_stats['total'] += 1
+        
+        return {
+            'today': today_stats,
+            'last_24h': last_24h_stats,
+            'all_time': {
+                'verify': len(self.api_call_stats['verify']),
+                'post': len(self.api_call_stats['post']),
+                'timeline': len(self.api_call_stats['timeline']),
+                'user': len(self.api_call_stats['user']),
+                'total': sum(len(calls) for calls in self.api_call_stats.values())
+            },
+            'rate_limit_status': {
+                'verify_limit': '75/15min',
+                'post_limit': '300/15min',
+                'timeline_limit': '900/15min'
+            }
+        }
     
     def split_long_content(self, content: str, max_length: int = 270) -> List[str]:
         """

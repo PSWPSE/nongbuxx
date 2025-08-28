@@ -139,6 +139,11 @@ class XCrawler:
                         'timestamp': current_time
                     }
                     self.api_usage['x_api']['calls'] += 1
+                    self.api_usage['x_api']['user_calls'] = self.api_usage['x_api'].get('user_calls', [])
+                    self.api_usage['x_api']['user_calls'].append({
+                        'timestamp': datetime.now(KST).isoformat(),
+                        'username': username
+                    })
                     logger.info(f"🔄 API 호출: 사용자 정보 조회 - @{username}")
                 except Exception as e:
                     logger.error(f"❌ 사용자 {username}을 찾을 수 없습니다: {str(e)}")
@@ -195,6 +200,12 @@ class XCrawler:
             
             # API 사용량 업데이트 (타임라인 조회)
             self.api_usage['x_api']['calls'] += 1
+            self.api_usage['x_api']['timeline_calls'] = self.api_usage['x_api'].get('timeline_calls', [])
+            self.api_usage['x_api']['timeline_calls'].append({
+                'timestamp': datetime.now(KST).isoformat(),
+                'username': username,
+                'count': len(tweets)
+            })
             
             # 수집 기록 저장
             if tweets:
@@ -476,10 +487,11 @@ class XCrawler:
             }
     
     def get_stats(self) -> Dict:
-        """통계 정보"""
+        """통계 정보 (API 호출 상세 포함)"""
         # 최근 24시간 통계
         now = datetime.now(KST)
         last_24h = now - timedelta(hours=24)
+        today = now.date()
         
         recent_collections = [
             h for h in self.collection_history 
@@ -490,6 +502,28 @@ class XCrawler:
             h for h in self.publish_history
             if datetime.fromisoformat(h['timestamp']) > last_24h
         ]
+        
+        # API 호출 통계 계산
+        user_calls_today = 0
+        timeline_calls_today = 0
+        user_calls_24h = 0
+        timeline_calls_24h = 0
+        
+        # 사용자 정보 조회 통계
+        for call in self.api_usage['x_api'].get('user_calls', []):
+            call_time = datetime.fromisoformat(call['timestamp'])
+            if call_time.date() == today:
+                user_calls_today += 1
+            if call_time > last_24h:
+                user_calls_24h += 1
+        
+        # 타임라인 조회 통계
+        for call in self.api_usage['x_api'].get('timeline_calls', []):
+            call_time = datetime.fromisoformat(call['timestamp'])
+            if call_time.date() == today:
+                timeline_calls_today += 1
+            if call_time > last_24h:
+                timeline_calls_24h += 1
         
         return {
             'overview': {
@@ -503,6 +537,23 @@ class XCrawler:
                 'collections': len(recent_collections),
                 'publishes': len(recent_publishes),
                 'success_rate': self._calculate_success_rate(recent_collections)
+            },
+            'api_calls': {
+                'today': {
+                    'user_lookups': user_calls_today,
+                    'timeline_fetches': timeline_calls_today,
+                    'total': user_calls_today + timeline_calls_today
+                },
+                'last_24h': {
+                    'user_lookups': user_calls_24h,
+                    'timeline_fetches': timeline_calls_24h,
+                    'total': user_calls_24h + timeline_calls_24h
+                },
+                'all_time': {
+                    'user_lookups': len(self.api_usage['x_api'].get('user_calls', [])),
+                    'timeline_fetches': len(self.api_usage['x_api'].get('timeline_calls', [])),
+                    'total': self.api_usage['x_api']['calls']
+                }
             },
             'api_status': {
                 'x_api': {
