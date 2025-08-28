@@ -1701,17 +1701,32 @@ async function generateSelectedNews(contentType = 'standard', selectedFormats = 
                         error: item.error || item.message || '알 수 없는 오류'
                     })));
                     
-                    // 사용자에게 실패 알림
-                    const failedUrls = failedResults.map(item => {
-                        const errorMsg = item.error || item.message || '알 수 없는 오류';
-                        return `• ${item.url}: ${errorMsg}`;
-                    }).join('\n');
+                    // 사용자에게 실패 알림 (간단한 요약)
+                    let failedMessage = `⚠️ ${failedResults.length}개 콘텐츠 생성 실패`;
                     
-                    showToast(
-                        `⚠️ ${failedResults.length}개 콘텐츠 생성 실패:\n${failedUrls}`,
-                        'warning',
-                        8000 // 8초 동안 표시
-                    );
+                    // 실패 원인별 집계
+                    const failureReasons = {};
+                    failedResults.forEach(item => {
+                        const reason = item.error || item.message || '알 수 없는 오류';
+                        if (reason.includes('홍보성') || reason.includes('promotional')) {
+                            failureReasons['홍보성'] = (failureReasons['홍보성'] || 0) + 1;
+                        } else if (reason.includes('extraction failed') || reason.includes('추출 실패')) {
+                            failureReasons['추출 실패'] = (failureReasons['추출 실패'] || 0) + 1;
+                        } else {
+                            failureReasons['기타'] = (failureReasons['기타'] || 0) + 1;
+                        }
+                    });
+                    
+                    // 원인별 요약 추가
+                    const reasonSummary = Object.entries(failureReasons)
+                        .map(([reason, count]) => `${reason} ${count}개`)
+                        .join(', ');
+                    
+                    if (reasonSummary) {
+                        failedMessage += ` (${reasonSummary})`;
+                    }
+                    
+                    showToast(failedMessage, 'warning', 3000);
                 }
                 
                 successfulResults.forEach((item, idx) => {
