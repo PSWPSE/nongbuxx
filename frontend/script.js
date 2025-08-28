@@ -6732,12 +6732,8 @@ window.showValidationResult = function(message, type) {
 // X에 게시 - window 객체에 노출
 window.publishToX = async function() {
     try {
-        // 인증 확인
-        const isValid = await window.validateXCredentials();
-        if (!isValid) {
-            showToast('X API 인증에 실패했습니다. 인증 정보를 확인해주세요.', 'error');
-            return;
-        }
+        // 인증 확인 제거 - 백엔드에서 처리
+        // (모달 열 때 이미 확인했고, 백엔드에서도 확인함)
         
         const content = xModalElements.contentTextarea.value;
         if (!content) {
