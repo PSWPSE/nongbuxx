@@ -974,6 +974,10 @@ const XCrawler = {
             if (result.success) {
                 const stats = result.data;
                 
+                // 디버그: 스케줄 데이터 확인
+                console.log('📊 Stats 데이터:', stats);
+                console.log('📅 스케줄 데이터:', stats?.scheduler?.next_schedules);
+                
                 // 상태 카드 업데이트
                 this.updateStatusCards(stats);
                 
@@ -1101,7 +1105,12 @@ const XCrawler = {
     
     updateTimeline(stats) {
         const container = document.getElementById('scheduleTimeline') || document.querySelector('.timeline-items');
-        if (!container) return;
+        if (!container) {
+            console.error('❌ 타임라인 컨테이너를 찾을 수 없습니다');
+            return;
+        }
+        
+        console.log('📅 updateTimeline 호출됨:', stats);
         
         container.innerHTML = '';
         
@@ -1145,18 +1154,28 @@ const XCrawler = {
         
         // 예정된 스케줄
         if (stats?.scheduler?.next_schedules) {
+            console.log('📅 스케줄 데이터 처리 중:', stats.scheduler.next_schedules);
             stats.scheduler.next_schedules.forEach(schedule => {
                 const scheduleTime = new Date(schedule.next_run);
-                if (scheduleTime.toDateString() === today && scheduleTime > now) {
+                console.log(`📅 스케줄: ${schedule.name}, 시간: ${scheduleTime}, 오늘: ${today}`);
+                
+                // 오늘 날짜 체크를 제거하고 모든 예정된 스케줄 표시
+                if (scheduleTime > now) {
                     const isUpcoming = scheduleTime - now < 30 * 60 * 1000;
-                    allEvents.push({
-                        time: scheduleTime,
-                        status: isUpcoming ? '⏳' : '⏰',
-                        description: schedule.job_type === 'collect' ? '수집 예정' : '게시 예정',
-                        className: isUpcoming ? 'upcoming' : 'scheduled'
-                    });
+                    const isToday = scheduleTime.toDateString() === today;
+                    
+                    if (isToday) {
+                        allEvents.push({
+                            time: scheduleTime,
+                            status: isUpcoming ? '⏳' : '⏰',
+                            description: schedule.job_type === 'collect' ? '수집 예정' : '게시 예정',
+                            className: isUpcoming ? 'upcoming' : 'scheduled'
+                        });
+                    }
                 }
             });
+        } else {
+            console.log('⚠️ 스케줄 데이터가 없습니다');
         }
         
         // 시간순 정렬
