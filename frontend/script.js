@@ -6357,19 +6357,18 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
             console.error('❌ publishBtn을 찾을 수 없습니다!');
         }
         
-        // 인증 정보가 있으면 자동으로 인증 확인 후 버튼 활성화
-        setTimeout(async () => {
-            console.log('⏰ 자동 인증 확인 시작');
+        // 인증 정보가 있으면 버튼 즉시 활성화 (API 호출 없이)
+        setTimeout(() => {
+            console.log('⏰ 인증 정보 확인');
             if (xModalElements.consumerKey && xModalElements.consumerKey.value &&
                 xModalElements.consumerSecret && xModalElements.consumerSecret.value &&
                 xModalElements.accessToken && xModalElements.accessToken.value &&
                 xModalElements.accessTokenSecret && xModalElements.accessTokenSecret.value) {
-                console.log('🔑 인증 정보가 모두 있음, validateXCredentials 호출');
-                const isValid = await window.validateXCredentials();
-                console.log('🔐 인증 결과:', isValid);
-                if (isValid && xModalElements.publishBtn) {
+                console.log('🔑 인증 정보가 모두 있음, 버튼 활성화');
+                // API 호출 없이 바로 활성화 (백엔드에서 검증)
+                if (xModalElements.publishBtn) {
                     xModalElements.publishBtn.disabled = false;
-                    console.log('🔓 최종: publishBtn disabled = false');
+                    console.log('🔓 버튼 활성화 완료 (API 호출 없음)');
                 }
             } else {
                 console.log('⚠️ 인증 정보가 부족함');
