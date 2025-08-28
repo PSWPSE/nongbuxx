@@ -159,9 +159,46 @@
 
             <!-- X API Settings Section -->
             <section id="api-settings-section" class="x-section">
-                <h2 class="section-title">X API 설정</h2>
+                <h2 class="section-title">API 설정</h2>
                 
-                <!-- Unified API Settings -->
+                <!-- AI API Settings -->
+                <div class="api-settings-card" style="margin-bottom: 2rem;">
+                    <h3>🤖 AI API 설정 (요약 생성용)</h3>
+                    <p style="color: var(--x-accent); margin-bottom: 1.5rem;">
+                        수집된 포스트를 AI로 요약하려면 API 키를 설정하세요. (선택사항)
+                    </p>
+                    <div class="form-group">
+                        <label>AI 제공자</label>
+                        <select id="aiProvider" class="form-select" style="width: 100%; padding: 0.75rem; border: 1px solid var(--x-border); border-radius: 8px; background: var(--x-bg);">
+                            <option value="">선택하세요</option>
+                            <option value="openai">OpenAI (GPT-4)</option>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <div class="input-with-toggle">
+                            <input type="password" id="aiApiKey" placeholder="API Key 입력">
+                            <button class="toggle-visibility" data-target="aiApiKey">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="saveAiApiBtn" class="btn btn-success">
+                            <i class="fas fa-save"></i> AI API 저장
+                        </button>
+                        <button id="loadAiApiBtn" class="btn btn-info">
+                            <i class="fas fa-upload"></i> AI API 불러오기
+                        </button>
+                        <button id="deleteAiApiBtn" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> AI API 삭제
+                        </button>
+                    </div>
+                    <div id="aiApiStatus" class="validation-result" style="margin-top: 1rem;"></div>
+                </div>
+                
+                <!-- X API Settings -->
                 <div class="api-settings-card">
                     <h3>🔑 X API 인증 정보 (읽기/쓰기 통합)</h3>
                     <p style="color: var(--x-accent); margin-bottom: 1.5rem;">

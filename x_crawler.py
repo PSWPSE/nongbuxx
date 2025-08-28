@@ -170,38 +170,63 @@ class XCrawler:
         self, 
         posts: List[Dict],
         max_length: int = 280
-    ) -> str:
+    ) -> Dict:
         """AI를 이용한 포스트 요약 생성"""
         try:
             if not posts:
-                return ""
+                return {
+                    'summary': "",
+                    'hashtags': [],
+                    'error': "요약할 포스트가 없습니다"
+                }
+            
+            if not self.ai_client:
+                logger.warning("⚠️ AI API가 설정되지 않았습니다")
+                return {
+                    'summary': f"📊 {len(posts)}개 포스트 수집 완료 (AI 요약 미설정)",
+                    'hashtags': [],
+                    'posts_count': len(posts)
+                }
+            
+            # 인기도 순으로 정렬 후 상위 10개 선택
+            posts_to_summarize = sorted(
+                posts, 
+                key=lambda x: x.get('engagement', x.get('likes', 0) + x.get('retweets', 0)), 
+                reverse=True
+            )[:10]
             
             # 포스트 텍스트 결합
             combined_text = "\n\n".join([
-                f"@{post['author']}: {post['text'][:200]}"
-                for post in posts[:10]  # 최대 10개만
+                f"@{post['author']} (❤️{post.get('likes', 0)} 🔁{post.get('retweets', 0)}):\n{post['text'][:200]}"
+                for post in posts_to_summarize
             ])
             
             prompt = f"""다음은 오늘의 주요 X(트위터) 포스트들입니다. 
-한국어로 280자 이내의 매력적인 요약을 작성해주세요.
-주요 트렌드와 인사이트를 포함하고, 이모지를 적절히 사용하세요.
+한국어로 280자 이내의 매력적인 요약을 작성하고, 관련 해시태그를 제안해주세요.
 
-포스트들:
+[수집된 포스트]
 {combined_text}
 
-요약:"""
+[요구사항]
+1. 280자 이내의 한국어 요약 (핵심 트렌드와 인사이트 중심)
+2. 이모지를 적절히 사용하여 가독성 향상
+3. 해시태그 5개 제안 (#으로 시작)
+
+[응답 형식]
+요약: (요약 내용)
+해시태그: #태그1 #태그2 #태그3 #태그4 #태그5"""
             
             if self.ai_provider == 'openai':
                 response = self.ai_client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role": "system", "content": "당신은 소셜 미디어 콘텐츠 전문가입니다."},
+                        {"role": "system", "content": "당신은 소셜 미디어 트렌드 분석 전문가입니다. 간결하고 인사이트 있는 요약을 작성합니다."},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=500,
                     temperature=0.7
                 )
-                summary = response.choices[0].message.content
+                ai_response = response.choices[0].message.content
                 
             elif self.ai_provider == 'anthropic':
                 response = self.ai_client.messages.create(
@@ -212,21 +237,54 @@ class XCrawler:
                         {"role": "user", "content": prompt}
                     ]
                 )
-                summary = response.content[0].text
+                ai_response = response.content[0].text
             
             else:
-                summary = f"📱 오늘의 테크 리더 인사이트\n\n{len(posts)}개 포스트 수집됨"
+                return {
+                    'summary': f"📱 오늘의 테크 리더 인사이트\n\n{len(posts)}개 포스트 수집됨",
+                    'hashtags': ['#X트렌드', '#AI요약', '#인플루언서'],
+                    'posts_count': len(posts)
+                }
+            
+            # 응답 파싱
+            lines = ai_response.strip().split('\n')
+            summary = ""
+            hashtags = []
+            
+            for line in lines:
+                if line.startswith('요약:'):
+                    summary = line.replace('요약:', '').strip()
+                elif line.startswith('해시태그:'):
+                    hashtag_text = line.replace('해시태그:', '').strip()
+                    hashtags = [tag.strip() for tag in hashtag_text.split() if tag.startswith('#')]
+            
+            # 기본값 처리
+            if not summary:
+                summary = ai_response[:280] if len(ai_response) > 280 else ai_response
             
             # 길이 제한
             if len(summary) > max_length:
                 summary = summary[:max_length-3] + "..."
             
-            logger.info(f"✅ AI 요약 생성 완료 ({len(summary)}자)")
-            return summary
+            if not hashtags:
+                hashtags = ['#X트렌드', '#AI요약', '#인플루언서', '#소셜미디어', '#트렌드분석']
+            
+            logger.info(f"✅ AI 요약 생성 완료 ({len(summary)}자, 해시태그 {len(hashtags)}개)")
+            
+            return {
+                'summary': summary,
+                'hashtags': hashtags,
+                'posts_count': len(posts),
+                'analyzed_count': len(posts_to_summarize)
+            }
             
         except Exception as e:
             logger.error(f"❌ 요약 생성 실패: {str(e)}")
-            return f"📱 오늘의 인사이트: {len(posts)}개 포스트"
+            return {
+                'summary': f"📱 오늘의 인사이트: {len(posts)}개 포스트",
+                'hashtags': [],
+                'error': str(e)
+            }
     
     async def create_summary_content(
         self, 

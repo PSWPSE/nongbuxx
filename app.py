@@ -2092,6 +2092,16 @@ def collect_posts():
                 'error': 'X API 인증 실패'
             }), 401
         
+        # AI API 설정 (선택적)
+        ai_provider = request.json.get('ai_provider')
+        ai_key = request.json.get('ai_key')
+        if ai_provider and ai_key:
+            crawler.setup_ai_api({
+                'provider': ai_provider,
+                'api_key': ai_key
+            })
+            logger.info(f"✅ AI API 설정됨: {ai_provider}")
+        
         # 활성 인플루언서 목록
         active_influencers = [inf for inf in influencers_storage if inf.get('isActive', True)]
         
@@ -2127,8 +2137,18 @@ def collect_posts():
             
             logger.info(f"✅ @{username}: {len(posts)}개 포스트 수집")
         
-        # 요약 생성 (Phase 7에서 구현)
-        summary = f"총 {len(all_posts)}개 포스트 수집됨"
+        # AI 요약 생성
+        summary_result = {}
+        if all_posts:
+            summary_result = loop.run_until_complete(
+                crawler.generate_summary(all_posts)
+            )
+            logger.info(f"📝 AI 요약 생성 완료: {summary_result.get('summary', '')[:50]}...")
+        else:
+            summary_result = {
+                'summary': "수집된 포스트가 없습니다",
+                'hashtags': []
+            }
         
         return jsonify({
             'success': True,
@@ -2137,7 +2157,9 @@ def collect_posts():
                 'total_posts': len(all_posts),
                 'influencers': collection_results,
                 'posts': all_posts[:10],  # 최대 10개만 반환
-                'summary': summary
+                'summary': summary_result.get('summary', ''),
+                'hashtags': summary_result.get('hashtags', []),
+                'analyzed_count': summary_result.get('analyzed_count', 0)
             }
         })
         

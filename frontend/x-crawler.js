@@ -89,6 +89,21 @@ const XCrawler = {
             this.deleteXApi();
         });
         
+        // AI API 저장
+        document.getElementById('saveAiApiBtn')?.addEventListener('click', () => {
+            this.saveAiApi();
+        });
+        
+        // AI API 불러오기
+        document.getElementById('loadAiApiBtn')?.addEventListener('click', () => {
+            this.loadAiApi();
+        });
+        
+        // AI API 삭제
+        document.getElementById('deleteAiApiBtn')?.addEventListener('click', () => {
+            this.deleteAiApi();
+        });
+        
         // 비밀번호 토글
         document.querySelectorAll('.toggle-visibility').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -150,6 +165,17 @@ const XCrawler = {
             return;
         }
         
+        // AI API 설정 가져오기 (선택적)
+        const aiProvider = localStorage.getItem('ai_provider');
+        const aiKey = localStorage.getItem('ai_key');
+        
+        // 요청 데이터 준비
+        const requestData = {};
+        if (aiProvider && aiKey) {
+            requestData.ai_provider = aiProvider;
+            requestData.ai_key = aiKey;
+        }
+        
         // 로딩 상태
         collectBtn.disabled = true;
         collectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 수집 중...';
@@ -162,21 +188,33 @@ const XCrawler = {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Credentials': credentials
-                }
+                },
+                body: JSON.stringify(requestData)
             });
             
             const result = await response.json();
             
             if (result.success) {
                 // 성공
-                statusDiv.className = 'collection-status success';
-                statusDiv.innerHTML = `
+                let statusHtml = `
                     <strong>✅ 수집 완료!</strong><br>
                     ${result.message}<br>
                     <small>${result.data.influencers.map(inf => 
                         `@${inf.username}: ${inf.posts_collected}개`
                     ).join(', ')}</small>
                 `;
+                
+                // AI 요약이 있으면 표시
+                if (result.data.summary) {
+                    statusHtml += `<br><br><strong>📝 AI 요약:</strong><br>${result.data.summary}`;
+                    
+                    if (result.data.hashtags && result.data.hashtags.length > 0) {
+                        statusHtml += `<br><small>${result.data.hashtags.join(' ')}</small>`;
+                    }
+                }
+                
+                statusDiv.className = 'collection-status success';
+                statusDiv.innerHTML = statusHtml;
                 
                 // 인플루언서 목록 새로고침
                 await this.loadInfluencers();
@@ -356,6 +394,64 @@ const XCrawler = {
             localStorage.removeItem('x_write_credentials'); // 구버전 호환성
             this.clearXApiFields();
             this.showNotification('X API 정보가 삭제되었습니다.', 'success');
+        }
+    },
+    
+    // AI API 저장
+    saveAiApi() {
+        const provider = document.getElementById('aiProvider').value;
+        const apiKey = document.getElementById('aiApiKey').value;
+        const statusDiv = document.getElementById('aiApiStatus');
+        
+        if (!provider || !apiKey) {
+            statusDiv.className = 'validation-result error';
+            statusDiv.textContent = '❌ AI 제공자와 API Key를 모두 입력해주세요';
+            return;
+        }
+        
+        // localStorage에 저장
+        localStorage.setItem('ai_provider', provider);
+        localStorage.setItem('ai_key', apiKey);
+        
+        statusDiv.className = 'validation-result success';
+        statusDiv.textContent = '✅ AI API 정보가 저장되었습니다';
+        
+        this.showNotification('AI API 정보가 저장되었습니다', 'success');
+    },
+    
+    // AI API 불러오기
+    loadAiApi() {
+        const provider = localStorage.getItem('ai_provider');
+        const apiKey = localStorage.getItem('ai_key');
+        const statusDiv = document.getElementById('aiApiStatus');
+        
+        if (provider && apiKey) {
+            document.getElementById('aiProvider').value = provider;
+            document.getElementById('aiApiKey').value = apiKey;
+            
+            statusDiv.className = 'validation-result success';
+            statusDiv.textContent = '✅ AI API 정보를 불러왔습니다';
+            
+            this.showNotification('AI API 정보를 불러왔습니다', 'success');
+        } else {
+            statusDiv.className = 'validation-result error';
+            statusDiv.textContent = '❌ 저장된 AI API 정보가 없습니다';
+        }
+    },
+    
+    // AI API 삭제
+    deleteAiApi() {
+        if (confirm('저장된 AI API 정보를 삭제하시겠습니까?')) {
+            document.getElementById('aiProvider').value = '';
+            document.getElementById('aiApiKey').value = '';
+            localStorage.removeItem('ai_provider');
+            localStorage.removeItem('ai_key');
+            
+            const statusDiv = document.getElementById('aiApiStatus');
+            statusDiv.className = 'validation-result success';
+            statusDiv.textContent = '✅ AI API 정보가 삭제되었습니다';
+            
+            this.showNotification('AI API 정보가 삭제되었습니다', 'success');
         }
     },
     
