@@ -218,14 +218,21 @@
     margin: 0;
 }
 
-/* Manual Collection */
-.manual-collection {
+/* Manual Actions */
+.manual-actions {
     background: var(--x-card-bg);
     border-radius: 12px;
     padding: 1.5rem;
     margin-bottom: 2rem;
     border: 1px solid var(--x-border);
     text-align: center;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1rem;
 }
 
 .btn-large {
@@ -256,6 +263,35 @@
 }
 
 .collection-status.error {
+    display: block;
+    background: rgba(224, 36, 94, 0.1);
+    color: var(--x-error);
+    border: 1px solid var(--x-error);
+}
+
+/* Publish Status */
+.publish-status {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    display: none;
+}
+
+.publish-status.loading {
+    display: block;
+    background: rgba(29, 161, 242, 0.1);
+    color: var(--x-primary);
+    border: 1px solid var(--x-primary);
+}
+
+.publish-status.success {
+    display: block;
+    background: rgba(23, 191, 99, 0.1);
+    color: var(--x-success);
+    border: 1px solid var(--x-success);
+}
+
+.publish-status.error {
     display: block;
     background: rgba(224, 36, 94, 0.1);
     color: var(--x-error);

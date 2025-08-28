@@ -2176,14 +2176,71 @@ def collect_posts():
 def publish_to_x_crawler():
     """수동 게시"""
     try:
-        scheduler = get_scheduler()
+        # X API 자격증명 확인
+        x_credentials = request.headers.get('X-Credentials')
+        if not x_credentials:
+            return jsonify({
+                'success': False,
+                'error': 'X API 자격증명이 필요합니다'
+            }), 401
+        
+        # 자격증명 디코드
+        try:
+            import base64
+            credentials = json.loads(base64.b64decode(x_credentials))
+        except:
+            return jsonify({
+                'success': False,
+                'error': '잘못된 자격증명 형식'
+            }), 400
+        
+        # 요청 데이터
+        data = request.get_json() or {}
+        
+        # 크롤러 초기화
+        crawler = get_crawler()
+        if not crawler.setup_x_api(credentials):
+            return jsonify({
+                'success': False,
+                'error': 'X API 인증 실패'
+            }), 401
+        
+        # 게시할 콘텐츠
+        content = data.get('content', {})
+        
+        # 요약이 없으면 에러
+        if not content.get('summary') and not content.get('text'):
+            return jsonify({
+                'success': False,
+                'error': '게시할 콘텐츠가 없습니다'
+            }), 400
+        
+        # X에 게시
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(scheduler.publish_content())
         
-        return jsonify(result)
+        result = loop.run_until_complete(
+            crawler.post_to_x(content)
+        )
+        
+        if result['success']:
+            logger.info(f"✅ X 게시 성공: {result['tweet_id']}")
+            return jsonify({
+                'success': True,
+                'message': 'X에 성공적으로 게시되었습니다',
+                'data': result
+            })
+        else:
+            logger.error(f"❌ X 게시 실패: {result.get('error')}")
+            return jsonify({
+                'success': False,
+                'error': result.get('error', '게시 실패')
+            }), 400
+            
     except Exception as e:
         logger.error(f"게시 오류: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({
             'success': False,
             'error': str(e)

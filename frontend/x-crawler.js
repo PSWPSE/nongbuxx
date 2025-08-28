@@ -145,7 +145,15 @@ const XCrawler = {
         document.getElementById('manualCollectBtn')?.addEventListener('click', () => {
             this.collectPosts();
         });
+        
+        // 수동 게시 버튼
+        document.getElementById('manualPublishBtn')?.addEventListener('click', () => {
+            this.publishToX();
+        });
     },
+    
+    // 마지막 수집 결과 저장
+    lastCollectionResult: null,
     
     // 포스트 수집
     async collectPosts() {
@@ -216,6 +224,15 @@ const XCrawler = {
                 statusDiv.className = 'collection-status success';
                 statusDiv.innerHTML = statusHtml;
                 
+                // 수집 결과 저장
+                this.lastCollectionResult = result.data;
+                
+                // 게시 버튼 표시
+                const publishBtn = document.getElementById('manualPublishBtn');
+                if (publishBtn && result.data.summary) {
+                    publishBtn.style.display = 'inline-block';
+                }
+                
                 // 인플루언서 목록 새로고침
                 await this.loadInfluencers();
                 if (this.currentSection === 'influencers') {
@@ -279,6 +296,90 @@ const XCrawler = {
             `;
             queueContainer.appendChild(item);
         });
+    },
+    
+    // X에 게시
+    async publishToX() {
+        const statusDiv = document.getElementById('publishStatus');
+        const publishBtn = document.getElementById('manualPublishBtn');
+        
+        // X API 자격증명 확인
+        const credentials = localStorage.getItem('x_credentials');
+        if (!credentials) {
+            this.showNotification('X API 설정이 필요합니다.', 'error');
+            return;
+        }
+        
+        // 수집 결과 확인
+        if (!this.lastCollectionResult) {
+            this.showNotification('먼저 포스트를 수집해주세요.', 'error');
+            return;
+        }
+        
+        // 로딩 상태
+        publishBtn.disabled = true;
+        publishBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 게시 중...';
+        statusDiv.className = 'publish-status loading';
+        statusDiv.textContent = 'X에 게시하고 있습니다...';
+        
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/api/x-crawler/publish`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Credentials': credentials
+                },
+                body: JSON.stringify({
+                    content: {
+                        text: this.lastCollectionResult.summary,
+                        summary: this.lastCollectionResult.summary,
+                        hashtags: this.lastCollectionResult.hashtags || []
+                    }
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 성공
+                statusDiv.className = 'publish-status success';
+                statusDiv.innerHTML = `
+                    <strong>✅ 게시 완료!</strong><br>
+                    ${result.message}<br>
+                    <a href="${result.data.url}" target="_blank" style="color: var(--x-primary);">
+                        게시물 보기 →
+                    </a>
+                `;
+                
+                // 게시 버튼 숨기기
+                publishBtn.style.display = 'none';
+                
+                // 수집 결과 초기화
+                this.lastCollectionResult = null;
+                
+                this.showNotification('X에 성공적으로 게시되었습니다!', 'success');
+            } else {
+                // 실패
+                statusDiv.className = 'publish-status error';
+                statusDiv.textContent = `❌ 오류: ${result.error}`;
+                this.showNotification(result.error || '게시 실패', 'error');
+            }
+        } catch (error) {
+            console.error('게시 오류:', error);
+            statusDiv.className = 'publish-status error';
+            statusDiv.textContent = '❌ 게시 중 오류가 발생했습니다.';
+            this.showNotification('게시 중 오류가 발생했습니다.', 'error');
+        } finally {
+            // 버튼 복원
+            publishBtn.disabled = false;
+            publishBtn.innerHTML = '<i class="fas fa-paper-plane"></i> X에 게시하기';
+            
+            // 5초 후 상태 메시지 숨기기
+            setTimeout(() => {
+                statusDiv.className = 'publish-status';
+                statusDiv.textContent = '';
+            }, 5000);
+        }
     },
     
     // 섹션 전환

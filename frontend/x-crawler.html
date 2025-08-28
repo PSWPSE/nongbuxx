@@ -102,13 +102,20 @@
                     </div>
                 </div>
 
-                <!-- Manual Collection Button -->
-                <div class="manual-collection">
-                    <button id="manualCollectBtn" class="btn btn-primary btn-large">
-                        <i class="fas fa-sync-alt"></i>
-                        수동 수집 실행
-                    </button>
+                <!-- Manual Collection & Publishing Buttons -->
+                <div class="manual-actions">
+                    <div class="action-buttons">
+                        <button id="manualCollectBtn" class="btn btn-primary btn-large">
+                            <i class="fas fa-sync-alt"></i>
+                            수동 수집 실행
+                        </button>
+                        <button id="manualPublishBtn" class="btn btn-success btn-large" style="display: none;">
+                            <i class="fas fa-paper-plane"></i>
+                            X에 게시하기
+                        </button>
+                    </div>
                     <div id="collectionStatus" class="collection-status"></div>
+                    <div id="publishStatus" class="publish-status"></div>
                 </div>
 
                 <!-- Today's Schedule -->

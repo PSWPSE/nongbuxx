@@ -338,24 +338,58 @@ class XCrawler:
     async def post_to_x(self, content: Dict) -> Dict:
         """X에 게시"""
         try:
+            if not self.x_client:
+                logger.error("❌ X API 클라이언트가 설정되지 않았습니다")
+                return {
+                    'success': False,
+                    'error': 'X API가 설정되지 않았습니다'
+                }
+            
             # 텍스트와 해시태그 결합
-            full_text = content['text']
+            full_text = content.get('text', content.get('summary', ''))
             if content.get('hashtags'):
                 hashtags_text = ' '.join(content['hashtags'])
                 # 280자 제한 고려
                 if len(full_text) + len(hashtags_text) + 2 <= 280:
                     full_text = f"{full_text}\n\n{hashtags_text}"
+                else:
+                    # 본문을 줄이고 해시태그 유지
+                    max_text_len = 280 - len(hashtags_text) - 5  # "\n\n" + "..."
+                    full_text = f"{full_text[:max_text_len]}...\n\n{hashtags_text}"
             
             # 트윗 게시
-            tweet = self.x_client.update_status(full_text)
-            
-            logger.info(f"✅ X 게시 성공: {tweet.id_str}")
-            
-            return {
-                'success': True,
-                'tweet_id': tweet.id_str,
-                'url': f'https://twitter.com/user/status/{tweet.id_str}'
-            }
+            try:
+                tweet = self.x_client.update_status(full_text)
+                
+                logger.info(f"✅ X 게시 성공: {tweet.id_str}")
+                
+                return {
+                    'success': True,
+                    'tweet_id': tweet.id_str,
+                    'url': f'https://twitter.com/user/status/{tweet.id_str}',
+                    'content': full_text,
+                    'created_at': tweet.created_at.isoformat()
+                }
+                
+            except tweepy.errors.Forbidden as e:
+                logger.error(f"❌ 권한 오류: {str(e)}")
+                return {
+                    'success': False,
+                    'error': '게시 권한이 없습니다. Write 권한이 있는 API 키를 확인해주세요.'
+                }
+            except tweepy.errors.TooManyRequests as e:
+                logger.warning(f"⚠️ Rate limit 초과: {str(e)}")
+                return {
+                    'success': False,
+                    'error': 'API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요.',
+                    'retry_after': 900  # 15분
+                }
+            except tweepy.errors.TweepyException as e:
+                logger.error(f"❌ Tweepy 오류: {str(e)}")
+                return {
+                    'success': False,
+                    'error': f'게시 실패: {str(e)}'
+                }
             
         except Exception as e:
             logger.error(f"❌ X 게시 실패: {str(e)}")
