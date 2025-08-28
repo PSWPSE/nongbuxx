@@ -19,6 +19,9 @@ load_dotenv('env.local')
 from url_extractor import OptimizedNewsExtractor
 from nongbuxx_generator import NongbuxxGenerator
 from x_publisher import XPublisher
+from scheduler_service import get_scheduler
+from x_crawler import get_crawler
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1954,6 +1957,155 @@ def internal_error(error):
         'code': 'INTERNAL_ERROR'
     }), 500
 
+# ==================== X 크롤러 API 엔드포인트 ====================
+
+@app.route('/api/x-crawler/schedule', methods=['GET', 'POST'])
+def handle_x_crawler_schedule():
+    """스케줄 관리"""
+    scheduler = get_scheduler()
+    
+    if request.method == 'GET':
+        # 현재 스케줄 상태 조회
+        status = scheduler.get_status()
+        return jsonify({
+            'success': True,
+            'data': status
+        })
+    
+    else:  # POST
+        # 스케줄 설정
+        config = request.json
+        scheduler.setup_schedules(config)
+        scheduler.start()
+        
+        return jsonify({
+            'success': True,
+            'message': '스케줄이 설정되었습니다'
+        })
+
+@app.route('/api/x-crawler/influencers', methods=['GET', 'POST', 'DELETE'])
+def handle_influencers():
+    """인플루언서 관리"""
+    if request.method == 'GET':
+        # 인플루언서 목록 조회
+        # TODO: DB에서 조회
+        return jsonify({
+            'success': True,
+            'data': []
+        })
+    
+    elif request.method == 'POST':
+        # 인플루언서 추가
+        data = request.json
+        # TODO: DB에 저장
+        return jsonify({
+            'success': True,
+            'message': '인플루언서가 추가되었습니다'
+        })
+    
+    else:  # DELETE
+        # 인플루언서 삭제
+        username = request.args.get('username')
+        # TODO: DB에서 삭제
+        return jsonify({
+            'success': True,
+            'message': f'{username}이(가) 삭제되었습니다'
+        })
+
+@app.route('/api/x-crawler/collect', methods=['POST'])
+def collect_posts():
+    """수동 수집 실행"""
+    try:
+        scheduler = get_scheduler()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(scheduler.collect_posts())
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"수집 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/x-crawler/publish', methods=['POST'])
+def publish_to_x_crawler():
+    """수동 게시"""
+    try:
+        scheduler = get_scheduler()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(scheduler.publish_content())
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"게시 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/x-crawler/queue', methods=['GET'])
+def get_publish_queue():
+    """게시 큐 조회"""
+    scheduler = get_scheduler()
+    return jsonify({
+        'success': True,
+        'data': scheduler.publish_queue
+    })
+
+@app.route('/api/x-crawler/history', methods=['GET'])
+def get_collection_history():
+    """수집 히스토리 조회"""
+    scheduler = get_scheduler()
+    return jsonify({
+        'success': True,
+        'data': scheduler.collection_history[-50:]  # 최근 50개
+    })
+
+@app.route('/api/x-crawler/stats', methods=['GET'])
+def get_x_crawler_stats():
+    """통계 조회"""
+    crawler = get_crawler()
+    scheduler = get_scheduler()
+    
+    stats = {
+        'crawler': crawler.get_stats(),
+        'scheduler': scheduler.get_status()
+    }
+    
+    return jsonify({
+        'success': True,
+        'data': stats
+    })
+
+@app.route('/api/x-crawler/test', methods=['POST'])
+def test_x_crawler():
+    """테스트 실행"""
+    try:
+        scheduler = get_scheduler()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # 수집 테스트
+        collection_result = loop.run_until_complete(scheduler.test_collection())
+        
+        # 게시 테스트
+        publish_result = loop.run_until_complete(scheduler.test_publishing())
+        
+        return jsonify({
+            'success': True,
+            'collection': collection_result,
+            'publishing': publish_result
+        })
+    except Exception as e:
+        logger.error(f"테스트 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     # 환경 변수 확인
     port = int(os.getenv('PORT', 8080))  # Railway 기본 포트 8080
@@ -1963,6 +2115,11 @@ if __name__ == '__main__':
     logger.info(f"🔧 Debug mode: {debug}")
     logger.info(f"🌍 Environment: {os.getenv('FLASK_ENV', 'development')}")
     logger.info(f"🔑 API Keys - OpenAI: {'SET' if os.getenv('OPENAI_API_KEY') else 'NOT_SET'}, Anthropic: {'SET' if os.getenv('ANTHROPIC_API_KEY') else 'NOT_SET'}")
+    
+    # X 크롤러 스케줄러 시작
+    scheduler = get_scheduler()
+    scheduler.start()
+    logger.info("📅 X 크롤러 스케줄러 시작됨")
     
 
     

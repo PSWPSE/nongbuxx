@@ -22,6 +22,10 @@ psutil>=5.9.0
 # X(Twitter) API integration
 tweepy>=4.14.0
 
+# Scheduler dependencies
+APScheduler>=3.10.4
+pytz>=2024.1
+
 # Development dependencies
 pytest>=7.4.0
 pytest-cov>=4.1.0 
