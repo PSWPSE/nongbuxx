@@ -2401,9 +2401,9 @@ def generate_manual_summary():
                     'author': influencer_name.replace('@', ''),
                     'text': post.get('content', '').strip(),
                     'created_at': post.get('datetime', datetime.now().isoformat()),
-                    'likes': int(post.get('likes', 0)),
-                    'retweets': int(post.get('retweets', 0)),
-                    'engagement': int(post.get('likes', 0)) + int(post.get('retweets', 0)),
+                    'likes': 0,  # 수동 입력에서는 좋아요 수 불필요
+                    'retweets': 0,  # 수동 입력에서는 리트윗 수 불필요
+                    'engagement': 0,  # 수동 입력에서는 인게이지먼트 계산 불필요
                     'url': f'https://twitter.com/{influencer_name.replace("@", "")}/status/manual_{len(valid_posts)}'
                 })
         

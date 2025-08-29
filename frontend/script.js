@@ -7098,20 +7098,10 @@ class ManualSummaryManager {
                         <label>포스팅 내용</label>
                         <textarea class="form-control post-content" rows="4" placeholder="포스팅 내용을 입력하세요"></textarea>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>좋아요 수</label>
-                            <input type="number" class="form-control post-likes" value="0" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label>리트윗 수</label>
-                            <input type="number" class="form-control post-retweets" value="0" min="0">
-                        </div>
-                        <div class="form-group">
+                                            <div class="form-group">
                             <label>작성 시간</label>
                             <input type="datetime-local" class="form-control post-datetime">
                         </div>
-                    </div>
                 </div>
             `;
             
@@ -7172,15 +7162,11 @@ class ManualSummaryManager {
             
             postItems.forEach(item => {
                 const content = item.querySelector('.post-content')?.value?.trim();
-                const likes = parseInt(item.querySelector('.post-likes')?.value || 0);
-                const retweets = parseInt(item.querySelector('.post-retweets')?.value || 0);
                 const datetime = item.querySelector('.post-datetime')?.value;
                 
                 if (content) {
                     posts.push({
                         content: content,
-                        likes: likes,
-                        retweets: retweets,
                         datetime: datetime
                     });
                 }

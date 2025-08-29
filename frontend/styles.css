@@ -8668,7 +8668,7 @@ textarea:focus-visible {
 }
 
 .manual-posts-input h3 {
-    margin: 0 0 1rem 0;
+    margin: 0 0 1.2rem 0;
     color: var(--text-primary);
     display: flex;
     align-items: center;
@@ -8689,8 +8689,8 @@ textarea:focus-visible {
 .posts-container {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
 }
 
 .post-item {
@@ -8699,6 +8699,25 @@ textarea:focus-visible {
     border-radius: 8px;
     padding: 1rem;
     position: relative;
+}
+
+/* 컴팩트한 폼 레이아웃 */
+.post-item .form-group {
+    margin-bottom: 0.8rem;
+}
+
+.post-item .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.post-item .form-control {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.post-item .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
 }
 
 .post-header {
@@ -8720,11 +8739,7 @@ textarea:focus-visible {
     font-size: 0.8rem;
 }
 
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 2fr;
-    gap: 1rem;
-}
+/* 더 이상 필요 없음 - 좋아요/리트윗 필드 제거됨 */
 
 .posts-actions {
     display: flex;
@@ -8812,9 +8827,7 @@ textarea:focus-visible {
         align-items: flex-start;
     }
     
-    .form-row {
-        grid-template-columns: 1fr;
-    }
+    /* 더 이상 필요 없음 - 좋아요/리트윗 필드 제거됨 */
     
     .posts-actions {
         flex-direction: column;
