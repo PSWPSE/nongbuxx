@@ -3,6 +3,43 @@
 console.log('🚀 NONGBUXX 스크립트 로드 - VERSION: 2025-08-25-21:12');
 // 전역 변수
 let currentJobId = null;
+
+// 불렛포인트 포맷팅 공통 함수
+function formatBulletPoints(content) {
+    // 먼저 모든 불렛포인트를 임시 구분자로 분리
+    content = content.replace(/•\s*/g, '|||BULLET|||');
+    // 임시 구분자를 기준으로 분할하고 각각을 새 줄에 배치
+    const parts = content.split('|||BULLET|||');
+    if (parts.length > 1) {
+        // 첫 번째 부분 (불렛포인트 이전)
+        let result = parts[0];
+        // 나머지 부분들을 불렛포인트와 함께 새 줄에 배치
+        for (let i = 1; i < parts.length; i++) {
+            const bulletContent = parts[i].trim();
+            if (bulletContent) {
+                // 이전 줄이 있고 줄바꿈이 없다면 추가
+                if (result && !result.endsWith('\n')) {
+                    result += '\n';
+                }
+                result += '• ' + bulletContent;
+                // 마지막이 아니라면 줄바꿈 추가
+                if (i < parts.length - 1) {
+                    result += '\n';
+                }
+            }
+        }
+        content = result;
+    }
+    
+    // 중복된 줄바꿈 정리 (3개 이상의 연속 줄바꿈을 2개로)
+    content = content.replace(/\n{3,}/g, '\n\n');
+    
+    // 불필요한 공백 정리
+    content = content.replace(/[ \t]+\n/g, '\n'); // 줄 끝 공백 제거
+    content = content.replace(/\n[ \t]+/g, '\n'); // 줄 시작 공백 제거
+    
+    return content;
+}
 let currentData = null;
 let currentBatchJobId = null;
 let currentBatchData = null;
@@ -4903,9 +4940,8 @@ async function copySessionContent(index) {
             // ▶ 뒤에 정확히 1줄만 (제목과 내용 사이)
             formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\s*\n*/g, '$1\n');
             
-            // 불렛포인트 각각 새 줄에
-            formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
-            formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)$/gm, '$1 $2');
+            // 불렛포인트 각각 새 줄에 (개선된 로직)
+            formattedContent = formatBulletPoints(formattedContent);
             
             // 해시태그 앞에 빈 줄 추가
             formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
@@ -5555,8 +5591,8 @@ function copySimpleContent(index) {
             formattedContent = formattedContent.replace(/([^\n])\s*(▶)/g, '$1\n\n$2');
             formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\s*\n*/g, '$1\n');
             
-            // 불렛포인트 줄바꿈
-            formattedContent = formattedContent.replace(/([•])\s*([^•\n]+)(?=[•])/g, '$1 $2\n');
+            // 불렛포인트 줄바꿈 (개선된 로직)
+            formattedContent = formatBulletPoints(formattedContent);
             
             // 해시태그 앞 줄바꿈
             formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
@@ -5717,9 +5753,8 @@ async function copyContent(contentId) {
             // ▶ 뒤에 정확히 1줄만 (제목과 내용 사이)
             formattedContent = formattedContent.replace(/(▶[^\n:]+:?)\s*\n*/g, '$1\n');
             
-            // 불렛포인트 각각 새 줄에
-            formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
-            formattedContent = formattedContent.replace(/(•)\s*([^•\n]+)$/gm, '$1 $2');
+            // 불렛포인트 각각 새 줄에 (개선된 로직)
+            formattedContent = formatBulletPoints(formattedContent);
             
             // 해시태그 앞에 빈 줄 추가
             formattedContent = formattedContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
@@ -6245,9 +6280,41 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
                 // ▶ 뒤에 정확히 1줄만 (제목과 내용 사이)
                 cleanContent = cleanContent.replace(/(▶[^\n:]+:?)\s*\n*/g, '$1\n');
                 
-                // 불렛포인트 각각 새 줄에
-                cleanContent = cleanContent.replace(/(•)\s*([^•\n]+)(?=•)/g, '$1 $2\n');
-                cleanContent = cleanContent.replace(/(•)\s*([^•\n]+)$/gm, '$1 $2');
+                // 섹션 제목과 불렛포인트 사이 간격 정리
+                cleanContent = cleanContent.replace(/(▶[^\n]+:)\s*\n\s*•/g, '$1\n• ');
+                
+                // 불렛포인트 각각 새 줄에 (개선된 로직)
+                // 먼저 모든 불렛포인트를 임시 구분자로 분리
+                cleanContent = cleanContent.replace(/•\s*/g, '|||BULLET|||');
+                // 임시 구분자를 기준으로 분할하고 각각을 새 줄에 배치
+                const parts = cleanContent.split('|||BULLET|||');
+                if (parts.length > 1) {
+                    // 첫 번째 부분 (불렛포인트 이전)
+                    let result = parts[0];
+                    // 나머지 부분들을 불렛포인트와 함께 새 줄에 배치
+                    for (let i = 1; i < parts.length; i++) {
+                        const bulletContent = parts[i].trim();
+                        if (bulletContent) {
+                            // 이전 줄이 있고 줄바꿈이 없다면 추가
+                            if (result && !result.endsWith('\n')) {
+                                result += '\n';
+                            }
+                            result += '• ' + bulletContent;
+                            // 마지막이 아니라면 줄바꿈 추가
+                            if (i < parts.length - 1) {
+                                result += '\n';
+                            }
+                        }
+                    }
+                    cleanContent = result;
+                }
+                
+                // 중복된 줄바꿈 정리 (3개 이상의 연속 줄바꿈을 2개로)
+                cleanContent = cleanContent.replace(/\n{3,}/g, '\n\n');
+                
+                // 불필요한 공백 정리
+                cleanContent = cleanContent.replace(/[ \t]+\n/g, '\n'); // 줄 끝 공백 제거
+                cleanContent = cleanContent.replace(/\n[ \t]+/g, '\n'); // 줄 시작 공백 제거 (단, 들여쓰기는 보존)
                 
                 // 해시태그 앞에 빈 줄 추가
                 cleanContent = cleanContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
