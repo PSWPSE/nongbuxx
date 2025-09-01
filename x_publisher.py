@@ -102,10 +102,10 @@ class XPublisher:
             if response.data:
                 # 캐시 업데이트
                 self.cached_user = {
-                    'id': response.data.id,
-                    'username': response.data.username,
-                    'name': response.data.name
-                }
+                        'id': response.data.id,
+                        'username': response.data.username,
+                        'name': response.data.name
+                    }
                 self.last_verify_time = current_time
                 
                 return {
@@ -352,7 +352,7 @@ class XPublisher:
                 'post_limit': '300/15min',
                 'timeline_limit': '900/15min'
             }
-        }
+            }
     
     def split_long_content(self, content: str, max_length: int = 270) -> List[str]:
         """
