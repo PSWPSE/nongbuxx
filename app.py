@@ -2394,25 +2394,37 @@ def test_x_crawler():
 def generate_manual_summary():
     """수동 입력된 포스팅으로 AI 요약 생성"""
     if request.method == 'OPTIONS':
-        return '', 200
+        response = make_response('', 200)
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
     
     try:
         data = request.get_json()
         if not data:
-            return jsonify({
+            response = make_response(jsonify({
                 'success': False,
                 'error': '요청 데이터가 없습니다'
-            }), 400
+            }), 400)
+            response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+            return response
         
         # 필수 필드 검증
         required_fields = ['influencer_name', 'posts', 'ai_provider', 'ai_api_key']
         missing_fields = [field for field in required_fields if not data.get(field)]
         
         if missing_fields:
-            return jsonify({
+            response = make_response(jsonify({
                 'success': False,
                 'error': f'필수 필드가 누락되었습니다: {", ".join(missing_fields)}'
-            }), 400
+            }), 400)
+            response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+            return response
         
         influencer_name = data.get('influencer_name', '').strip()
         posts = data.get('posts', [])
@@ -2421,10 +2433,14 @@ def generate_manual_summary():
         
         # 포스팅 데이터 검증
         if not posts or len(posts) == 0:
-            return jsonify({
+            response = make_response(jsonify({
                 'success': False,
                 'error': '최소 1개 이상의 포스팅을 입력해주세요'
-            }), 400
+            }), 400)
+            response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+            return response
         
         # 빈 포스팅 제거
         valid_posts = []
@@ -2442,10 +2458,14 @@ def generate_manual_summary():
                 })
         
         if not valid_posts:
-            return jsonify({
+            response = make_response(jsonify({
                 'success': False,
                 'error': '유효한 포스팅 내용이 없습니다'
-            }), 400
+            }), 400)
+            response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+            return response
         
         logger.info(f"수동 요약 생성 요청: {influencer_name}, {len(valid_posts)}개 포스팅")
         
@@ -2459,10 +2479,14 @@ def generate_manual_summary():
         })
         
         if not ai_setup_success:
-            return jsonify({
+            response = make_response(jsonify({
                 'success': False,
                 'error': 'AI API 설정에 실패했습니다. API 키를 확인해주세요.'
-            }), 400
+            }), 400)
+            response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+            return response
         
         # AI 요약 생성 (비동기 함수를 동기적으로 실행)
         loop = asyncio.new_event_loop()
@@ -2472,14 +2496,18 @@ def generate_manual_summary():
             summary_result = loop.run_until_complete(crawler.generate_summary(valid_posts))
             
             if 'error' in summary_result:
-                return jsonify({
+                response = make_response(jsonify({
                     'success': False,
                     'error': f'AI 요약 생성 실패: {summary_result["error"]}'
-                }), 500
+                }), 500)
+                response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+                response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+                return response
             
             logger.info(f"수동 요약 생성 완료: {len(summary_result.get('summary', ''))}자")
             
-            return jsonify({
+            response = make_response(jsonify({
                 'success': True,
                 'data': {
                     'influencer_name': influencer_name,
@@ -2489,17 +2517,25 @@ def generate_manual_summary():
                     'analyzed_count': summary_result.get('analyzed_count', len(valid_posts)),
                     'generation_time': datetime.now().isoformat()
                 }
-            })
+            }))
+            response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+            return response
             
         finally:
             loop.close()
         
     except Exception as e:
         logger.error(f"수동 요약 생성 오류: {str(e)}")
-        return jsonify({
+        response = make_response(jsonify({
             'success': False,
             'error': f'서버 오류가 발생했습니다: {str(e)}'
-        }), 500
+        }), 500)
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
 
 if __name__ == '__main__':
     # 환경 변수 확인
