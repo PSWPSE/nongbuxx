@@ -12,6 +12,7 @@ class NewsConverter:
         self.api_provider = api_provider.lower()
         self.anthropic_client = None
         self.openai_client = None
+        self.perplexity_client = None
         
         # 사용자 제공 API 키를 우선 사용, 없으면 환경변수에서 가져오기
         # 주 API 클라이언트 초기화
@@ -24,6 +25,12 @@ class NewsConverter:
             key = api_key if api_key else os.getenv('OPENAI_API_KEY')
             if key:
                 self.openai_client = OpenAI(api_key=key)
+                
+        elif self.api_provider == 'perplexity':
+            key = api_key if api_key else os.getenv('PERPLEXITY_API_KEY')
+            if key:
+                # Perplexity API는 requests로 직접 호출
+                self.perplexity_api_key = key
         
         # 폴백을 위한 보조 API 클라이언트 초기화 (환경변수에서만)
         if self.api_provider == 'anthropic':
@@ -228,6 +235,32 @@ class NewsConverter:
             )
             print("[INFO] Used OpenAI API.")
             return response.choices[0].message.content
+            
+        elif self.api_provider == 'perplexity' and hasattr(self, 'perplexity_api_key'):
+            import requests
+            headers = {
+                'Authorization': f'Bearer {self.perplexity_api_key}',
+                'Content-Type': 'application/json'
+            }
+            data = {
+                'model': 'llama-3.1-sonar-large-128k-chat',
+                'messages': [{'role': 'user', 'content': prompt}],
+                'max_tokens': max_tokens,
+                'temperature': temperature
+            }
+            response = requests.post(
+                'https://api.perplexity.ai/chat/completions',
+                headers=headers,
+                json=data,
+                timeout=60
+            )
+            if response.status_code == 200:
+                result = response.json()
+                print("[INFO] Used Perplexity API.")
+                return result['choices'][0]['message']['content']
+            else:
+                raise RuntimeError(f"Perplexity API error: {response.status_code} - {response.text}")
+                
         else:
             raise RuntimeError("No valid API client available.")
 
@@ -1110,10 +1143,11 @@ def main():
     
     if len(sys.argv) < 2:
         print("Usage: python converter.py <txt_file_or_directory> [api_provider]")
-        print("api_provider options: anthropic (default) or openai")
+        print("api_provider options: anthropic (default), openai, or perplexity")
         print("\nExamples:")
         print("  python converter.py article.txt")
         print("  python converter.py article.txt openai")
+        print("  python converter.py article.txt perplexity")
         print("  python converter.py ./articles/")
         print("  python converter.py ./articles/ openai")
         sys.exit(1)
@@ -1122,8 +1156,8 @@ def main():
     api_provider = sys.argv[2] if len(sys.argv) > 2 else 'anthropic'
     
     # Validate API provider
-    if api_provider not in ['anthropic', 'openai']:
-        print("Error: api_provider must be 'anthropic' or 'openai'")
+    if api_provider not in ['anthropic', 'openai', 'perplexity']:
+        print("Error: api_provider must be 'anthropic', 'openai', or 'perplexity'")
         sys.exit(1)
     
     # Check if required API key is set
@@ -1134,6 +1168,10 @@ def main():
     elif api_provider == 'openai' and not os.getenv('OPENAI_API_KEY'):
         print("Error: OPENAI_API_KEY environment variable is required")
         print("Please set your OpenAI API key in the .env file")
+        sys.exit(1)
+    elif api_provider == 'perplexity' and not os.getenv('PERPLEXITY_API_KEY'):
+        print("Error: PERPLEXITY_API_KEY environment variable is required")
+        print("Please set your Perplexity API key in the .env file")
         sys.exit(1)
     
     converter = NewsConverter(api_provider=api_provider)

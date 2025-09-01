@@ -150,10 +150,10 @@ def validate_api_key():
         api_provider = data['api_provider']
         api_key = data['api_key']
         
-        if api_provider not in ['anthropic', 'openai']:
+        if api_provider not in ['anthropic', 'openai', 'perplexity']:
             return jsonify({
                 'success': False,
-                'error': 'API provider must be anthropic or openai',
+                'error': 'API provider must be anthropic, openai, or perplexity',
                 'code': 'INVALID_API_PROVIDER'
             }), 400
         
@@ -179,6 +179,13 @@ def validate_api_key():
                     'error': 'Invalid OpenAI API key format',
                     'code': 'INVALID_OPENAI_KEY'
                 }), 400
+        elif api_provider == 'perplexity':
+            if not api_key.startswith('pplx-'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid Perplexity API key format (should start with pplx-)',
+                    'code': 'INVALID_PERPLEXITY_KEY'
+                }), 400
         
         # 실제 API 호출을 통한 유효성 검증
         try:
@@ -201,6 +208,27 @@ def validate_api_key():
                     max_tokens=10,
                     messages=[{"role": "user", "content": "Hello"}]
                 )
+                
+            elif api_provider == 'perplexity':
+                import requests
+                # Perplexity API 테스트 호출
+                headers = {
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                }
+                data = {
+                    'model': 'llama-3.1-sonar-small-128k-online',
+                    'messages': [{'role': 'user', 'content': 'Hello'}],
+                    'max_tokens': 10
+                }
+                response = requests.post(
+                    'https://api.perplexity.ai/chat/completions',
+                    headers=headers,
+                    json=data,
+                    timeout=30
+                )
+                if response.status_code != 200:
+                    raise Exception(f"Perplexity API error: {response.status_code} - {response.text}")
             
             return jsonify({
                 'success': True,
@@ -296,10 +324,10 @@ def generate_content():
             }), 400
         
         # API 제공자 검증
-        if api_provider not in ['anthropic', 'openai']:
+        if api_provider not in ['anthropic', 'openai', 'perplexity']:
             return jsonify({
                 'success': False,
-                'error': 'API provider must be anthropic or openai',
+                'error': 'API provider must be anthropic, openai, or perplexity',
                 'code': 'INVALID_API_PROVIDER'
             }), 400
         
@@ -323,6 +351,12 @@ def generate_content():
                 'success': False,
                 'error': 'Invalid OpenAI API key format',
                 'code': 'INVALID_OPENAI_KEY'
+            }), 400
+        elif api_provider == 'perplexity' and not api_key.startswith('pplx-'):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid Perplexity API key format (should start with pplx-)',
+                'code': 'INVALID_PERPLEXITY_KEY'
             }), 400
         
         # 작업 ID 생성
@@ -712,10 +746,10 @@ def batch_generate():
                 'code': 'TOO_MANY_URLS'
             }), 400
         
-        if api_provider not in ['anthropic', 'openai']:
+        if api_provider not in ['anthropic', 'openai', 'perplexity']:
             return jsonify({
                 'success': False,
-                'error': 'API provider must be anthropic or openai',
+                'error': 'API provider must be anthropic, openai, or perplexity',
                 'code': 'INVALID_API_PROVIDER'
             }), 400
         

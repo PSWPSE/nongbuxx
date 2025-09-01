@@ -106,6 +106,11 @@ class XCrawler:
             elif provider == 'anthropic':
                 self.ai_client = anthropic.Anthropic(api_key=api_key)
                 self.ai_provider = 'anthropic'
+            elif provider == 'perplexity':
+                # Perplexity API는 requests로 직접 호출
+                self.ai_client = None
+                self.ai_provider = 'perplexity'
+                self.perplexity_api_key = api_key
             else:
                 raise ValueError(f"지원하지 않는 AI 제공자: {provider}")
             
@@ -270,7 +275,7 @@ class XCrawler:
                     'error': "요약할 포스트가 없습니다"
                 }
             
-            if not self.ai_client:
+            if not self.ai_provider or (not self.ai_client and self.ai_provider != 'perplexity'):
                 logger.warning("⚠️ AI API가 설정되지 않았습니다")
                 return {
                     'summary': f"📊 {len(posts)}개 포스트 수집 완료 (AI 요약 미설정)",
@@ -376,6 +381,34 @@ class XCrawler:
                     ]
                 )
                 ai_response = response.content[0].text
+                
+            elif self.ai_provider == 'perplexity':
+                import requests
+                headers = {
+                    'Authorization': f'Bearer {self.perplexity_api_key}',
+                    'Content-Type': 'application/json'
+                }
+                data = {
+                    'model': 'llama-3.1-sonar-large-128k-chat',
+                    'messages': [
+                        {"role": "system", "content": "당신은 소셜 미디어 트렌드 분석 전문가입니다. 주어진 포맷에 맞춰 정확히 작성하고, 구어체로 자연스럽게 번역합니다."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    'max_tokens': 500,
+                    'temperature': 0.7
+                }
+                response = requests.post(
+                    'https://api.perplexity.ai/chat/completions',
+                    headers=headers,
+                    json=data,
+                    timeout=60
+                )
+                if response.status_code == 200:
+                    result = response.json()
+                    ai_response = result['choices'][0]['message']['content']
+                else:
+                    logger.error(f"Perplexity API error: {response.status_code} - {response.text}")
+                    raise Exception(f"Perplexity API error: {response.status_code}")
             
             else:
                 return {
