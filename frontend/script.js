@@ -7161,14 +7161,45 @@ class ManualSummaryManager {
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
+                    
+                    <!-- 리포스팅 여부 체크박스 -->
                     <div class="form-group">
-                        <label>포스팅 내용</label>
-                        <textarea class="form-control post-content" rows="4" placeholder="포스팅 내용을 입력하세요"></textarea>
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="repost-checkbox" onchange="manualSummaryManager.toggleRepostFields(${this.postCounter})">
+                            <span class="checkmark"></span>
+                            리포스팅 (다른 사람 글 인용)
+                        </label>
                     </div>
-                                            <div class="form-group">
-                            <label>작성 시간</label>
-                            <input type="datetime-local" class="form-control post-datetime">
+                    
+                    <!-- 인플루언서 포스팅 내용 -->
+                    <div class="form-group">
+                        <label>인플루언서 포스팅 내용</label>
+                        <textarea class="form-control post-content" rows="4" placeholder="인플루언서가 작성한 내용을 입력하세요"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>포스팅 작성 시간</label>
+                        <input type="datetime-local" class="form-control post-datetime">
+                    </div>
+                    
+                    <!-- 리포스팅 원문 정보 (기본 숨김) -->
+                    <div class="repost-fields" id="repostFields${this.postCounter}" style="display: none;">
+                        <div class="repost-divider">
+                            <i class="fas fa-retweet"></i>
+                            <span>참조한 원문</span>
                         </div>
+                        <div class="form-group">
+                            <label>원문 작성자명</label>
+                            <input type="text" class="form-control original-author" placeholder="@username 또는 이름">
+                        </div>
+                        <div class="form-group">
+                            <label>원문 내용</label>
+                            <textarea class="form-control original-content" rows="4" placeholder="참조한 원문 내용을 입력하세요"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>원문 작성 시간</label>
+                            <input type="datetime-local" class="form-control original-datetime">
+                        </div>
+                    </div>
                 </div>
             `;
             
@@ -7196,6 +7227,31 @@ class ManualSummaryManager {
             const remainingPosts = document.querySelectorAll('.post-item').length;
             if (remainingPosts === 0) {
                 this.addPost(); // 최소 1개는 유지
+            }
+        }
+    }
+    
+    toggleRepostFields(postId) {
+        const checkbox = document.querySelector(`[data-post-id="${postId}"] .repost-checkbox`);
+        const repostFields = document.getElementById(`repostFields${postId}`);
+        
+        if (checkbox && repostFields) {
+            if (checkbox.checked) {
+                repostFields.style.display = 'block';
+                console.log(`✅ 포스팅 #${postId} 리포스팅 필드 활성화`);
+                
+                // 원문 작성 시간 기본값 설정 (현재 시간보다 이전)
+                const originalDatetime = repostFields.querySelector('.original-datetime');
+                if (originalDatetime && !originalDatetime.value) {
+                    const now = new Date();
+                    // 1시간 전으로 설정
+                    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+                    const localDateTime = new Date(oneHourAgo.getTime() - oneHourAgo.getTimezoneOffset() * 60000);
+                    originalDatetime.value = localDateTime.toISOString().slice(0, 16);
+                }
+            } else {
+                repostFields.style.display = 'none';
+                console.log(`❌ 포스팅 #${postId} 리포스팅 필드 비활성화`);
             }
         }
     }
@@ -7230,12 +7286,27 @@ class ManualSummaryManager {
             postItems.forEach(item => {
                 const content = item.querySelector('.post-content')?.value?.trim();
                 const datetime = item.querySelector('.post-datetime')?.value;
+                const isRepost = item.querySelector('.repost-checkbox')?.checked || false;
                 
                 if (content) {
-                    posts.push({
+                    const postData = {
                         content: content,
-                        datetime: datetime
-                    });
+                        datetime: datetime,
+                        is_repost: isRepost
+                    };
+                    
+                    // 리포스팅인 경우 원문 정보 추가
+                    if (isRepost) {
+                        const originalAuthor = item.querySelector('.original-author')?.value?.trim();
+                        const originalContent = item.querySelector('.original-content')?.value?.trim();
+                        const originalDatetime = item.querySelector('.original-datetime')?.value;
+                        
+                        postData.original_author = originalAuthor || '';
+                        postData.original_content = originalContent || '';
+                        postData.original_datetime = originalDatetime || '';
+                    }
+                    
+                    posts.push(postData);
                 }
             });
             

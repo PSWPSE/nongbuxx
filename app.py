@@ -2442,11 +2442,11 @@ def generate_manual_summary():
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
             return response
         
-        # 빈 포스팅 제거
+        # 빈 포스팅 제거 및 리포스팅 정보 포함
         valid_posts = []
         for post in posts:
             if post.get('content', '').strip():
-                valid_posts.append({
+                post_data = {
                     'id': f'manual_{int(time.time() * 1000)}_{len(valid_posts)}',
                     'author': influencer_name.replace('@', ''),
                     'text': post.get('content', '').strip(),
@@ -2454,8 +2454,17 @@ def generate_manual_summary():
                     'likes': 0,  # 수동 입력에서는 좋아요 수 불필요
                     'retweets': 0,  # 수동 입력에서는 리트윗 수 불필요
                     'engagement': 0,  # 수동 입력에서는 인게이지먼트 계산 불필요
-                    'url': f'https://twitter.com/{influencer_name.replace("@", "")}/status/manual_{len(valid_posts)}'
-                })
+                    'url': f'https://twitter.com/{influencer_name.replace("@", "")}/status/manual_{len(valid_posts)}',
+                    'is_repost': post.get('is_repost', False)
+                }
+                
+                # 리포스팅인 경우 원문 정보 추가
+                if post.get('is_repost', False):
+                    post_data['original_author'] = post.get('original_author', '').strip()
+                    post_data['original_content'] = post.get('original_content', '').strip()
+                    post_data['original_datetime'] = post.get('original_datetime', '')
+                
+                valid_posts.append(post_data)
         
         if not valid_posts:
             response = make_response(jsonify({

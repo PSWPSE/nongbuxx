@@ -290,11 +290,21 @@ class XCrawler:
                 reverse=True
             )[:10]
             
-            # 포스트 텍스트 결합
-            combined_text = "\n\n".join([
-                f"@{post['author']} (❤️{post.get('likes', 0)} 🔁{post.get('retweets', 0)}):\n{post['text'][:200]}"
-                for post in posts_to_summarize
-            ])
+            # 포스트 텍스트 결합 (리포스팅 정보 포함)
+            combined_text_parts = []
+            for post in posts_to_summarize:
+                post_info = f"@{post['author']} (❤️{post.get('likes', 0)} 🔁{post.get('retweets', 0)}):\n{post['text'][:200]}"
+                
+                # 리포스팅인 경우 원문 정보 추가
+                if post.get('is_repost', False):
+                    original_author = post.get('original_author', '')
+                    original_content = post.get('original_content', '')
+                    if original_author and original_content:
+                        post_info += f"\n[참조 원문] @{original_author}: {original_content[:150]}"
+                
+                combined_text_parts.append(post_info)
+            
+            combined_text = "\n\n".join(combined_text_parts)
             
             # 새로운 포맷팅 스타일
             from datetime import datetime
@@ -310,21 +320,52 @@ class XCrawler:
                     posts_by_author[author] = []
                 posts_by_author[author].append(post)
             
-            # 포맷팅된 텍스트 생성
+            # 포맷팅된 텍스트 생성 (리포스팅 지원)
             formatted_posts = []
             
             for author, author_posts in posts_by_author.items():
                 formatted_posts.append(f"@{author}의 포스트:")
                 for post in author_posts[:5]:  # 작성자당 최대 5개
-                    formatted_posts.append(f"▶ \"{post['text'][:150]}...\"")
-                    created_at = post.get('created_at', '')
-                    if created_at:
-                        try:
-                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                            dt_kst = dt.astimezone(KST)
-                            formatted_posts.append(f"   -{dt_kst.strftime('%Y.%m.%d (%a) %H:%M')}")
-                        except:
-                            formatted_posts.append(f"   -시간 정보 없음")
+                    # 리포스팅인 경우 특별 처리
+                    if post.get('is_repost', False):
+                        formatted_posts.append(f"💬 인플루언서 코멘트: \"{post['text'][:150]}...\"")
+                        created_at = post.get('created_at', '')
+                        if created_at:
+                            try:
+                                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                                dt_kst = dt.astimezone(KST)
+                                formatted_posts.append(f"   -{dt_kst.strftime('%Y.%m.%d (%a) %H:%M')}")
+                            except:
+                                formatted_posts.append(f"   -시간 정보 없음")
+                        
+                        # 원문 정보 추가
+                        original_author = post.get('original_author', '')
+                        original_content = post.get('original_content', '')
+                        original_datetime = post.get('original_datetime', '')
+                        
+                        if original_author and original_content:
+                            formatted_posts.append(f"📰 참조한 포스팅: @{original_author}의 포스팅")
+                            formatted_posts.append(f"   \"{original_content[:150]}...\"")
+                            if original_datetime:
+                                try:
+                                    dt = datetime.fromisoformat(original_datetime.replace('Z', '+00:00'))
+                                    dt_kst = dt.astimezone(KST)
+                                    formatted_posts.append(f"   -{dt_kst.strftime('%Y.%m.%d (%a) %H:%M')}")
+                                except:
+                                    formatted_posts.append(f"   -원문 시간 정보 없음")
+                    else:
+                        # 일반 포스팅
+                        formatted_posts.append(f"▶ \"{post['text'][:150]}...\"")
+                        created_at = post.get('created_at', '')
+                        if created_at:
+                            try:
+                                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                                dt_kst = dt.astimezone(KST)
+                                formatted_posts.append(f"   -{dt_kst.strftime('%Y.%m.%d (%a) %H:%M')}")
+                            except:
+                                formatted_posts.append(f"   -시간 정보 없음")
+                    
+                    formatted_posts.append("------------------------------------")
                 formatted_posts.append("")
             
             combined_text = "\n".join(formatted_posts)
@@ -335,29 +376,35 @@ class XCrawler:
 {combined_text}
 
 [요구 포맷]
-🚀 @인플루언서명의 최근 게시글 요약 모음
+📱 오늘의 @인플루언서명 의 게시글 모음  
 
-▶ "직접 인용문 (구어체 한국어 번역)"
--2025.08.28 (목) 18:00
+💬 "인플루언서 포스팅 내용 인용문"
+-2025.09.02 (화) 10:30
 
-▶ "직접 인용문 (구어체 한국어 번역)"
--2025.08.28 (목) 18:00
+📰 참조한 포스팅 : @참조원문작성자명 의 포스팅
+"참조한 포스팅의 원문 내용 인용문"
+-2025.09.02 (화) 08:30
 
-▶ "직접 인용문 (구어체 한국어 번역)"
--2025.08.28 (목) 18:00
+------------------------------------
 
-긍정 키워드: #긍정적맥락1 #긍정적맥락2 #긍정적맥락3
-부정 키워드: #우려사항1 #우려사항2
+💬 "다음 인플루언서 포스팅 내용"
+-2025.09.02 (화) 15:20
+
+📰 참조한 포스팅 : @참조원문작성자명 의 포스팅
+"참조한 포스팅의 원문 내용 인용문"
+-2025.09.02 (화) 14:00
+
+------------------------------------
 
 [작성 원칙]
-1. 제목 앞에 적절한 이모지 1개 추가 (🚀, 📊, 💰, 🔥, 📱 등 내용에 맞게)
-2. 각 인용문 앞에 동일한 화살표(▶) 사용
-3. 인용문 뒤의 - @username 부분은 제거
-4. 인용문은 구어체로 자연스럽게 한국어 번역
-5. 원문의 의미를 정확히 전달하되 읽기 쉽게
-6. 긍정/부정 키워드는 맥락에서 추출
-7. 시간은 한국 시간(KST) 기준
-8. 링크는 포함하지 않음"""
+1. 제목 앞에 적절한 알림 이모지 1개 추가 (📱, 📊, 💰, 🔥, 📈 등 내용에 맞게)
+2. 리포스팅인 경우: 💬 인플루언서 코멘트 → 📰 참조 원문 순서로 작성
+3. 일반 포스팅인 경우: 💬 "포스팅 내용" 형태로만 작성
+4. 각 포스팅 사이에 구분선(------------------------------------) 추가
+5. 인용문은 구어체로 자연스럽게 한국어 번역
+6. 시간은 한국 시간(KST) 기준으로 정확히 표시
+7. 링크는 포함하지 않음
+8. 해시태그는 포함하지 않음"""
             
             if self.ai_provider == 'openai':
                 response = self.ai_client.chat.completions.create(

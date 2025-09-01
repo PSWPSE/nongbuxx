@@ -913,13 +913,44 @@
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
+                            
+                            <!-- 리포스팅 여부 체크박스 -->
                             <div class="form-group">
-                                <label>포스팅 내용</label>
-                                <textarea class="form-control post-content" rows="4" placeholder="포스팅 내용을 입력하세요"></textarea>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" class="repost-checkbox" onchange="manualSummaryManager.toggleRepostFields(1)">
+                                    <span class="checkmark"></span>
+                                    리포스팅 (다른 사람 글 인용)
+                                </label>
+                            </div>
+                            
+                            <!-- 인플루언서 포스팅 내용 -->
+                            <div class="form-group">
+                                <label>인플루언서 포스팅 내용</label>
+                                <textarea class="form-control post-content" rows="4" placeholder="인플루언서가 작성한 내용을 입력하세요"></textarea>
                             </div>
                             <div class="form-group">
-                                <label>작성 시간</label>
+                                <label>포스팅 작성 시간</label>
                                 <input type="datetime-local" class="form-control post-datetime">
+                            </div>
+                            
+                            <!-- 리포스팅 원문 정보 (기본 숨김) -->
+                            <div class="repost-fields" id="repostFields1" style="display: none;">
+                                <div class="repost-divider">
+                                    <i class="fas fa-retweet"></i>
+                                    <span>참조한 원문</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>원문 작성자명</label>
+                                    <input type="text" class="form-control original-author" placeholder="@username 또는 이름">
+                                </div>
+                                <div class="form-group">
+                                    <label>원문 내용</label>
+                                    <textarea class="form-control original-content" rows="4" placeholder="참조한 원문 내용을 입력하세요"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>원문 작성 시간</label>
+                                    <input type="datetime-local" class="form-control original-datetime">
+                                </div>
                             </div>
                         </div>
                     </div>

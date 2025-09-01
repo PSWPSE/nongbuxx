@@ -8949,4 +8949,69 @@ textarea:focus-visible {
     color: var(--text-primary);
 }
 
+/* 리포스팅 기능 스타일 */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.repost-fields {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.repost-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.repost-divider i {
+    font-size: 1.1rem;
+}
+
+.repost-fields .form-group {
+    margin-bottom: 1rem;
+}
+
+.repost-fields .form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* 다크 테마 리포스팅 스타일 */
+[data-theme="dark"] .repost-fields {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .checkbox-label {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .repost-divider {
+    color: var(--primary-color);
+    border-color: var(--border-color);
+}
+
 /* 배포 시스템 테스트 Wed Aug 28 22:35 KST 2025 */
