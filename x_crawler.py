@@ -320,110 +320,109 @@ class XCrawler:
                     posts_by_author[author] = []
                 posts_by_author[author].append(post)
             
-            # 포맷팅된 텍스트 생성 (리포스팅 지원)
-            formatted_posts = []
+            # 간단하고 명확한 포스트 정보 생성
+            posts_info = []
+            for i, post in enumerate(posts_to_summarize, 1):
+                post_info = f"포스트 {i}:\n"
+                post_info += f"작성자: @{post['author']}\n"
+                post_info += f"내용: {post['text']}\n"
+                post_info += f"작성시간: {post.get('created_at', '')}\n"
+                
+                # 리포스팅 정보 추가
+                if post.get('is_repost', False):
+                    post_info += f"리포스팅: 예\n"
+                    post_info += f"원문작성자: {post.get('original_author', '')}\n"
+                    post_info += f"원문내용: {post.get('original_content', '')}\n"
+                    post_info += f"원문시간: {post.get('original_datetime', '')}\n"
+                else:
+                    post_info += f"리포스팅: 아니오\n"
+                
+                posts_info.append(post_info)
             
-            for author, author_posts in posts_by_author.items():
-                formatted_posts.append(f"@{author}의 포스트:")
-                for post in author_posts[:5]:  # 작성자당 최대 5개
-                    # 리포스팅인 경우 특별 처리
-                    if post.get('is_repost', False):
-                        formatted_posts.append(f"💬 인플루언서 코멘트: \"{post['text'][:150]}...\"")
-                        created_at = post.get('created_at', '')
-                        if created_at:
-                            try:
-                                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                                dt_kst = dt.astimezone(KST)
-                                formatted_posts.append(f"   -{dt_kst.strftime('%Y.%m.%d (%a) %H:%M')}")
-                            except:
-                                formatted_posts.append(f"   -시간 정보 없음")
-                        
-                        # 원문 정보 추가
-                        original_author = post.get('original_author', '')
-                        original_content = post.get('original_content', '')
-                        original_datetime = post.get('original_datetime', '')
-                        
-                        if original_author and original_content:
-                            formatted_posts.append(f"📰 참조한 포스팅: @{original_author}의 포스팅")
-                            formatted_posts.append(f"   \"{original_content[:150]}...\"")
-                            if original_datetime:
-                                try:
-                                    dt = datetime.fromisoformat(original_datetime.replace('Z', '+00:00'))
-                                    dt_kst = dt.astimezone(KST)
-                                    formatted_posts.append(f"   -{dt_kst.strftime('%Y.%m.%d (%a) %H:%M')}")
-                                except:
-                                    formatted_posts.append(f"   -원문 시간 정보 없음")
-                    else:
-                        # 일반 포스팅
-                        formatted_posts.append(f"▶ \"{post['text'][:150]}...\"")
-                        created_at = post.get('created_at', '')
-                        if created_at:
-                            try:
-                                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                                dt_kst = dt.astimezone(KST)
-                                formatted_posts.append(f"   -{dt_kst.strftime('%Y.%m.%d (%a) %H:%M')}")
-                            except:
-                                formatted_posts.append(f"   -시간 정보 없음")
-                    
-                    formatted_posts.append("------------------------------------")
-                formatted_posts.append("")
+            combined_text = "\n".join(posts_info)
             
-            combined_text = "\n".join(formatted_posts)
+            # 첫 번째 포스트의 작성자를 인플루언서명으로 사용
+            influencer_name = posts_to_summarize[0]['author'] if posts_to_summarize else 'unknown'
             
-            prompt = f"""다음 X(트위터) 포스트들을 정확히 아래 형식으로만 작성해주세요. 다른 형식은 절대 사용하지 마세요.
+            prompt = f"""다음 포스트들을 정확히 아래 형식으로만 변환하세요.
 
-[수집된 포스트]
+[포스트 데이터]
 {combined_text}
 
-[필수 출력 포맷 - 이 형식을 정확히 따라야 함]
-📱 오늘의 @인플루언서명 의 게시글 모음  
+출력 형식 (정확히 이대로):
 
-💬 "인플루언서 포스팅 내용을 정확히 인용"
--2025.09.02 (화) 10:30
+📱 오늘의 @{influencer_name} 의 게시글 모음  
 
-📰 참조한 포스팅 : @참조원문작성자명 의 포스팅
-"참조한 포스팅의 원문 내용을 정확히 인용"
--2025.09.02 (화) 08:30
+"""
+            
+            # 각 포스트를 지정된 포맷으로 변환
+            for post in posts_to_summarize:
+                # 시간 포맷팅
+                try:
+                    if post.get('created_at'):
+                        dt = datetime.fromisoformat(post['created_at'].replace('Z', '+00:00'))
+                        dt_kst = dt.astimezone(KST)
+                        time_str = dt_kst.strftime('%Y.%m.%d (%a) %H:%M')
+                    else:
+                        time_str = "시간 정보 없음"
+                except:
+                    time_str = "시간 정보 없음"
+                
+                # 리포스팅인 경우
+                if post.get('is_repost', False):
+                    prompt += f"""💬 "{post['text']}"
+-{time_str}
 
-------------------------------------
+"""
+                    # 원문 정보가 있는 경우
+                    if post.get('original_author') and post.get('original_content'):
+                        # 원문 시간 포맷팅
+                        try:
+                            if post.get('original_datetime'):
+                                orig_dt = datetime.fromisoformat(post['original_datetime'].replace('Z', '+00:00'))
+                                orig_dt_kst = orig_dt.astimezone(KST)
+                                orig_time_str = orig_dt_kst.strftime('%Y.%m.%d (%a) %H:%M')
+                            else:
+                                orig_time_str = "시간 정보 없음"
+                        except:
+                            orig_time_str = "시간 정보 없음"
+                            
+                        prompt += f"""📰 참조한 포스팅 : @{post['original_author']} 의 포스팅
+"{post['original_content']}"
+-{orig_time_str}
 
-💬 "다음 포스팅 내용을 정확히 인용"
--2025.09.02 (화) 15:20
+"""
+                else:
+                    # 일반 포스팅
+                    prompt += f"""💬 "{post['text']}"
+-{time_str}
 
-📰 참조한 포스팅 : @참조원문작성자명 의 포스팅
-"참조한 포스팅의 원문 내용을 정확히 인용"
--2025.09.02 (화) 14:00
-
-------------------------------------
-
-[엄격한 작성 규칙 - 반드시 준수]
-1. 위의 포맷을 정확히 따라야 함. ▶ 기호나 다른 형식 절대 사용 금지
-2. 💬 와 📰 이모지만 사용, 다른 이모지 금지
-3. 구분선은 정확히 "------------------------------------" 사용
-4. 해시태그, 키워드, 추가 분석 절대 포함 금지
-5. 시간 형식: -YYYY.MM.DD (요일) HH:MM 정확히 준수
-6. 인용문은 쌍따옴표("")로 정확히 감싸기
-7. @사용자명 형식 정확히 유지
-8. 리포스팅이 아닌 경우 📰 부분 생략하고 💬 만 사용"""
+"""
+                
+                prompt += "------------------------------------\n\n"
+            
+            prompt += """
+중요: 위 내용을 그대로 복사해서 출력하세요. 
+절대로 ▶ 기호, 해시태그, 키워드 분석을 추가하지 마세요."""
             
             if self.ai_provider == 'openai':
                 response = self.ai_client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role": "system", "content": "당신은 포맷팅 전문가입니다. 주어진 형식을 정확히 따라야 하며, 절대로 다른 형식을 사용하면 안 됩니다. ▶ 기호, 해시태그, 키워드 분석 등은 절대 포함하지 마세요. 오직 💬와 📰 이모지만 사용하고 구분선은 정확히 ------------------------------------ 를 사용하세요."},
+                        {"role": "system", "content": "주어진 텍스트를 그대로 복사해서 출력하세요. 아무것도 추가하거나 변경하지 마세요."},
                         {"role": "user", "content": prompt}
                     ],
-                    max_tokens=500,
-                    temperature=0.7
+                    max_tokens=1000,
+                    temperature=0.1
                 )
                 ai_response = response.choices[0].message.content
                 
             elif self.ai_provider == 'anthropic':
                 response = self.ai_client.messages.create(
                     model="claude-3-5-haiku-20241022",
-                    max_tokens=500,
-                    temperature=0.7,
-                    system="당신은 포맷팅 전문가입니다. 주어진 형식을 정확히 따라야 하며, 절대로 다른 형식을 사용하면 안 됩니다. ▶ 기호, 해시태그, 키워드 분석 등은 절대 포함하지 마세요. 오직 💬와 📰 이모지만 사용하고 구분선은 정확히 ------------------------------------ 를 사용하세요.",
+                    max_tokens=1000,
+                    temperature=0.1,
+                    system="주어진 텍스트를 그대로 복사해서 출력하세요. 아무것도 추가하거나 변경하지 마세요.",
                     messages=[
                         {"role": "user", "content": prompt}
                     ]
@@ -439,11 +438,11 @@ class XCrawler:
                 data = {
                     'model': 'llama-3.1-sonar-large-128k-chat',
                     'messages': [
-                        {"role": "system", "content": "당신은 포맷팅 전문가입니다. 주어진 형식을 정확히 따라야 하며, 절대로 다른 형식을 사용하면 안 됩니다. ▶ 기호, 해시태그, 키워드 분석 등은 절대 포함하지 마세요. 오직 💬와 📰 이모지만 사용하고 구분선은 정확히 ------------------------------------ 를 사용하세요."},
+                        {"role": "system", "content": "주어진 텍스트를 그대로 복사해서 출력하세요. 아무것도 추가하거나 변경하지 마세요."},
                         {"role": "user", "content": prompt}
                     ],
-                    'max_tokens': 500,
-                    'temperature': 0.7
+                    'max_tokens': 1000,
+                    'temperature': 0.1
                 }
                 response = requests.post(
                     'https://api.perplexity.ai/chat/completions',
