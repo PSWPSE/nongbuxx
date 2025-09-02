@@ -2497,43 +2497,75 @@ def generate_manual_summary():
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
             return response
         
-        # AI 요약 생성 (비동기 함수를 동기적으로 실행)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # 백엔드에서 직접 포맷 생성 (AI 사용하지 않음)
+        import pytz
         
-        try:
-            summary_result = loop.run_until_complete(crawler.generate_summary(valid_posts))
+        KST = pytz.timezone('Asia/Seoul')
+        
+        # 포맷 생성
+        summary_lines = []
+        summary_lines.append(f"📱 오늘의 @{influencer_name} 의 게시글 모음\n")
+        
+        for post in valid_posts:
+            # 인플루언서 포스팅
+            summary_lines.append(f'💬 "{post["text"]}"')
             
-            if 'error' in summary_result:
-                response = make_response(jsonify({
-                    'success': False,
-                    'error': f'AI 요약 생성 실패: {summary_result["error"]}'
-                }), 500)
-                response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
-                response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
-                return response
+            # 시간 포맷팅
+            try:
+                if post.get('created_at'):
+                    dt = datetime.fromisoformat(post['created_at'].replace('Z', '+00:00'))
+                    dt_kst = dt.astimezone(KST)
+                    time_str = dt_kst.strftime('%Y.%m.%d (%a) %H:%M')
+                else:
+                    time_str = "시간 정보 없음"
+            except:
+                time_str = "시간 정보 없음"
             
-            logger.info(f"수동 요약 생성 완료: {len(summary_result.get('summary', ''))}자")
+            summary_lines.append(f"-{time_str}\n")
             
-            response = make_response(jsonify({
-                'success': True,
-                'data': {
-                    'influencer_name': influencer_name,
-                    'posts_count': len(valid_posts),
-                    'summary': summary_result.get('summary', ''),
-                    'hashtags': summary_result.get('hashtags', []),
-                    'analyzed_count': summary_result.get('analyzed_count', len(valid_posts)),
-                    'generation_time': datetime.now().isoformat()
-                }
-            }))
-            response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
-            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
-            return response
+            # 리포스팅인 경우 원문 추가
+            if post.get('is_repost', False) and post.get('original_author') and post.get('original_content'):
+                summary_lines.append(f'📰 참조한 포스팅 : @{post["original_author"]} 의 포스팅')
+                summary_lines.append(f'"{post["original_content"]}"')
+                
+                # 원문 시간 포맷팅
+                try:
+                    if post.get('original_datetime'):
+                        orig_dt = datetime.fromisoformat(post['original_datetime'].replace('Z', '+00:00'))
+                        orig_dt_kst = orig_dt.astimezone(KST)
+                        orig_time_str = orig_dt_kst.strftime('%Y.%m.%d (%a) %H:%M')
+                    else:
+                        orig_time_str = "시간 정보 없음"
+                except:
+                    orig_time_str = "시간 정보 없음"
+                
+                summary_lines.append(f"-{orig_time_str}\n")
             
-        finally:
-            loop.close()
+            summary_lines.append("------------------------------------\n")
+        
+        # 마지막 구분선 제거
+        if summary_lines and summary_lines[-1] == "------------------------------------\n":
+            summary_lines.pop()
+        
+        final_summary = "\n".join(summary_lines)
+        
+        logger.info(f"수동 요약 생성 완료: {len(final_summary)}자 (직접 포맷 생성)")
+        
+        response = make_response(jsonify({
+            'success': True,
+            'data': {
+                'influencer_name': influencer_name,
+                'posts_count': len(valid_posts),
+                'summary': final_summary,
+                'hashtags': [],  # 해시태그 제거
+                'analyzed_count': len(valid_posts),
+                'generation_time': datetime.now().isoformat()
+            }
+        }))
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        return response
         
     except Exception as e:
         logger.error(f"수동 요약 생성 오류: {str(e)}")

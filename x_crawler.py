@@ -405,6 +405,8 @@ class XCrawler:
 중요: 위 내용을 그대로 복사해서 출력하세요. 
 절대로 ▶ 기호, 해시태그, 키워드 분석을 추가하지 마세요."""
             
+            logger.info(f"🤖 AI 프롬프트 확인:\n{prompt[:500]}...")
+            
             if self.ai_provider == 'openai':
                 response = self.ai_client.chat.completions.create(
                     model="gpt-4o-mini",
