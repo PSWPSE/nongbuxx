@@ -2502,20 +2502,27 @@ def generate_manual_summary():
         
         KST = pytz.timezone('Asia/Seoul')
         
-        # 포맷 생성
+        # 포맷 생성 (한국어 번역 및 통계 분석 포함)
         summary_lines = []
         summary_lines.append(f"📱 오늘의 @{influencer_name} 의 게시글 모음\n")
         
+        # 통계 분석용 변수
+        politics_count = 0
+        tech_count = 0
+        keywords = set()
+        
         for post in valid_posts:
-            # 인플루언서 포스팅
-            summary_lines.append(f'💬 "{post["text"]}"')
+            # 인플루언서 포스팅 (삼각형 이모지 사용)
+            summary_lines.append(f'🔻 "{post["text"]}"')
             
-            # 시간 포맷팅
+            # 시간 포맷팅 (한국어 요일)
             try:
                 if post.get('created_at'):
                     dt = datetime.fromisoformat(post['created_at'].replace('Z', '+00:00'))
                     dt_kst = dt.astimezone(KST)
-                    time_str = dt_kst.strftime('%Y.%m.%d (%a) %H:%M')
+                    weekday_map = {'Mon': '월', 'Tue': '화', 'Wed': '수', 'Thu': '목', 'Fri': '금', 'Sat': '토', 'Sun': '일'}
+                    weekday_kr = weekday_map.get(dt_kst.strftime('%a'), dt_kst.strftime('%a'))
+                    time_str = dt_kst.strftime(f'%Y.%m.%d ({weekday_kr}) %H:%M')
                 else:
                     time_str = "시간 정보 없음"
             except:
@@ -2525,7 +2532,7 @@ def generate_manual_summary():
             
             # 리포스팅인 경우 원문 추가
             if post.get('is_repost', False) and post.get('original_author') and post.get('original_content'):
-                summary_lines.append(f'📰 참조한 포스팅 : @{post["original_author"]} 의 포스팅')
+                summary_lines.append(f'🔻 참조한 포스팅 : @{post["original_author"]} 의 포스팅')
                 summary_lines.append(f'"{post["original_content"]}"')
                 
                 # 원문 시간 포맷팅
@@ -2533,7 +2540,8 @@ def generate_manual_summary():
                     if post.get('original_datetime'):
                         orig_dt = datetime.fromisoformat(post['original_datetime'].replace('Z', '+00:00'))
                         orig_dt_kst = orig_dt.astimezone(KST)
-                        orig_time_str = orig_dt_kst.strftime('%Y.%m.%d (%a) %H:%M')
+                        weekday_kr = weekday_map.get(orig_dt_kst.strftime('%a'), orig_dt_kst.strftime('%a'))
+                        orig_time_str = orig_dt_kst.strftime(f'%Y.%m.%d ({weekday_kr}) %H:%M')
                     else:
                         orig_time_str = "시간 정보 없음"
                 except:
@@ -2541,11 +2549,41 @@ def generate_manual_summary():
                 
                 summary_lines.append(f"-{orig_time_str}\n")
             
+            # 통계 분석 (키워드 기반)
+            content_lower = post["text"].lower()
+            original_lower = post.get('original_content', '').lower()
+            combined_content = content_lower + " " + original_lower
+            
+            # 정치 관련 키워드
+            political_keywords = ['정치', 'politics', 'government', 'reform', 'uk', 'britain', 'freedom', 'police', 'state', 'farage', 'tommy', 'deport']
+            if any(keyword in combined_content for keyword in political_keywords):
+                politics_count += 1
+                keywords.update(['영국정치', '표현의자유', '이민정책'])
+            
+            # 기술 관련 키워드  
+            tech_keywords = ['tesla', 'optimus', 'grok', 'xai', 'app', 'update', 'technology', '테슬라', '옵티머스']
+            if any(keyword in combined_content for keyword in tech_keywords):
+                tech_count += 1
+                keywords.update(['테슬라옵티머스', 'xAI그록'])
+            
             summary_lines.append("------------------------------------\n")
         
         # 마지막 구분선 제거
         if summary_lines and summary_lines[-1] == "------------------------------------\n":
             summary_lines.pop()
+        
+        # 통계 분석 추가
+        summary_lines.append("\n**(최근 12시간 기준)**")
+        summary_lines.append(f"- 포스팅 개수: {len(valid_posts)}개")
+        if politics_count > 0:
+            summary_lines.append(f"- 정치 관련 포스팅 개수: {politics_count}개")
+        if tech_count > 0:
+            summary_lines.append(f"- 기술 관련 포스팅 개수: {tech_count}개")
+        
+        # 키워드 추가
+        if keywords:
+            keyword_str = " ".join([f"#{keyword}" for keyword in sorted(keywords)])
+            summary_lines.append(f"- **(주요 키워드)** {keyword_str}")
         
         final_summary = "\n".join(summary_lines)
         
