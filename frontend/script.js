@@ -4,41 +4,88 @@ console.log('🚀 NONGBUXX 스크립트 로드 - VERSION: 2025-08-25-21:12');
 // 전역 변수
 let currentJobId = null;
 
-// 불렛포인트 포맷팅 공통 함수
+// 🚨 개선된 불렛포인트 포맷팅 공통 함수 - 줄바꿈 문제 완전 해결
 function formatBulletPoints(content) {
-    // 먼저 모든 불렛포인트를 임시 구분자로 분리
+    if (!content) return content;
+    
+    // 1단계: 모든 불렛포인트를 임시 마커로 교체
     content = content.replace(/•\s*/g, '|||BULLET|||');
-    // 임시 구분자를 기준으로 분할하고 각각을 새 줄에 배치
+    
+    // 2단계: 임시 마커를 기준으로 분할
     const parts = content.split('|||BULLET|||');
-    if (parts.length > 1) {
-        // 첫 번째 부분 (불렛포인트 이전)
-        let result = parts[0];
-        // 나머지 부분들을 불렛포인트와 함께 새 줄에 배치
-        for (let i = 1; i < parts.length; i++) {
-            const bulletContent = parts[i].trim();
-            if (bulletContent) {
-                // 이전 줄이 있고 줄바꿈이 없다면 추가
-                if (result && !result.endsWith('\n')) {
-                    result += '\n';
-                }
-                result += '• ' + bulletContent;
-                // 마지막이 아니라면 줄바꿈 추가
-                if (i < parts.length - 1) {
-                    result += '\n';
-                }
-            }
-        }
-        content = result;
+    
+    if (parts.length <= 1) {
+        return content; // 불렛포인트가 없으면 원본 반환
     }
     
-    // 중복된 줄바꿈 정리 (3개 이상의 연속 줄바꿈을 2개로)
-    content = content.replace(/\n{3,}/g, '\n\n');
+    // 3단계: 각 부분을 독립된 줄로 재구성
+    let result = parts[0].trim(); // 첫 번째 부분 (불렛포인트 이전 텍스트)
     
-    // 불필요한 공백 정리
-    content = content.replace(/[ \t]+\n/g, '\n'); // 줄 끝 공백 제거
-    content = content.replace(/\n[ \t]+/g, '\n'); // 줄 시작 공백 제거
+    for (let i = 1; i < parts.length; i++) {
+        const bulletContent = parts[i].trim();
+        if (bulletContent) {
+            // 이전 내용이 있고 줄바꿈이 없다면 줄바꿈 추가
+            if (result && !result.endsWith('\n')) {
+                result += '\n';
+            }
+            
+            // 불렛포인트 추가 (각각 새 줄에)
+            result += '• ' + bulletContent;
+            
+            // 다음 불렛포인트를 위해 줄바꿈 추가 (마지막 제외)
+            if (i < parts.length - 1) {
+                result += '\n';
+            }
+        }
+    }
     
-    return content;
+    // 4단계: 추가 정리 작업
+    // 한 줄에 여러 불렛포인트가 남아있는지 최종 확인
+    const lines = result.split('\n');
+    const finalLines = [];
+    
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) {
+            finalLines.push('');
+            continue;
+        }
+        
+        // 한 줄에 여러 불렛포인트가 있는지 확인
+        const bulletCount = (line.match(/•/g) || []).length;
+        if (bulletCount > 1) {
+            // 여러 불렛포인트를 분리
+            const bulletParts = line.split('•');
+            
+            // 첫 번째 부분 (불렛포인트 이전 텍스트)
+            if (bulletParts[0].trim()) {
+                finalLines.push(bulletParts[0].trim());
+            }
+            
+            // 나머지 불렛포인트들을 각각 새 줄에
+            for (let j = 1; j < bulletParts.length; j++) {
+                if (bulletParts[j].trim()) {
+                    finalLines.push('• ' + bulletParts[j].trim());
+                }
+            }
+        } else {
+            finalLines.push(line);
+        }
+    }
+    
+    result = finalLines.join('\n');
+    
+    // 5단계: 최종 정리
+    // 3개 이상의 연속 줄바꿈을 2개로 제한
+    result = result.replace(/\n{3,}/g, '\n\n');
+    
+    // 줄 끝 공백 제거
+    result = result.replace(/[ \t]+\n/g, '\n');
+    
+    // 줄 시작 공백 제거 (불렛포인트 제외)
+    result = result.replace(/\n[ \t]+(?!•)/g, '\n');
+    
+    return result;
 }
 let currentData = null;
 let currentBatchJobId = null;
@@ -6283,35 +6330,12 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
                 // 섹션 제목과 불렛포인트 사이 간격 정리
                 cleanContent = cleanContent.replace(/(▶[^\n]+:)\s*\n\s*•/g, '$1\n• ');
                 
-                // 불렛포인트 각각 새 줄에 (개선된 로직)
-                // 먼저 모든 불렛포인트를 임시 구분자로 분리
-                cleanContent = cleanContent.replace(/•\s*/g, '|||BULLET|||');
-                // 임시 구분자를 기준으로 분할하고 각각을 새 줄에 배치
-                const parts = cleanContent.split('|||BULLET|||');
-                if (parts.length > 1) {
-                    // 첫 번째 부분 (불렛포인트 이전)
-                    let result = parts[0];
-                    // 나머지 부분들을 불렛포인트와 함께 새 줄에 배치
-                    for (let i = 1; i < parts.length; i++) {
-                        const bulletContent = parts[i].trim();
-                        if (bulletContent) {
-                            // 이전 줄이 있고 줄바꿈이 없다면 추가
-                            if (result && !result.endsWith('\n')) {
-                                result += '\n';
-                            }
-                            result += '• ' + bulletContent;
-                            // 마지막이 아니라면 줄바꿈 추가
-                            if (i < parts.length - 1) {
-                                result += '\n';
-                            }
-                        }
-                    }
-                    cleanContent = result;
-                }
+                // 🚨 불렛포인트 각각 새 줄에 (완전 개선된 로직)
+                cleanContent = formatBulletPoints(cleanContent);
                 
                 // 중복된 줄바꿈 정리 (3개 이상의 연속 줄바꿈을 2개로)
-                cleanContent = cleanContent.replace(/\n{3,}/g, '\n\n');
-                
+            cleanContent = cleanContent.replace(/\n{3,}/g, '\n\n');
+            
                 // 불필요한 공백 정리
                 cleanContent = cleanContent.replace(/[ \t]+\n/g, '\n'); // 줄 끝 공백 제거
                 cleanContent = cleanContent.replace(/\n[ \t]+/g, '\n'); // 줄 시작 공백 제거 (단, 들여쓰기는 보존)
@@ -6319,9 +6343,14 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
                 // 해시태그 앞에 빈 줄 추가
                 cleanContent = cleanContent.replace(/([^#\n])(\s*)(#[가-힣a-zA-Z0-9_]+(?:\s+#[가-힣a-zA-Z0-9_]+)*)\s*$/g, '$1\n\n$3');
             } else {
-                // X Short Form 포맷팅 구조화
+                // 🚨 X Short Form 포맷팅 구조화 - 불렛포인트 줄바꿈 문제 해결 (X 게시 모달)
                 // 구조: 제목 → 출처 → 빈줄 → 본문 → 빈줄 → 해시태그
-                const lines = cleanContent.split('\n').filter(line => line.trim());
+                
+                // 1단계: 불렛포인트 포맷팅 먼저 적용
+                cleanContent = formatBulletPoints(cleanContent);
+                
+                // 2단계: 구조화된 파싱
+                const lines = cleanContent.split('\n');
                 let title = "";
                 let source = "";
                 let bodyLines = [];
@@ -6329,6 +6358,7 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
                 
                 lines.forEach(line => {
                     const trimmedLine = line.trim();
+                    if (!trimmedLine) return; // 빈 줄 건너뛰기
                     
                     // 제목 (다양한 이모지로 시작)
                     if (!title && /^[🚨📈📉📊💰💵💴💶🏢🏭🛍️🏦🚀💡🔬🤖💻⚠️🔥💥🇺🇸🇨🇳🇯🇵🇰🇷🇪🇺🎯⚡🌍📱🏆🎮🛡️📌🔍🌟]/.test(trimmedLine)) {
@@ -6347,7 +6377,7 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
                     else if (trimmedLine.startsWith('#') && (trimmedLine.match(/#/g) || []).length >= 2) {
                         hashtags = trimmedLine;
                     }
-                    // 불렛 포인트 본문
+                    // 불렛 포인트 본문 (각각 독립된 줄로 처리)
                     else if (trimmedLine.startsWith('•')) {
                         bodyLines.push(trimmedLine);
                     }
@@ -6359,16 +6389,21 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
                     }
                 });
                 
-                // 재구성
+                // 3단계: 재구성 (각 불렛포인트가 독립된 줄에 오도록)
                 let parts = [];
                 if (title) parts.push(title);
                 if (source) {
                     parts.push(source);
                     parts.push("");  // 출처 다음 빈 줄
                 }
+                
+                // 불렛포인트들을 각각 독립된 줄로 추가
                 if (bodyLines.length > 0) {
-                    parts = parts.concat(bodyLines);
+                    bodyLines.forEach(line => {
+                        parts.push(line); // 각 불렛포인트가 독립된 줄
+                    });
                 }
+                
                 if (hashtags) {
                     // 해시태그 앞에 반드시 빈 줄 추가
                     if (parts.length > 0 && parts[parts.length - 1].trim() !== '') {
@@ -6378,6 +6413,9 @@ window.openXPublishingModal = function(content = '', contentType = 'x') {
                 }
                 
                 cleanContent = parts.join('\n');
+                
+                // 4단계: 최종 불렛포인트 검증 및 정리
+                cleanContent = formatBulletPoints(cleanContent);
             }
             
             // 해시태그는 마지막에 위치하도록 (이미 되어있음)
@@ -6576,7 +6614,7 @@ window.loadXCredentials = function() {
             
             if (cachedAuth && cachedAuth.user) {
                 // 캐시된 정보로 UI 업데이트 (API 호출 없음)
-                if (apiStatusText) {
+            if (apiStatusText) {
                     const remainingMinutes = Math.round((X_AUTH_CACHE_TTL - (Date.now() - cachedAuth.timestamp)) / 60000);
                     apiStatusText.innerHTML = `✅ @${cachedAuth.user.username}로 인증됨 (캐시 유효: ${remainingMinutes}분)`;
                 }
@@ -6707,8 +6745,8 @@ window.validateXCredentials = async function() {
                     'warning'
                 );
                 console.warn('⚠️ X API Rate Limit 초과 - 20분 대기 설정');
-            } else {
-                showValidationResult(`❌ 인증 실패: ${result.error}`, 'error');
+        } else {
+            showValidationResult(`❌ 인증 실패: ${result.error}`, 'error');
             }
             console.log('❌ 인증 실패! publishBtn 비활성화');
             if (xModalElements.publishBtn) {
