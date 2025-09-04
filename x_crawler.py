@@ -344,14 +344,17 @@ class XCrawler:
             # 첫 번째 포스트의 작성자를 인플루언서명으로 사용
             influencer_name = posts_to_summarize[0]['author'] if posts_to_summarize else 'unknown'
             
-            prompt = f"""다음 포스트들을 정확히 아래 형식으로만 변환하세요.
+            # 요일 한글 변환 딕셔너리
+            weekday_kr = {'Mon': '월', 'Tue': '화', 'Wed': '수', 'Thu': '목', 'Fri': '금', 'Sat': '토', 'Sun': '일'}
+            
+            prompt = f"""X(트위터) 스타일로 요약해줘. 아래 형식 그대로 따라해.
 
 [포스트 데이터]
 {combined_text}
 
-출력 형식 (정확히 이대로):
+출력 형식:
 
-📱 오늘의 @{influencer_name} 의 게시글 모음  
+📱 오늘의 @{influencer_name} 게시글 모음
 
 """
             
@@ -362,15 +365,21 @@ class XCrawler:
                     if post.get('created_at'):
                         dt = datetime.fromisoformat(post['created_at'].replace('Z', '+00:00'))
                         dt_kst = dt.astimezone(KST)
-                        time_str = dt_kst.strftime('%Y.%m.%d (%a) %H:%M')
+                        # 요일 한글로 변환
+                        weekday = dt_kst.strftime('%a')
+                        weekday_korean = weekday_kr.get(weekday, weekday)
+                        time_str = dt_kst.strftime(f'%Y.%m.%d ({weekday_korean}) %H:%M')
                     else:
                         time_str = "시간 정보 없음"
                 except:
                     time_str = "시간 정보 없음"
                 
+                # 텍스트를 한국어로 번역하도록 표시
+                text_content = post['text']
+                
                 # 리포스팅인 경우
                 if post.get('is_repost', False):
-                    prompt += f"""💬 "{post['text']}"
+                    prompt += f"""🔻 "{text_content}"
 -{time_str}
 
 """
@@ -381,20 +390,22 @@ class XCrawler:
                             if post.get('original_datetime'):
                                 orig_dt = datetime.fromisoformat(post['original_datetime'].replace('Z', '+00:00'))
                                 orig_dt_kst = orig_dt.astimezone(KST)
-                                orig_time_str = orig_dt_kst.strftime('%Y.%m.%d (%a) %H:%M')
+                                weekday = orig_dt_kst.strftime('%a')
+                                weekday_korean = weekday_kr.get(weekday, weekday)
+                                orig_time_str = orig_dt_kst.strftime(f'%Y.%m.%d ({weekday_korean}) %H:%M')
                             else:
                                 orig_time_str = "시간 정보 없음"
                         except:
                             orig_time_str = "시간 정보 없음"
                             
-                        prompt += f"""📰 참조한 포스팅 : @{post['original_author']} 의 포스팅
+                        prompt += f"""🔻 참조한 포스팅 : @{post['original_author']} 의 포스팅
 "{post['original_content']}"
 -{orig_time_str}
 
 """
                 else:
                     # 일반 포스팅
-                    prompt += f"""💬 "{post['text']}"
+                    prompt += f"""🔻 "{text_content}"
 -{time_str}
 
 """
@@ -402,8 +413,17 @@ class XCrawler:
                 prompt += "------------------------------------\n\n"
             
             prompt += """
-중요: 위 내용을 그대로 복사해서 출력하세요. 
-절대로 ▶ 기호, 해시태그, 키워드 분석을 추가하지 마세요."""
+**(최근 12시간 기준)**
+- 포스팅 개수: {포스팅 총 개수}개
+- 정치 관련: {정치 관련 포스팅 수}개
+- 기술 관련: {기술 관련 포스팅 수}개
+- **(주요 키워드)** #{키워드1} #{키워드2} #{키워드3}
+
+중요: 
+1. 영어 포스팅은 한국어로 번역해서 출력
+2. X에 어울리는 짧고 간결한 반말체 사용 (예: "~했음", "~하는 중", "~될 듯")
+3. 이모지 🔻 사용
+4. 시간 형식은 위 예시 그대로 유지"""
             
             logger.info(f"🤖 AI 프롬프트 확인:\n{prompt[:500]}...")
             
@@ -411,11 +431,11 @@ class XCrawler:
                 response = self.ai_client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role": "system", "content": "주어진 텍스트를 그대로 복사해서 출력하세요. 아무것도 추가하거나 변경하지 마세요."},
+                        {"role": "system", "content": "X(트위터) 포스팅 요약 전문가임. 영어는 한국어로 번역하고, 짧고 간결한 반말체로 작성. '~했음', '~하는 중', '~될 듯' 같은 X스타일 어미 사용."},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=1000,
-                    temperature=0.1
+                    temperature=0.3
                 )
                 ai_response = response.choices[0].message.content
                 
@@ -423,8 +443,8 @@ class XCrawler:
                 response = self.ai_client.messages.create(
                     model="claude-3-5-haiku-20241022",
                     max_tokens=1000,
-                    temperature=0.1,
-                    system="주어진 텍스트를 그대로 복사해서 출력하세요. 아무것도 추가하거나 변경하지 마세요.",
+                    temperature=0.3,
+                    system="X(트위터) 포스팅 요약 전문가임. 영어는 한국어로 번역하고, 짧고 간결한 반말체로 작성. '~했음', '~하는 중', '~될 듯' 같은 X스타일 어미 사용.",
                     messages=[
                         {"role": "user", "content": prompt}
                     ]
@@ -440,11 +460,11 @@ class XCrawler:
                 data = {
                     'model': 'llama-3.1-sonar-large-128k-chat',
                     'messages': [
-                        {"role": "system", "content": "주어진 텍스트를 그대로 복사해서 출력하세요. 아무것도 추가하거나 변경하지 마세요."},
+                        {"role": "system", "content": "X(트위터) 포스팅 요약 전문가임. 영어는 한국어로 번역하고, 짧고 간결한 반말체로 작성. '~했음', '~하는 중', '~될 듯' 같은 X스타일 어미 사용."},
                         {"role": "user", "content": prompt}
                     ],
                     'max_tokens': 1000,
-                    'temperature': 0.1
+                    'temperature': 0.3
                 }
                 response = requests.post(
                     'https://api.perplexity.ai/chat/completions',
@@ -543,18 +563,41 @@ class XCrawler:
     
     def generate_hashtags(self, posts: List[Dict]) -> List[str]:
         """해시태그 생성"""
-        # 간단한 해시태그 생성 로직
-        hashtags = ['#테크뉴스', '#AI', '#혁신']
+        # 기본 해시태그
+        hashtags = ['#X트렌드', '#테크뉴스']
         
         # 인플루언서 기반 해시태그
         authors = list(set(post['author'] for post in posts))
         for author in authors[:3]:  # 최대 3명
-            if 'elon' in author.lower():
-                hashtags.append('#일론머스크')
-            elif 'sundar' in author.lower():
+            author_lower = author.lower()
+            if 'elon' in author_lower or 'musk' in author_lower:
+                hashtags.extend(['#일론머스크', '#테슬라'])
+            elif 'sundar' in author_lower or 'pichai' in author_lower:
                 hashtags.append('#구글')
+            elif 'satya' in author_lower or 'nadella' in author_lower:
+                hashtags.append('#마이크로소프트')
+            elif 'zuckerberg' in author_lower:
+                hashtags.append('#메타')
+            elif 'cook' in author_lower:
+                hashtags.append('#애플')
+            elif 'bezos' in author_lower:
+                hashtags.append('#아마존')
         
-        return hashtags[:5]  # 최대 5개
+        # 컨텐츠 기반 해시태그
+        content_text = ' '.join(post['text'].lower() for post in posts[:10])
+        if 'ai' in content_text or 'artificial' in content_text:
+            hashtags.append('#AI')
+        if 'robot' in content_text:
+            hashtags.append('#로봇')
+        if 'crypto' in content_text or 'bitcoin' in content_text:
+            hashtags.append('#암호화폐')
+        if 'tesla' in content_text:
+            hashtags.append('#테슬라')
+        if 'spacex' in content_text or 'space' in content_text:
+            hashtags.append('#우주')
+        
+        # 중복 제거하고 최대 5개 반환
+        return list(dict.fromkeys(hashtags))[:5]
     
     async def post_to_x(self, content: Dict) -> Dict:
         """X에 게시"""
