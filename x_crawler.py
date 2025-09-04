@@ -409,6 +409,12 @@ class XCrawler:
    └ {orig_time_str}
 
 """
+                    
+                    # 마지막 포스팅이 아니면 구분선 추가
+                    if idx < len(posts_to_summarize) - 1:
+                        prompt += "─────────────────────\n\n"
+                    else:
+                        prompt += "\n"
                 else:
                     # 일반 포스팅
                     prompt += f"""{number_emoji} "{text_content}"
@@ -416,7 +422,11 @@ class XCrawler:
 
 """
                 
-                prompt += "\n"
+                # 마지막 포스팅이 아니면 구분선 추가
+                if idx < len(posts_to_summarize) - 1:
+                    prompt += "─────────────────────\n\n"
+                else:
+                    prompt += "\n"
             
             prompt += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
